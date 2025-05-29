@@ -1,7 +1,7 @@
 import handle_cert
 import keys
 import base64
-
+import requests
 
 def init_connection():
     # Step 1, get cert+rsa pub key
@@ -26,8 +26,6 @@ def init_connection():
     aes_key = keys.generate_aes_key()
     priv_key, pub_key = keys.generate_rsa_keypair()
     
-    # Serialize keys (for storage, transmission, etc)
-    # priv_pem = keys.serialize_private_key(priv_key)
 
     pub_pem = keys.serialize_public_key(pub_key)
     encrypted_aes_key = keys.encrypt_aes_key_with_rsa_public(aes_key, server_public_key)
@@ -36,5 +34,11 @@ def init_connection():
     username_enc = keys.encrypt_string_with_aes(aes_key,username)
     password_enc = keys.encrypt_string_with_aes(aes_key,password)
     payload = {"username":username_enc,"password":password_enc,"aes_key":encrypted_aes_key,"rsa_key":pub_pem}
+    url = "http://localhost:8000/client-login" 
+    response = requests.post(url, json=payload)
+    print(response.status_code)
+    # print(response.json())
+    # print(payload)
+
 
 init_connection()

@@ -17,7 +17,7 @@
   - Generates random AES key.  
   - Encrypts username+password with AES key.  
   - Encrypts AES key with server's RSA public key.  
-  - Sends encrypted credentials, encrypted AES key, and client's RSA public key.
+  - Sends encrypted encrypted AES key, and client's RSA public key.
 
 - **Client → Server:**  
   Sends the above data.
