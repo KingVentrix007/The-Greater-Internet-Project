@@ -6,6 +6,50 @@ from cryptography.hazmat.primitives.ciphers import algorithms
 from cryptography.hazmat.primitives import keywrap
 import os
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.fernet import Fernet
+import urllib.parse
+
+global_token = None
+
+global_rsa_pub = None
+global_rsa_private = None
+
+global_rsa_server_pub = None
+
+global_aes_key = None
+
+def set_global_aes_key(key):
+    global global_aes_key
+    global_aes_key = key
+def get_global_aes_key():
+    global global_aes_key
+    return global_aes_key
+
+def set_rsa_pub(key):
+    global global_rsa_pub
+    global_rsa_pub = key
+def set_rsa_private(key):
+    global global_rsa_private
+    global_rsa_private = key
+def get_rsa_public():
+    global global_rsa_pub
+    return global_rsa_pub
+def get_rsa_private():
+    global global_rsa_private
+    return global_rsa_private
+def set_rsa_server_public(key):
+    global global_rsa_server_pub
+    global_rsa_server_pub = key
+def get_rsa_server_public():
+    global global_rsa_server_pub
+    return global_rsa_server_pub
+def set_token(token):
+    global global_token
+    global_token = token
+def get_token():
+    global global_token
+    return global_token
+
 # Generate RSA key pair
 def generate_rsa_keypair(key_size=2048):
     private_key = rsa.generate_private_key(
@@ -88,3 +132,20 @@ def decrypt_string_with_aes(aes_key: bytes, encrypted_b64: str) -> str:
     ciphertext = encrypted_package[12:]
     decrypted_bytes = aesgcm.decrypt(nonce, ciphertext, None)
     return decrypted_bytes.decode('utf-8')
+
+def encrypt_for_url(data: any,key) -> str:
+    if data is None:
+        return None
+    # Ensure JSON is serialized to a string
+    json_data = json.dumps(data)
+    cipher = Fernet(key)
+    encrypted = cipher.encrypt(json_data.encode())  # Encrypted bytes
+    url_safe = urllib.parse.quote(encrypted.decode())  # Make it URL-safe
+    return url_safe
+
+def decrypt_from_url(url_safe: str,key) -> str:
+    cipher = Fernet(key)
+    encrypted = urllib.parse.unquote(url_safe).encode()
+    decrypted = cipher.decrypt(encrypted).decode()
+    data_out = json.loads(decrypted)
+    return data_out
