@@ -1,0 +1,43 @@
+I want to make an alternative for https, for people running server on http.
+Ill call it httpe, http encrypted 
+
+
+Connection plan:
+
+
+Client requests rsa public key from server
+Server sends rsa-key + coustem cert
+Client validates cert
+if valid:
+client creates RSA key pair, temp aes
+client sends username+password encrypted with AES key. it also sends the AES key encrypted with the server public key, and sends its own rsa-public key
+
+server checks username+password, after decrypted AES key and decypted username+password:
+
+if valid:
+server creates token+temp aes
+server encrypts token with temp aes, then encryptes aes with client public key
+server sends encypted data back to client
+server attches cleint token and temp aes togther for 10minutes
+
+cleint take token
+decrypts token.
+
+client then re-encypts token with server aes-key and sends it back to confirm Connection, and sends a NEW RSA-public key
+
+server takes confirmation
+
+server now removes old aes key from token, and creates a new one and accostites it on its side as well as the RSA public key.
+
+server then returns a new AES key, ecnypted with rsa-public key.
+
+client then requets data from server using aes key to encrpt requetsts, send with the token encypted as well.
+server decodes token, confirms it, and returns data also encypted with that aes key
+
+comifncaiton conutes like this for 30 minuteis befreo token expires.
+
+
+
+
+
+
