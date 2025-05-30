@@ -54,11 +54,15 @@ def init_connection():
     keys.set_global_aes_key(aes_key)
     # print(payload)
 
-
+import os
+import time
 def send_request_post(request,path):
     url = f"http://localhost:8000/{path}" 
     enc_request = keys.encrypt_for_url(request,base64.b64encode((keys.get_global_aes_key())))
-    payload = {"request_data":enc_request}
+    package_verify_data = {"time_sent":datetime.now(timezone.utc).isoformat(),"package_code": base64.b64encode(os.urandom(128)).decode("utf-8")}
+    # time.sleep(125)
+    package_verify_data_enc  =keys.encrypt_for_url(package_verify_data,base64.b64encode((keys.get_global_aes_key())))
+    payload = {"request_data":enc_request,"package_verify":package_verify_data_enc}
     headers = {"Authorization": f"Bearer {keys.get_token()}"}
     response = requests.post(url, json=payload,headers=headers)
     try:
@@ -93,5 +97,7 @@ def test_req():
     res = send_request_post(payload,"test")
     print(res.status_code)
     print(res.json())
+
+
 init_connection()
 test_req()

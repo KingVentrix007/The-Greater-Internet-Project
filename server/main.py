@@ -18,6 +18,7 @@ from starlette.responses import StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+res_codes = []
 
 class LoginPayload(BaseModel):
     username: str
@@ -177,7 +178,8 @@ async def handle_return(user, response) -> Response:
 async def jwt_auth_middleware(request: Request, call_next):
     if request.url.path in ["/httpe-init", "/client-login"]:
         return await call_next(request)
-    
+    current_user = await get_current_user_manual(request)
+    user_id = current_user.id
     # Read body once
     body_bytes = await request.receive()
     print(body_bytes)
@@ -185,9 +187,27 @@ async def jwt_auth_middleware(request: Request, call_next):
     try:
         body_json = json.loads(body_bytes['body'])
         print(body_json)
+        
         # body = 
         is_enc = body_json.get("request_data",None)
         if(is_enc != None):
+            package_verify_enc = body_json.get("package_verify",None)
+            if(package_verify_enc == None):
+                return JSONResponse(status_code=401,content={"details":"No validation stamp included"})
+            package_verify = keys.decrypt_from_url(package_verify_enc,base64.b64encode(keys.get_client_key(user_id)))
+            time_sent_iso = package_verify.get("time_sent",None)
+            if(package_verify_enc == None):
+                return JSONResponse(status_code=401,content={"details":"No validation time stamp included"})
+            sent_time = datetime.fromisoformat(time_sent_iso)
+            now = datetime.now(timezone.utc)
+            if now - sent_time > timedelta(minutes=2):
+                return JSONResponse(status_code=401,content={"details":"Invalid timestamp"})
+            package_code = package_verify.get("package_code",None)
+            if(package_code == None):
+                return JSONResponse(status_code=401,content={"details":"No return code included"})
+            if(package_code in res_codes):
+                return JSONResponse(status_code=401, content={"Packet is duplicate"})
+            res_codes.append(package_code)
             is_enc = True
     except json.JSONDecodeError:
         is_enc = False
@@ -206,7 +226,7 @@ async def jwt_auth_middleware(request: Request, call_next):
         return JSONResponse(status_code=401, content={"detail": "Invalid Authorization header format"})
 
     try:
-        current_user = await get_current_user_manual(request)
+        # current_user = await get_current_user_manual(request)
         payload = keys.decode_access_token(token)
     except JWTError:
         return JSONResponse(status_code=401, content={"detail": "Invalid token"})
@@ -216,7 +236,7 @@ async def jwt_auth_middleware(request: Request, call_next):
     if is_enc:
         try:
             print("Hello")
-            user_id = current_user.id
+            
             encrypted_data = body_json["request_data"]
             decrypted = keys.decrypt_from_url(
                 encrypted_data, base64.b64encode(keys.get_client_key(user_id))
