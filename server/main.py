@@ -10,7 +10,10 @@ from jose import JWTError
 import jwt
 from starlette.types import Receive, Scope, Send
 import base64
+import time
+from datetime import datetime, timedelta,timezone
 app = FastAPI()
+from starlette.responses import StreamingResponse
 
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -117,20 +120,64 @@ async def client_login(payload: LoginPayload,db: user.AsyncSession = Depends(use
 class TestItem(BaseModel):
     username: str
 @app.post("/test")
-async def test(item: TestItem, request: Request):
+def test(item: TestItem, request: Request):
     # body = await request.body()
     # print("Raw body received by endpoint:", body.decode())
     # print(item.username)
-    return {"username": item.username}
-class ModifiedRequest(Request):
-    def __init__(self, scope: Scope, receive: Receive) -> None:
-        super().__init__(scope, receive)
-from starlette.requests import Request as StarletteRequest
+    return {"username": "My name is"}
+
+
+async def handle_return(user, response) -> Response:
+    print("Hello world")
+    # try:
+    #     # Try to read the full body asynchronously
+    #     body_bytes = await response.body()
+    # except AttributeError:
+    #     # If response.body() is not a coroutine, try response.body directly
+    #     try:
+    #         body_bytes = response.body
+    #     except Exception as e:
+    #         print("Could not get response body:", e)
+    #         return response
+    
+    # # Decode bytes if needed
+    # if isinstance(body_bytes, bytes):
+    #     body_str = body_bytes.decode()
+    # else:
+    #     body_str = body_bytes
+
+    # try:
+    #     print(json.loads(body_str))
+    # except Exception as e:
+    #     print("Could not parse JSON response:", e)
+    if isinstance(response, type(response)):
+        steamed_res:StreamingResponse = response
+        body = b""
+        async for chunk in steamed_res.body_iterator:
+            body += chunk
+
+        print("Raw body bytes:", body)
+        try:
+            json_body = json.loads(body.decode())
+            enc_data = keys.encrypt_for_url(json_body,base64.b64encode(keys.get_client_key(user.id)))
+            # 
+            
+            ret_data = {"enc_data":enc_data,"time_send":keys.encrypt_string_with_aes(keys.get_client_key(user.id),datetime.now(timezone.utc).isoformat())}
+            body = json.dumps(ret_data).encode("utf-8")
+            print("Parsed JSON:", json_body)
+        except Exception as e:
+            print("Not JSON or decoding failed:", e)
+            # print("Ths")
+        return Response(content=body, media_type="application/json")
+    else:
+        print(type(response))
+    return response
+
 @app.middleware("http")
 async def jwt_auth_middleware(request: Request, call_next):
     if request.url.path in ["/httpe-init", "/client-login"]:
         return await call_next(request)
-
+    
     # Read body once
     body_bytes = await request.receive()
     print(body_bytes)
@@ -191,8 +238,11 @@ async def jwt_auth_middleware(request: Request, call_next):
             # Create a new request object with the patched body
             # modified_request = StarletteRequest(request.scope, receive)
             request._receive = receive  # patch it back for safety
-            return await call_next(request)
+            response = await call_next(request)
+    
 
+
+            return await handle_return(current_user, response)
         except Exception as e:
             return JSONResponse(status_code=450, content={"detail": f"Decryption failed: {str(e)}"})
 
@@ -201,20 +251,34 @@ async def jwt_auth_middleware(request: Request, call_next):
         return {"type": "http.request", "body": body_bytes, "more_body": False}
     
     request._receive = receive_plain  # patch it back for safety
-    return await call_next(request)
-    # print("Final patched request body:", await request.body())
     
-# @app.middleware("http")
-# async def replace_body_middleware(request: Request, call_next):
-#     if request.url.path == "/test":
-#         # Simulate decrypted body
-#         new_body = b'{"username": "tristan"}'
+    # response = await call_next(request)
 
-#         async def receive() -> dict:
-#             return {"type": "http.request", "body": new_body, "more_body": False}
+    # # Buffer the response body (must fully consume body_iterator)
+    response = await call_next(request)
+    
 
-#         # Override internal body reader
-#         request._receive = receive
 
-#     response = await call_next(request)
-#     return response
+    # Intercept response
+    response_body = b""
+    async for chunk in response.body_iterator:
+        response_body += chunk
+
+    # Modify response
+    try:
+        data = json.loads(response_body)
+    except Exception:
+        data = response_body.decode(errors="ignore")
+
+    modified = {
+        "modified": True,
+        "original": data
+    }
+
+    return Response(
+        content=json.dumps(modified),
+        status_code=response.status_code,
+        headers=dict(response.headers),
+        media_type="application/json"
+    )
+    # return handle_return(current_user, new_response)

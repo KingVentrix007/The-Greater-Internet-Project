@@ -1,8 +1,9 @@
+import json
 import handle_cert
 import keys
 import base64
 import requests
-
+from datetime import datetime, timezone, timedelta
 def init_connection():
     # Step 1, get cert+rsa pub key
     server_cert = handle_cert.request_certificate()
@@ -60,7 +61,32 @@ def send_request_post(request,path):
     payload = {"request_data":enc_request}
     headers = {"Authorization": f"Bearer {keys.get_token()}"}
     response = requests.post(url, json=payload,headers=headers)
-    return response
+    try:
+        encrypted_response_data = response.json()
+        enc_data = encrypted_response_data["enc_data"]
+        enc_time_send = encrypted_response_data["time_send"]
+        time_iso_send = keys.decrypt_string_with_aes((keys.get_global_aes_key()), enc_time_send)
+        sent_time = datetime.fromisoformat(time_iso_send)
+        now = datetime.now(timezone.utc)
+        if now - sent_time > timedelta(minutes=2):
+            return None
+        return_data = keys.decrypt_from_url(enc_data, base64.b64encode(keys.get_global_aes_key()))
+
+        # Replace response content with decrypted data JSON
+        decrypted_json_str = json.dumps(return_data)
+
+        # response._content expects bytes
+        response._content = decrypted_json_str.encode('utf-8')
+
+        # Also update Content-Length header accordingly
+        response.headers['Content-Length'] = str(len(response._content))
+        print("My res")
+        return response
+
+    except Exception as e:
+        print(e)
+        return response
+
 
 def test_req():
     payload = {"username":"tristan"}

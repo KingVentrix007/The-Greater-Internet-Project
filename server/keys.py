@@ -125,3 +125,12 @@ def decrypt_from_url(url_safe: str,key) -> str:
 
 def load_public_key(pem_str):
     return serialization.load_pem_public_key(pem_str.encode('utf-8'))
+
+def encrypt_string_with_aes(aes_key: bytes, plaintext: str) -> str:
+    aesgcm = AESGCM(aes_key)
+    nonce = os.urandom(12)  # 96-bit nonce, recommended for GCM
+    plaintext_bytes = plaintext.encode('utf-8')
+    encrypted = aesgcm.encrypt(nonce, plaintext_bytes, None)
+    # Return nonce + encrypted ciphertext as base64 for JSON
+    encrypted_package = nonce + encrypted
+    return base64.b64encode(encrypted_package).decode('utf-8')
