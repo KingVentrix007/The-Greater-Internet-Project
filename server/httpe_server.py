@@ -13,7 +13,7 @@ from starlette.responses import StreamingResponse
 
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
+database_up = False
 res_codes = []
 
 class LoginPayload(BaseModel):
@@ -34,8 +34,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: user.AsyncSe
         raise HTTPException(status_code=401, detail="User not found")
     return current_user
 
+import asyncio
 
 def httpe_init():
+    global database_up
+    if database_up ==False:
+        asyncio.run(user.init_db())
+        database_up=True
     # Load server private key (used for TLS-like operations)
     # privkey = load_pem_key("server_private.pem", is_private=True)
 
@@ -83,8 +88,10 @@ async def get_current_user_manual(request: Request) -> user.User:
 
 async def client_login(payload: LoginPayload,db: user.AsyncSession = Depends(user.get_token_db)):
     # Access data like:
+    print("this data")
     username_enc = payload.username
     password_enc = payload.password
+    print(f"{username_enc}:{password_enc}")
     encrypted_aes_key = payload.aes_key
     pub_pem = payload.rsa_key
     decrypted_aes_key = keys.decrypt_aes_key_with_rsa_private(encrypted_aes_key,load_pem_key("server_private.pem", is_private=True))

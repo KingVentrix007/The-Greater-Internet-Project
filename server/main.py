@@ -1,5 +1,6 @@
 from fastapi import FastAPI,Depends,status,HTTPException,Response,Request
 import httpe_server
+from httpe_server import client_login
 app = FastAPI()
 
 
@@ -12,8 +13,9 @@ def init_connection():
     return httpe_server.httpe_init()
 
 @app.post("/client-login")
-def login(payload):
-    return httpe_server.client_login(payload)
+async def login(payload:httpe_server.LoginPayload):
+    print("server here")
+    return await httpe_server.client_login(payload)
 
 
 @app.middleware("http")

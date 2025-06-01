@@ -12,8 +12,8 @@ def get_fun_fact():
 
 
 def main():
-    username = input("Enter username")
-    password = input("Enter password")
+    username = "tristan"
+    password = "tristan"
     httpe_client.init_connection(username, password,user_url="http://localhost:8000/")
     get_fun_fact()
 

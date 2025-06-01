@@ -65,3 +65,5 @@ if __name__ == "__main__":
     asyncio.run(init_db())
 
     asyncio.run(add_user_interactive())
+
+
