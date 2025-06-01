@@ -1,3 +1,5 @@
+raise Exception("Code is deprecated")
+
 from fastapi import FastAPI,Depends,status,HTTPException,Response,Request
 import keys
 import json
