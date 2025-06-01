@@ -106,7 +106,6 @@ async def client_login(payload: LoginPayload,db: user.AsyncSession = Depends(use
     keys.set_client_key(current_user.id,decrypted_aes_key)
     access_token = keys.create_access_token(data={"sub": username})
     aes_token_encrypt_key = Fernet.generate_key()
-    print(pub_pem)
     encrypted_aes_token_encrypt_key = keys.encrypt_aes_key_with_rsa_public(aes_token_encrypt_key,keys.load_public_key(pub_pem))
     token_data = {"access_token": access_token, "token_type": "bearer"}
     
@@ -118,24 +117,12 @@ async def client_login(payload: LoginPayload,db: user.AsyncSession = Depends(use
         )    # print(f"{username} {password}")
     # Now add server validation from database
 
-class TestItem(BaseModel):
-    username: str
-@app.post("/test")
-def test(item: TestItem, request: Request):
-    # body = await request.body()
-    # print("Raw body received by endpoint:", body.decode())
-    # print(item.username)
-    return {"username": "My name is"}
-
-
 async def handle_return(user, response) -> Response:
-    if isinstance(response, type(response)):
+    try:
         steamed_res:StreamingResponse = response
         body = b""
         async for chunk in steamed_res.body_iterator:
             body += chunk
-
-        print("Raw body bytes:", body)
         try:
             json_body = json.loads(body.decode())
             enc_data = keys.encrypt_for_url(json_body,base64.b64encode(keys.get_client_key(user.id)))
@@ -143,13 +130,12 @@ async def handle_return(user, response) -> Response:
             
             ret_data = {"enc_data":enc_data,"time_send":keys.encrypt_string_with_aes(keys.get_client_key(user.id),datetime.now(timezone.utc).isoformat())}
             body = json.dumps(ret_data).encode("utf-8")
-            print("Parsed JSON:", json_body)
         except Exception as e:
             print("Not JSON or decoding failed:", e)
             # print("Ths")
         return Response(content=body, media_type="application/json")
-    else:
-        print(type(response))
+    except Exception as e:
+        print(e)
     return response
 
 @app.middleware("http")
@@ -160,11 +146,9 @@ async def jwt_auth_middleware(request: Request, call_next):
     user_id = current_user.id
     # Read body once
     body_bytes = await request.receive()
-    print(body_bytes)
     # Try to parse as JSON to check for encryption
     try:
         body_json = json.loads(body_bytes['body'])
-        print(body_json)
         
         # body = 
         is_enc = body_json.get("request_data",None)
@@ -210,10 +194,8 @@ async def jwt_auth_middleware(request: Request, call_next):
         return JSONResponse(status_code=401, content={"detail": "Invalid token"})
 
     # Decrypt and patch request if encrypted
-    print(is_enc)
     if is_enc:
         try:
-            print("Hello")
             
             encrypted_data = body_json["request_data"]
             decrypted = keys.decrypt_from_url(
@@ -232,7 +214,6 @@ async def jwt_auth_middleware(request: Request, call_next):
                 rec_data = body_bytes
                 rec_data['body'] = new_body
                 return rec_data
-            print("NEw: ",new_body)
             # Create a new request object with the patched body
             # modified_request = StarletteRequest(request.scope, receive)
             request._receive = receive  # patch it back for safety
@@ -268,15 +249,11 @@ async def jwt_auth_middleware(request: Request, call_next):
     except Exception:
         data = response_body.decode(errors="ignore")
 
-    modified = {
-        "modified": True,
-        "original": data
-    }
-
     return Response(
-        content=json.dumps(modified),
+        content=json.dumps(data),
         status_code=response.status_code,
         headers=dict(response.headers),
         media_type="application/json"
     )
     # return handle_return(current_user, new_response)
+

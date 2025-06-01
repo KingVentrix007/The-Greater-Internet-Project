@@ -2,7 +2,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 import json
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,timezone
 import hashlib
 from cryptography.hazmat.backends import default_backend
 
@@ -53,7 +53,7 @@ def create_certificate(subject_name: str, pubkey_b64: str, issuer: str, private_
         "public_key": pubkey_b64,
         "usage": ["server_auth"],
         "issued": datetime.utcnow().isoformat(),
-        "expires": (datetime.utcnow() + timedelta(days=365)).isoformat()
+        "expires": (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
     }
 
     # Compute fingerprint (before signing)
