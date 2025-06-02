@@ -4,6 +4,7 @@ import threading
 import inspect
 import json
 from httpe_class import Response
+from datetime import datetime, timezone, timedelta
 class Httpe:
     def __init__(self,server_host="127.0.0.1",Port=8080):
         self.routes = {}
@@ -43,13 +44,15 @@ class Httpe:
                     if not chunk:
                         break
                     data += chunk
-                    print(chunk)
+                    # print(chunk)
                     if b"END\n" in data or b"END\r\n" in data or b"END" in data:
                         break
                 
             except Exception as e:
-                return None
-            print(type(data))
+                err_res =  Response.error(message="Internal Server Error",status="500 INTERNAL SERVER ERROR")
+                conn.sendall(err_res.serialize().encode())
+                return
+            # print(type(data))
             text = data.decode()
             lines = text.splitlines()
 
@@ -79,7 +82,17 @@ class Httpe:
                     body += line + "\n"
 
             print(f"HTTPE {method} {location} from {addr} with headers {headers}")
-
+            timestamp = headers.get("timestamp", None)
+            if(timestamp == None):
+                err_res =  Response.error(message="Invalid Timestamp",status="400 BAD REQUEST")
+                conn.sendall(err_res.serialize().encode())
+                return
+            timestamp = datetime.fromisoformat(timestamp)
+            now = datetime.now(timezone.utc)
+            if now - timestamp > timedelta(minutes=2):
+                err_res =  Response.error(message="Old Timestamp",status="400 BAD REQUEST")
+                conn.sendall(err_res.serialize().encode())
+                return
             handler = self.routes.get((location, method))
 
             if handler:
@@ -107,16 +120,21 @@ class Httpe:
             conn.sendall(response.encode())
 
         except Exception as e:
-            print(f"Error handling client: {e}")
+            err_res =  Response.error(message="Error With Client",status="400 BAD REQUEST")
+            conn.sendall(err_res.serialize().encode())
+            return
         finally:
             conn.close()
     def _parse_handler(self, handler,sig,body):
-        for name, param in sig.parameters.items():
-            print(name, param.default, param.kind) 
+        # for name, param in sig.parameters.items():
+        #     print(name, param.default, param.kind) 
         kwargs = {}
         for name, param in sig.parameters.items():
+            print(name)
             if(name in body):
                 kwargs[name] = body[name]
             else:
-                raise Exception(f"This failed")
+                err_res =  Response.error(message="Invalid Paramater",status="400 BAD REQUEST")
+                # 
+                return err_res
         return handler(**kwargs)

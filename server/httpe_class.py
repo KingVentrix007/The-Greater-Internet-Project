@@ -15,3 +15,5 @@ class Response:
         response_lines.append("END")
         response_lines.append(self.body)
         return "\n".join(response_lines)
+    def error(message="Internal Server Error", status="500 INTERNAL SERVER ERROR"):
+        return Response(body=message, status=status)

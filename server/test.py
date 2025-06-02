@@ -1,6 +1,6 @@
 import socket
 import uuid
-from datetime import datetime
+from datetime import datetime,timezone
 
 class HttpeClient:
     def __init__(self, host="127.0.0.1", port=8080):
@@ -15,7 +15,7 @@ class HttpeClient:
         headers.setdefault("client_id", "None")
         headers.setdefault("token", "None")
         headers.setdefault("packet_id", str(uuid.uuid4()))
-        headers.setdefault("timestamp", datetime.utcnow().isoformat())
+        headers.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
         headers.setdefault("compressions", "false")
 
         request_lines = [
@@ -60,7 +60,7 @@ response = client.send_request("GET", "/hello-world")
 
 print("GET Response:\n", response)
 
-body = {"data":"hello world"}
+body = {"data":"hello world","cat":"cool"}
 body = json.dumps(body)
 response = client.send_request("POST", "/PTS",body=body)
 print("POST Response:\n",response)
