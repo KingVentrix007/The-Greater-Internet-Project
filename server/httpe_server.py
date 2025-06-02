@@ -3,8 +3,9 @@ from threading import Thread
 import threading
 import inspect
 import json
-from httpe_class import Response
+from httpe_class import _Response
 from datetime import datetime, timezone, timedelta
+import httpe_keys
 class Httpe:
     def __init__(self,server_host="127.0.0.1",Port=8080):
         self.routes = {}
@@ -35,6 +36,8 @@ class Httpe:
                         continue  # Allows checking for KeyboardInterrupt
             except KeyboardInterrupt:
                 print("\nShutting down HTTPE server...")
+    def _handle_share_aes(self,data):
+        pass # Do this tmr
     def _handle_client(self, conn, addr):
         try:
             try:
@@ -49,7 +52,7 @@ class Httpe:
                         break
                 
             except Exception as e:
-                err_res =  Response.error(message="Internal Server Error",status="500 INTERNAL SERVER ERROR")
+                err_res =  _Response.error(message="Internal Server Error",status="500 INTERNAL SERVER ERROR")
                 conn.sendall(err_res.serialize().encode())
                 return
             # print(type(data))
@@ -59,6 +62,8 @@ class Httpe:
             version = None
             method = None
             location = None
+            is_initial_packet = False
+            initial_packet_type = None
             headers = {}
             body = ""
             
@@ -67,6 +72,9 @@ class Httpe:
                 line = line.strip()
                 if line.startswith("VERSION:"):
                     version = line.split(":", 1)[1].strip()
+                elif line.startswith("TYPE:"):
+                    is_initial_packet = True
+                    initial_packet_type = line.split(":", 1)[1].strip().upper()
                 elif line.startswith("METHOD:"):
                     method = line.split(":", 1)[1].strip().upper()
                 elif line.startswith("LOCATION:"):
@@ -80,17 +88,29 @@ class Httpe:
                     headers[key.strip()] = value.strip()
                 elif not reading_headers:
                     body += line + "\n"
-
+            if(is_initial_packet == True):
+                if(initial_packet_type == "GET_RSA"):
+                    send_rsa_pub = {"rsa":httpe_keys.get_public_key()}
+                    rsa_rez = _Response(json.dumps(send_rsa_pub))
+                    conn.sendall(rsa_rez.serialize().encode())
+                    return
+                elif(initial_packet_type == "SHARE_AES"):
+                    res_data = self._handle_share_aes(headers)
+            packet_id = headers.get("packet_id",None)
+            if(packet_id == None):
+                err_res =  _Response.error(message="packet_id missing",status="400 BAD REQUEST")
+                conn.sendall(err_res.serialize().encode())
+                return
             print(f"HTTPE {method} {location} from {addr} with headers {headers}")
             timestamp = headers.get("timestamp", None)
             if(timestamp == None):
-                err_res =  Response.error(message="Invalid Timestamp",status="400 BAD REQUEST")
+                err_res =  _Response.error(message="Invalid Timestamp",status="400 BAD REQUEST")
                 conn.sendall(err_res.serialize().encode())
                 return
             timestamp = datetime.fromisoformat(timestamp)
             now = datetime.now(timezone.utc)
             if now - timestamp > timedelta(minutes=2):
-                err_res =  Response.error(message="Old Timestamp",status="400 BAD REQUEST")
+                err_res =  _Response.error(message="Old Timestamp",status="400 BAD REQUEST")
                 conn.sendall(err_res.serialize().encode())
                 return
             handler = self.routes.get((location, method))
@@ -101,26 +121,24 @@ class Httpe:
 
 
                     result = handler()
-                    if not isinstance(result, Response):
-                        result = Response(str(result))  # fallback
-                    response = result.serialize()
+                    if not isinstance(result, _Response):
+                        result = _Response(str(result))  # fallback
+                    _Response = result.serialize()
                 else:
-                    # for name, param in sig.parameters.items():
-                    #     print(name, param.default, param.kind)
                     result = self._parse_handler(handler,sig,json.loads(body))
-                    if not isinstance(result, Response):
-                        result = Response(str(result))  # fallback
-                    response = result.serialize()
+                    if not isinstance(result, _Response):
+                        result = _Response(str(result))  # fallback
+                    _Response = result.serialize()
             else:
                 result = "Route Not Found"
-                if not isinstance(result, Response):
-                        result = Response(str(result))  # fallback
-                response = result.serialize()
+                if not isinstance(result, _Response):
+                        result = _Response(str(result))  # fallback
+                _Response = result.serialize()
 
-            conn.sendall(response.encode())
+            conn.sendall(_Response.encode())
 
         except Exception as e:
-            err_res =  Response.error(message="Error With Client",status="400 BAD REQUEST")
+            err_res =  _Response.error(message=f"Error With Client{e}",status="400 BAD REQUEST")
             conn.sendall(err_res.serialize().encode())
             return
         finally:
@@ -129,12 +147,19 @@ class Httpe:
         # for name, param in sig.parameters.items():
         #     print(name, param.default, param.kind) 
         kwargs = {}
+        for val in body.keys():
+            print(val,sig.parameters)
+            if val not in sig.parameters:
+                
+                err_res =  _Response.error(message="Invalid Parameter",status="400 BAD REQUEST")
+        #         # 
+                return err_res
         for name, param in sig.parameters.items():
             print(name)
             if(name in body):
                 kwargs[name] = body[name]
             else:
-                err_res =  Response.error(message="Invalid Paramater",status="400 BAD REQUEST")
+                err_res =  _Response.error(message="Invalid Parameter",status="400 BAD REQUEST")
                 # 
                 return err_res
         return handler(**kwargs)

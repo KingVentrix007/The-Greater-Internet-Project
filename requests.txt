@@ -2,8 +2,8 @@ VERSION:HTTPE/1.0
 METHOD:GET/POST
 LOCATION:/location
 HEADERS:
+is_com_setup:true/false
 client_id:number/None
-token:token/None
 packet_id:uuid
 timestamp:
 compressions:true/false

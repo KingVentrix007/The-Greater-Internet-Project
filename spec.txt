@@ -1,0 +1,2 @@
+POST body data is assumed to be JSON unless specified otherwise
+packet_id cannot be None
