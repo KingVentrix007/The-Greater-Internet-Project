@@ -3,6 +3,7 @@ from threading import Thread
 import threading
 import inspect
 import json
+from httpe_class import Response
 class Httpe:
     def __init__(self,server_host="127.0.0.1",Port=8080):
         self.routes = {}
@@ -34,11 +35,9 @@ class Httpe:
             except KeyboardInterrupt:
                 print("\nShutting down HTTPE server...")
     def _handle_client(self, conn, addr):
-        print(f"Got connection:{addr}")
         try:
             try:
                 data = b""
-                post_data = b""
                 while True:
                     chunk = conn.recv(1024)
                     if not chunk:
@@ -46,11 +45,9 @@ class Httpe:
                     data += chunk
                     print(chunk)
                     if b"END\n" in data or b"END\r\n" in data or b"END" in data:
-                        print("Done")
                         break
                 
             except Exception as e:
-                print(f"Well this happended {e}")
                 return None
             print(type(data))
             text = data.decode()
@@ -90,34 +87,22 @@ class Httpe:
                 if(len(sig.parameters) == 0):
 
 
-                    response_body = handler()
-                    response = (
-                        "RESPONSE:HTTPE/1.0\n"
-                        "STATUS:200 OK\n"
-                        f"CONTENT_LENGTH:{len(response_body)}\n"
-                        "END\n"
-                        f"{response_body}"
-                    )
+                    result = handler()
+                    if not isinstance(result, Response):
+                        result = Response(str(result))  # fallback
+                    response = result.serialize()
                 else:
                     # for name, param in sig.parameters.items():
                     #     print(name, param.default, param.kind)
-                    response_body = self._parse_handler(handler,sig,json.loads(body))
-                    response = (
-                        "RESPONSE:HTTPE/1.0\n"
-                        "STATUS:200 OK\n"
-                        f"CONTENT_LENGTH:{len(response_body)}\n"
-                        "END\n"
-                        f"{response_body}"
-                    )
+                    result = self._parse_handler(handler,sig,json.loads(body))
+                    if not isinstance(result, Response):
+                        result = Response(str(result))  # fallback
+                    response = result.serialize()
             else:
-                response_body = "Route Not Found"
-                response = (
-                    "RESPONSE:HTTPE/1.0\n"
-                    "STATUS:404 NOT FOUND\n"
-                    f"CONTENT_LENGTH:{len(response_body)}\n"
-                    "END\n"
-                    f"{response_body}"
-                )
+                result = "Route Not Found"
+                if not isinstance(result, Response):
+                        result = Response(str(result))  # fallback
+                response = result.serialize()
 
             conn.sendall(response.encode())
 
@@ -126,7 +111,6 @@ class Httpe:
         finally:
             conn.close()
     def _parse_handler(self, handler,sig,body):
-        print("PASSING")
         for name, param in sig.parameters.items():
             print(name, param.default, param.kind) 
         kwargs = {}
