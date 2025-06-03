@@ -29,7 +29,8 @@ class HttpeResponse:
 
     def body(self) -> str:
         return self._body_str
-
+    def _set_body(self, body: str) -> None:
+        self._body_str = body
     def json(self) -> dict:
         try:
             return json.loads(self._body_str)
@@ -99,6 +100,9 @@ class HttpeClient:
             s.sendall(data_to_send.encode())
             response = self._receive_full_response(s)
             ret_res = HttpeResponse(response)
+            enc_body = ret_res.body()
+            plain_body = sec.fernet_decrypt(enc_body,self._aes_key)
+            ret_res._set_body(plain_body)
             return ret_res
     def _receive_full_response(self, s):
         chunks = []

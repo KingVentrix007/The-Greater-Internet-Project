@@ -191,6 +191,7 @@ class Httpe:
                     is_encrypted_packet = True
                     headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(new_lines)
             packet_id = headers.get("packet_id",None)
+            
             header_user_id = headers.get("client_id",None)
             if(str(header_user_id) != str(user_id_from_token)):
                 err_res =  Response.error(message="STOLEN TOKEN",status="400 BAD STOLEN")
@@ -224,7 +225,7 @@ class Httpe:
                         result = Response(str(result))  # fallback
                     response = result.serialize()
                 else:
-                    result = self._parse_handler(handler,sig,json.loads(body))
+                    result = self._parse_handler(handler,sig,json.loads(body),httpe_keys.get_user_key(header_user_id))
                     if not isinstance(result, Response):
                         result = Response(str(result))  # fallback
                     response = result.serialize()
@@ -242,7 +243,7 @@ class Httpe:
             return
         finally:
             conn.close()
-    def _parse_handler(self, handler,sig,body):
+    def _parse_handler(self, handler,sig,body,aes_key):
         # for name, param in sig.parameters.items():
         #     print(name, param.default, param.kind) 
         kwargs = {}
@@ -261,4 +262,6 @@ class Httpe:
                 err_res =  Response.error(message="Invalid Parameter",status="400 BAD REQUEST")
                 # 
                 return err_res
-        return handler(**kwargs)
+        res_data = handler(**kwargs)
+        enc_data = sec.fernet_encrypt(json.dumps(res_data),aes_key)
+        return enc_data
