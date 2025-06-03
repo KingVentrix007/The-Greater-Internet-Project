@@ -14,20 +14,23 @@ private_key = rsa.generate_private_key(
     backend=default_backend()
 )
 public_key = private_key.public_key()
-
+pem = public_key.public_bytes(
+   encoding=serialization.Encoding.PEM,
+   format=serialization.PublicFormat.SubjectPublicKeyInfo
+)
 cert_internal = {
     "hostname": "1245",
     "valid_from": datetime.now(timezone.utc).isoformat(),
     "valid_to": (datetime.now(timezone.utc) + timedelta(days=100)).isoformat(),
     "public_key": ""
 }
-hashed_cert = hashlib.sha256(json.dumps(cert_internal).encode("utf-8")).hexdigest()
-sig = private_key.sign(hashed_cert.encode("utf-8"),padding.PSS(
+hashed_cert = hashlib.sha256(json.dumps(cert_internal).encode("utf-8")).digest()
+sig = private_key.sign(hashed_cert,padding.PSS(
         mgf=padding.MGF1(hashes.SHA256()),
         salt_length=padding.PSS.MAX_LENGTH
     ),
     hashes.SHA256())
-cert = {"cert": cert_internal,"hash":hashed_cert,"signature":sig}
+cert = {"cert": cert_internal,"hash":hashed_cert.hex(),"signature":sig.hex()}
 # message = hashed_cert.encode("utf-8")
 # signature = private_key.sign(
 #     message,
@@ -37,4 +40,10 @@ cert = {"cert": cert_internal,"hash":hashed_cert,"signature":sig}
 #     ),
 #     hashes.SHA256()
 # )
+verify_key = serialization.load_pem_public_key(pem)
+print(verify_key.verify(bytes.fromhex(cert["signature"]),hashlib.sha256(json.dumps(cert["cert"]).encode("utf-8")).digest(),padding.PSS(
+        mgf=padding.MGF1(hashes.SHA256()),
+        salt_length=padding.PSS.MAX_LENGTH
+    ),
+    hashes.SHA256()))
 print(cert)
