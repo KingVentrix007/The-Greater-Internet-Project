@@ -13,14 +13,15 @@ class Httpe:
         self.host = server_host
         self.port = Port
 
-    def path(self, route, method="GET"):
+    def path(self, route, method="GET",requires_enc=True):
         def decorator(func):
-            self.routes[(route, method)] = func
+            self.routes[(route, method,requires_enc)] = func
             return func
         return decorator
     def paths(self):
-        for (route, method), func in self.routes.items():
-            print(f"{method} {route} -> {func.__name__}")
+        for (route, method, requires_enc), func in self.routes.items():
+            enc_status = "Encrypted" if requires_enc else "Unencrypted"
+            print(f"{method} {route} ({enc_status}) -> {func.__name__}")
     def serve(self, host="127.0.0.1", port=8080):
         print(f"HTTPE server running on {host}:{port}...")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -129,32 +130,10 @@ class Httpe:
             initial_packet_type = None
             headers = {}
             body = ""
+            is_encrypted_packet = False
             # print(text)
             reading_headers = False
-            headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(lines)
-            # for line in lines:
-            #     # print(line)
-            #     line = line.strip()
-            #     if line.startswith("VERSION:"):
-            #         version = line.split(":", 1)[1].strip()
-            #     elif line.startswith("TYPE:"):
-            #         is_initial_packet = True
-            #         initial_packet_type = line.split(":", 1)[1].strip().upper()
-            #         if(initial_packet_type == "REQ_ENC"):
-            #             break
-            #     elif line.startswith("METHOD:"):
-            #         method = line.split(":", 1)[1].strip().upper()
-            #     elif line.startswith("LOCATION:"):
-            #         location = line.split(":", 1)[1].strip()
-            #     elif line.startswith("HEADERS:"):
-            #         reading_headers = True
-            #     elif line == "END":
-            #         reading_headers = False
-            #     elif reading_headers and ":" in line:
-            #         key, value = line.split(":", 1)
-            #         headers[key.strip()] = value.strip()
-            #     elif not reading_headers:
-            #         body += line + "\n"
+            headers,version,is_initial_packet,initial_packet_type,method,location,body  = self._handle_packet_contents(lines)
             if(is_initial_packet == True):
                 if(initial_packet_type == "GET_RSA"):
                     send_rsa_pub = {"rsa":httpe_keys.get_public_key()}
@@ -168,7 +147,7 @@ class Httpe:
                     return
                 elif(initial_packet_type == "REQ_ENC"):
                     new_lines =  self._handle_enc_request(lines).splitlines()
-                    
+                    is_encrypted_packet = True
                     headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(new_lines)
             packet_id = headers.get("packet_id",None)
             if(packet_id == None):
@@ -187,7 +166,7 @@ class Httpe:
                 err_res =  Response.error(message="Old Timestamp",status="400 BAD REQUEST")
                 conn.sendall(err_res.serialize().encode())
                 return
-            handler = self.routes.get((location, method))
+            handler = self.routes.get((location, method,is_encrypted_packet))
 
             if handler:
                 sig = inspect.signature(handler)
