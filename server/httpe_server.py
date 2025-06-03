@@ -10,6 +10,7 @@ import httpe_keys
 import httpe_secure as sec
 import uuid
 import base64
+import httpe_cert
 class Httpe:
     def __init__(self,server_host="127.0.0.1",Port=8080):
         self.routes = {}
@@ -71,8 +72,12 @@ class Httpe:
             user_id = sec.decrypt_user_id(user_id_enc,httpe_keys.get_private_key(True))
             token = self._create_token(user_id)
             token_enc = sec.fernet_encrypt(json.dumps(token),httpe_keys.get_master_key())
+            certificate = httpe_cert.create_corticate(self.host,10,httpe_keys.get_public_key(True))
+            certificate_enc = sec.fernet_encrypt(json.dumps(certificate),aes_key)
+            ret_data = {"token":token_enc,"certificate":certificate_enc}
+
             httpe_keys.set_user_key(aes_key,user_id)
-            res = Response(token_enc)
+            res = Response(json.dumps(ret_data))
             return res
         except Exception as e:
             print(e)

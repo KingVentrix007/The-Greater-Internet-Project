@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime,timezone
 from cryptography.fernet import Fernet
 import httpe_secure as sec
+import httpe_cert
 import json
 
 class HttpeResponse:
@@ -157,8 +158,17 @@ class HttpeClient:
         if(parsed_response.status != "200 OK"):
             print("Inti error")
             return #Handle errors
-        enc_token = parsed_response.body()
-        print(enc_token)
+        parsed_res = parsed_response.body()
+        parsed_res = json.loads(parsed_res)
+        # print(enc_token)
+        enc_token = parsed_res["token"]
+        enc_cert  = parsed_res["certificate"]
+        cert = sec.fernet_decrypt(enc_cert,self._aes_key)
+        valid_cert = httpe_cert.verify_cert(cert,self.host,"public.pem",self._server_rsa_pub_key)
+        if(valid_cert != True):
+            print("Cert invalid")
+            return # Handle error
+        
         # Check for valid cert
         self._token = enc_token
         self._aes_key_enc = enc_aes_key

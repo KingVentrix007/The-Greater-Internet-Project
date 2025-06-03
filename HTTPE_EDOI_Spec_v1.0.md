@@ -61,6 +61,7 @@ END
     - Decrypted client ID
     - Timestamp
     - Server-generated session ID
+3.1. Server sends back certifcate with token for client verification
 
 #### Token-Based Requests
 
