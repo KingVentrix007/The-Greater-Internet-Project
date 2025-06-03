@@ -12,7 +12,58 @@ class HttpeClient:
         self._client_id = None
         self._aes_key = None
         self._server_rsa_pub_key = None
+        self._aes_key_enc = None
+        self._user_id_enc = None
+        self._enc_mode_active = False
     def send_request(self, method, location, headers=None, body=""):
+        if(self._enc_mode_active == False):
+            return self._send_request_normal(method, location, headers, body)
+        else:
+            return self._send_request_enc(method, location, headers, body)
+    def _send_request_enc(self, method, location, headers=None,body=""):
+        if headers is None:
+            headers = {}
+
+        # Add standard HTTPE headers
+        headers.setdefault("client_id", self._client_id)
+        headers.setdefault("token", "None")
+        headers.setdefault("packet_id", str(uuid.uuid4()))
+        headers.setdefault("is_com_setup", False)
+        headers.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
+        headers.setdefault("compressions", "false")
+        
+        request_lines_to_enc = [
+            
+            f"METHOD:{method.upper()}",
+            f"LOCATION:{location}",
+            "HEADERS:"
+        ]
+        for key, value in headers.items():
+            request_lines_to_enc.append(f"{key}:{value}")
+        request_lines_to_enc.append("END")
+
+        if method.upper() == "POST":
+            print("POST")
+            request_lines_to_enc.append(body)
+            request_lines_to_enc.append("END")
+        request_data = "\n".join(request_lines_to_enc)
+        enc_request_data = sec.fernet_encrypt(request_data,self._aes_key)
+        packet_start = [
+            "VERSION:HTTPE/1.0",
+            "TYPE:REQ_ENC",
+            f"ID:{self._user_id_enc}",
+            f"{enc_request_data}",
+            "END"
+            ]
+        data_to_send = "\n".join(packet_start)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.host, self.port))
+            s.sendall(data_to_send.encode())
+            response = self._receive_full_response(s)
+            ret_res = HttpeResponse(response)
+            return ret_res
+
+    def _send_request_normal(self, method, location, headers=None, body=""):
         if headers is None:
             headers = {}
 
@@ -47,7 +98,6 @@ class HttpeClient:
             response = self._receive_full_response(s)
             ret_res = HttpeResponse(response)
             return ret_res
-
     def _receive_full_response(self, s):
         chunks = []
         while True:
@@ -85,18 +135,25 @@ class HttpeClient:
             "VERSION:HTTPE/1.0",
             "TYPE:SHARE_AES",
             "METHOD:POST",
-            "HEADERS"
+            "HEADERS:"
         ]
-        enc_aes_key = sec.rsa_encrypt_key(self._aes_key,self._server_rsa_pub_key)
-        enc_user_id = sec.fernet_encrypt(str(self._client_id),self._aes_key.encode("utf-8"))
+        print(self._server_rsa_pub_key,"\n\n",type(self._server_rsa_pub_key))
+        enc_aes_key = sec.rsa_encrypt_key(self._aes_key.encode(),(self._server_rsa_pub_key))
+        enc_user_id = sec.encrypt_user_id(str(self._client_id),self._server_rsa_pub_key)
         headers = {}
-        headers.setdefault("aes",enc_aes_key)
+        headers.setdefault("aes_key",enc_aes_key)
         headers.setdefault("user_id",enc_user_id)
         for key, value in headers.items():
             request_lines.append(f"{key}:{value}")
         request_lines.append("END")
         request_data = "\n".join(request_lines)
         parsed_response = self._connection_send(request_data)
+        if(parsed_response.status != "200 OK"):
+            print("Inti error")
+            return #Handle errors
+        self._aes_key_enc = enc_aes_key
+        self._user_id_enc = enc_user_id
+        self._enc_mode_active = True
 
 
         
@@ -109,3 +166,8 @@ client = HttpeClient()
 
 # Simple GET
 response = client._init_connection()
+print("NEXT")
+data = {"data":"world"}
+res = client.send_request("POST","/PTS",body=json.dumps(data))
+print(res.status)
+print(res.body())

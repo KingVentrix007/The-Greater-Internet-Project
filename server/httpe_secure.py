@@ -62,3 +62,31 @@ def decrypt_payload(json_payload, rsa_priv_pem, password=None):
     data = json.loads(json_payload)
     fernet_key = rsa_decrypt_key(data["rsa_key"], rsa_priv_pem, password)
     return fernet_decrypt(data["ciphertext"], fernet_key)
+
+
+# Encrypt UUID with RSA Public Key
+def encrypt_user_id(uuid_str, rsa_pub_pem):
+    public_key = load_public_key(rsa_pub_pem)
+    encrypted = public_key.encrypt(
+        uuid_str.encode(),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    return base64.b64encode(encrypted).decode()
+
+# Decrypt UUID with RSA Private Key
+def decrypt_user_id(encrypted_uuid_b64, rsa_priv_pem, password=None):
+    encrypted = base64.b64decode(encrypted_uuid_b64)
+    private_key = load_private_key(rsa_priv_pem, password)
+    decrypted = private_key.decrypt(
+        encrypted,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    return decrypted.decode()

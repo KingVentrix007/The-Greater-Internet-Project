@@ -1,4 +1,4 @@
-class _Response:
+class Response:
     def __init__(self, body="", status="200 OK", headers=None):
         self.body = body
         self.status = status
@@ -16,7 +16,7 @@ class _Response:
         response_lines.append(self.body)
         return "\n".join(response_lines)
     def error(message="Internal Server Error", status="500 INTERNAL SERVER ERROR"):
-        return _Response(body=message, status=status)
+        return Response(body=message, status=status)
 
 import json
 

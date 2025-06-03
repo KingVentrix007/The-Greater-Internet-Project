@@ -2,6 +2,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 import json
 
+user_keys = {}
+
 # Generate RSA private key (2048 bits)
 private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
@@ -34,3 +36,12 @@ def get_private_key(string=True):
         return private_key_str
     else:
         return private_key
+
+def set_user_key(user_key,user_id):
+    global user_keys
+    if(user_key):
+        user_keys[user_id] = user_key
+
+def get_user_key(user_id):
+    global user_keys
+    return user_keys[user_id]
