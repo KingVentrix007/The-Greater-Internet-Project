@@ -7,7 +7,7 @@ HEADERS:
 is_com_setup:true/false
 client_id:number/None: ONly non if not REQ_ENC
 packet_id:uuid
-timestamp:
+timestamp: python(datetime.now(timezone.utc).isoformat())
 compressions:true/false
 END
 [POST DATA]

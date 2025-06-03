@@ -21,8 +21,8 @@ HEADERS:
 is_com_setup:true/false
 client_id:number/None: Only None when not use EDOI
 packet_id:uuid
-timestamp:
-compressions:true/false
+timestamp:python(datetime.now(timezone.utc).isoformat())
+compressions:true/false(not in demo yet, prob lightweight compressions algorthim)
 END
 [POST DATA]
 
@@ -37,6 +37,8 @@ LOCATION+HEADERS+METHOD in AES ENCRYPTED
 ID goes in Pre-header
 client_id: goes in header
 
+client_id is technically the excat same value as ID, ID is RSA encrypted. client_id is encrypted in header.
+
 ID MUST BE RSA encrypted. This is because each client has its OWN AES key that the server associates with the ID. meaning, the server must be able to decrypt the ID to know what AES key to us4
 
 ------
@@ -49,6 +51,10 @@ Step 3. All requests types should now include TYPE:REQ_ENC, unless endpoint is k
 Step 4. LOCATION/METHOD/HEADERS is now ALL AES_ENCRYPTED. VERSION is not. TYPE is not. ID is RSA encrypted
 Step 5. ALL server response to a type REQ_ENC should be AES encrypted(Currenlty not impmented in server demo code)
 
+EDOI v2:
+No Demo YET:
+After handshake: EDOI steps 1+2
+server sends back AES encypted token(decrypted ID+timestamp+server created ID) prob json format
 
 Recomendations:
 
@@ -65,3 +71,4 @@ no timestamp -> No connection
 timestamp 2+ min old -> No connection
 packet_id is duplicate -> No connection
 client_id not in server registry -> No connection
+client_id != ID -> No connection
