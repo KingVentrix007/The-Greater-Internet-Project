@@ -1,9 +1,10 @@
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
+from cryptography.fernet import Fernet
 import json
 
 user_keys = {}
-
+server_master_aes = Fernet.generate_key()
 # Generate RSA private key (2048 bits)
 private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
