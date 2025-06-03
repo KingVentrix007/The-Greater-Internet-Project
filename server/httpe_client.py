@@ -159,6 +159,7 @@ class HttpeClient:
             return #Handle errors
         enc_token = parsed_response.body()
         print(enc_token)
+        # Check for valid cert
         self._token = enc_token
         self._aes_key_enc = enc_aes_key
         self._user_id_enc = enc_user_id
