@@ -1,3 +1,4 @@
+import os
 import socket
 from threading import Thread
 import threading
@@ -8,6 +9,7 @@ from datetime import datetime, timezone, timedelta
 import httpe_keys
 import httpe_secure as sec
 import uuid
+import base64
 class Httpe:
     def __init__(self,server_host="127.0.0.1",Port=8080):
         self.routes = {}
@@ -43,7 +45,8 @@ class Httpe:
             except KeyboardInterrupt:
                 print("\nShutting down HTTPE server...")
     def _create_token(self, user_id):
-        token = {"user_id":user_id,"session_id":str(uuid.uuid4()),"timestamp":datetime.now(timezone.utc).isoformat()}
+        
+        token = {"user_id":user_id,"session_id":str(uuid.uuid4()),"timestamp":datetime.now(timezone.utc).isoformat(),"noise":base64.b64encode(os.urandom(128)).decode()}
         self.valid_token_ids_per_user[user_id] = token["session_id"]
         self.valid_token_ids.append(token["session_id"])
         return token
@@ -57,16 +60,13 @@ class Httpe:
             return False
         elif self.valid_token_ids_per_user[user_id] != token["session_id"]:
             return False
-        elif now - timestamp > timedelta(minutes=2):
+        elif now - timestamp > timedelta(minutes=20):
             return False
         return True
     def _handle_share_aes(self,data:dict):
         try:
             aes_key_enc = data.get("aes_key",None)
             user_id_enc = data.get("user_id",None)
-            
-            # print(aes_key_enc)
-            # print(user_id_enc)
             aes_key = sec.rsa_decrypt_key(aes_key_enc,httpe_keys.get_private_key(True))
             user_id = sec.decrypt_user_id(user_id_enc,httpe_keys.get_private_key(True))
             token = self._create_token(user_id)
@@ -77,16 +77,12 @@ class Httpe:
         except Exception as e:
             print(e)
     def _handle_enc_request(self,data:str):
-        # print(data)
         user_id_enc = None
         aes_key_to_use = None
         found_id = False
         enc_data = None
         for line in data:
             if line.startswith("TOKEN:"):
-                #TODO Max this decrypt and validate the token
-                # user_id_enc = line.split(":", 1)[1].strip()
-                # user_id = sec.decrypt_user_id(user_id_enc,httpe_keys.get_private_key())
                 enc_token = line.split(":", 1)[1].strip()
                 try:
                     plain_token = sec.fernet_decrypt(enc_token,httpe_keys.get_master_key())
@@ -97,6 +93,7 @@ class Httpe:
                 # print(json_token)
                 user_id = json_token["user_id"]
                 if(self._validate_token(json_token,user_id) == False):
+                    print("NONE")
                     return None
                 aes_key_to_use = httpe_keys.get_user_key(user_id)
                 found_id = True
@@ -184,7 +181,8 @@ class Httpe:
                     conn.sendall(res_data.serialize().encode())
                     return
                 elif(initial_packet_type == "REQ_ENC"):
-                    new_lines,user_id_from_token =  self._handle_enc_request(lines).splitlines()
+                    new_lines,user_id_from_token =  self._handle_enc_request(lines)
+                    new_lines = new_lines.splitlines()
                     is_encrypted_packet = True
                     headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(new_lines)
             packet_id = headers.get("packet_id",None)
@@ -234,7 +232,7 @@ class Httpe:
             conn.sendall(response.encode())
 
         except Exception as e:
-            err_res =  Response.error(message=f"Error With Client{e}",status="400 BAD REQUEST")
+            err_res =  Response.error(message=f"Error With Client{e}",status="400 SYSTEM ERROR")
             conn.sendall(err_res.serialize().encode())
             return
         finally:
