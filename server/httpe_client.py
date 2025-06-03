@@ -10,7 +10,7 @@ class HttpeResponse:
         self.raw_response = raw_response.strip()
         self.headers = {}
         self._body_str = ""
-
+        self._token = None
         self._parse()
 
     def _parse(self):
@@ -57,17 +57,13 @@ class HttpeClient:
     def send_request(self, method, location, headers=None, body="",use_httpe=True):
         if(self.secure == False and use_httpe == True):
             self._init_connection()
-        if(self._enc_mode_active == False and use_httpe == False):
-            return self._send_request_normal(method, location, headers, body)
-        else:
-            return self._send_request_enc(method, location, headers, body)
+        return self._send_request_enc(method, location, headers, body)
     def _send_request_enc(self, method, location, headers=None,body=""):
         if headers is None:
             headers = {}
 
         # Add standard HTTPE headers
         headers.setdefault("client_id", self._client_id)
-        headers.setdefault("token", "None")
         headers.setdefault("packet_id", str(uuid.uuid4()))
         headers.setdefault("is_com_setup", False)
         headers.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
@@ -92,7 +88,7 @@ class HttpeClient:
         packet_start = [
             "VERSION:HTTPE/1.0",
             "TYPE:REQ_ENC",
-            f"ID:{self._user_id_enc}",
+            f"TOKEN:{self._token}",
             f"{enc_request_data}",
             "END"
             ]
@@ -100,42 +96,6 @@ class HttpeClient:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((self.host, self.port))
             s.sendall(data_to_send.encode())
-            response = self._receive_full_response(s)
-            ret_res = HttpeResponse(response)
-            return ret_res
-
-    def _send_request_normal(self, method, location, headers=None, body=""):
-        if headers is None:
-            headers = {}
-
-        # Add standard HTTPE headers
-        headers.setdefault("client_id", "None")
-        headers.setdefault("token", "None")
-        headers.setdefault("packet_id", str(uuid.uuid4()))
-        headers.setdefault("is_com_setup", False)
-        headers.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
-        headers.setdefault("compressions", "false")
-
-        request_lines = [
-            "VERSION:HTTPE/1.0",
-            f"METHOD:{method.upper()}",
-            f"LOCATION:{location}",
-            "HEADERS:"
-        ]
-        for key, value in headers.items():
-            request_lines.append(f"{key}:{value}")
-        request_lines.append("END")
-
-        if method.upper() == "POST":
-            print("POST")
-            request_lines.append(body)
-            request_lines.append("END")
-
-        request_data = "\n".join(request_lines)
-        print(request_data)
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.host, self.port))
-            s.sendall(request_data.encode())
             response = self._receive_full_response(s)
             ret_res = HttpeResponse(response)
             return ret_res
@@ -199,6 +159,7 @@ class HttpeClient:
             return #Handle errors
         enc_token = parsed_response.body()
         print(enc_token)
+        self._token = enc_token
         self._aes_key_enc = enc_aes_key
         self._user_id_enc = enc_user_id
         self._enc_mode_active = True

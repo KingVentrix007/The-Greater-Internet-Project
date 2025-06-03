@@ -13,6 +13,9 @@ class Httpe:
         self.routes = {}
         self.host = server_host
         self.port = Port
+        self.valid_token_ids = []
+        self.valid_token_ids_per_user = {}
+
 
     def path(self, route, method="GET",requires_enc=True):
         def decorator(func):
@@ -41,7 +44,22 @@ class Httpe:
                 print("\nShutting down HTTPE server...")
     def _create_token(self, user_id):
         token = {"user_id":user_id,"session_id":str(uuid.uuid4()),"timestamp":datetime.now(timezone.utc).isoformat()}
+        self.valid_token_ids_per_user[user_id] = token["session_id"]
+        self.valid_token_ids.append(token["session_id"])
         return token
+    def _validate_token(self, token,user_id):
+        token_time = token['timestamp']
+        timestamp = datetime.fromisoformat(token_time)
+        now = datetime.now(timezone.utc)
+        if token["user_id"] != user_id:
+            return False
+        elif token["session_id"] not in self.valid_token_ids:
+            return False
+        elif self.valid_token_ids_per_user[user_id] != token["session_id"]:
+            return False
+        elif now - timestamp > timedelta(minutes=2):
+            return False
+        return True
     def _handle_share_aes(self,data:dict):
         try:
             aes_key_enc = data.get("aes_key",None)
@@ -65,10 +83,21 @@ class Httpe:
         found_id = False
         enc_data = None
         for line in data:
-            if line.startswith("ID:"):
+            if line.startswith("TOKEN:"):
                 #TODO Max this decrypt and validate the token
-                user_id_enc = line.split(":", 1)[1].strip()
-                user_id = sec.decrypt_user_id(user_id_enc,httpe_keys.get_private_key())
+                # user_id_enc = line.split(":", 1)[1].strip()
+                # user_id = sec.decrypt_user_id(user_id_enc,httpe_keys.get_private_key())
+                enc_token = line.split(":", 1)[1].strip()
+                try:
+                    plain_token = sec.fernet_decrypt(enc_token,httpe_keys.get_master_key())
+                    json_token = json.loads(plain_token)
+                except Exception as e:
+                    print(e)
+                    return None
+                # print(json_token)
+                user_id = json_token["user_id"]
+                if(self._validate_token(json_token,user_id) == False):
+                    return None
                 aes_key_to_use = httpe_keys.get_user_key(user_id)
                 found_id = True
             elif(found_id == True):
@@ -76,7 +105,7 @@ class Httpe:
                 break
         decrypted_data = sec.fernet_decrypt(enc_data,aes_key_to_use)
         # print(decrypted_data)
-        return decrypted_data
+        return decrypted_data,user_id
     def _handle_packet_contents(self,lines):
         headers = {}
         version = None
@@ -139,6 +168,7 @@ class Httpe:
             headers = {}
             body = ""
             is_encrypted_packet = False
+            user_id_from_token = None
             # print(text)
             reading_headers = False
             headers,version,is_initial_packet,initial_packet_type,method,location,body  = self._handle_packet_contents(lines)
@@ -154,10 +184,15 @@ class Httpe:
                     conn.sendall(res_data.serialize().encode())
                     return
                 elif(initial_packet_type == "REQ_ENC"):
-                    new_lines =  self._handle_enc_request(lines).splitlines()
+                    new_lines,user_id_from_token =  self._handle_enc_request(lines).splitlines()
                     is_encrypted_packet = True
                     headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(new_lines)
             packet_id = headers.get("packet_id",None)
+            header_user_id = headers.get("client_id",None)
+            if(str(header_user_id) != str(user_id_from_token)):
+                err_res =  Response.error(message="STOLEN TOKEN",status="400 BAD STOLEN")
+                conn.sendall(err_res.serialize().encode())
+                return
             if(packet_id == None):
                 err_res =  Response.error(message="packet_id missing",status="400 BAD REQUEST")
                 conn.sendall(err_res.serialize().encode())

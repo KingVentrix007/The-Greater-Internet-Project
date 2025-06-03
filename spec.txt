@@ -52,9 +52,10 @@ Step 4. LOCATION/METHOD/HEADERS is now ALL AES_ENCRYPTED. VERSION is not. TYPE i
 Step 5. ALL server response to a type REQ_ENC should be AES encrypted(Currenlty not impmented in server demo code)
 
 EDOI v2:
-No Demo YET:
+
 After handshake: EDOI steps 1+2
-server sends back AES encypted token(decrypted ID+timestamp+server created ID) prob json format
+server sends back AES encypted token(decrypted ID+timestamp+server created ID) in json format
+ID is replaced with TOKEN, and the token is encypted with a master AES key on the server. the sevrer checks if it has token id matche sthe svaed id that the server assiged to the cleint id
 
 Recomendations:
 
