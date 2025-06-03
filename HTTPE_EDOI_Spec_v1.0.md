@@ -55,7 +55,7 @@ END
 
 #### Handshake Sequence
 
-1. Client requests the server’s RSA key and certificate (same as v1).
+1. Client requests the server’s RSA key (same as v1).
 2. Client sends AES key and user ID (UUIDv4), both RSA-encrypted.
 3. Server sends back an AES-encrypted token containing:
     - Decrypted client ID
@@ -135,5 +135,12 @@ Connection is rejected if:
 - Error codes
 - Compression algorithms
 - Lease expiration and connection auto-termination
-- Complete encrypted response handling
+
+
+## Details
+
+EDOI(v2) and HTTPE(v1) aim to address some concerns with https, namely the following:
+No downgrade abilities
+Blocking Metadata visibity be encrypting endpoints,contents,and other data
+
 

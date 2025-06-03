@@ -94,12 +94,12 @@ class Httpe:
                     json_token = json.loads(plain_token)
                 except Exception as e:
                     print(e)
-                    return None
+                    return None,None
                 # print(json_token)
                 user_id = json_token["user_id"]
                 if(self._validate_token(json_token,user_id) == False):
                     print("NONE")
-                    return None
+                    return None,None
                 aes_key_to_use = httpe_keys.get_user_key(user_id)
                 found_id = True
             elif(found_id == True):
@@ -187,6 +187,10 @@ class Httpe:
                     return
                 elif(initial_packet_type == "REQ_ENC"):
                     new_lines,user_id_from_token =  self._handle_enc_request(lines)
+                    if(new_lines == None or user_id_from_token == None):
+                        err_res =  Response.error(message=f"Error With Client{e}",status="400 DECRYPTION ERROR")
+                        conn.sendall(err_res.serialize().encode())
+                        return
                     new_lines = new_lines.splitlines()
                     is_encrypted_packet = True
                     headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(new_lines)

@@ -7,14 +7,21 @@ import httpe_cert
 import json
 
 class HttpeResponse:
+    """Parses custom HTTP-like responses in the format: headers + END + body"""
+
     def __init__(self, raw_response: str):
         self.raw_response = raw_response.strip()
         self.headers = {}
         self._body_str = ""
-        self._token = None
+        self.status = None
+        self.status_code = -1
+        self.content_length = -1
         self._parse()
 
     def _parse(self):
+        if "END" not in self.raw_response:
+            raise ValueError("Malformed response: missing 'END' delimiter")
+
         header_section, body_section = self.raw_response.split("END", 1)
         header_lines = header_section.strip().splitlines()
         self._body_str = body_section.strip()
@@ -25,22 +32,43 @@ class HttpeResponse:
                 self.headers[key.strip()] = value.strip()
 
         self.status = self.headers.get("STATUS")
-        self.content_length = int(self.headers.get("CONTENT_LENGTH", -1))
+
+        try:
+            self.status_code = int(self.headers.get("STATUS_CODE", -1))
+        except (ValueError, TypeError):
+            self.status_code = -1
+
+        try:
+            self.content_length = int(self.headers.get("CONTENT_LENGTH", -1))
+        except (ValueError, TypeError):
+            self.content_length = -1
+
+    @property
+    def text(self) -> str:
+        return self._body_str
+
+    @property
+    def content(self) -> bytes:
+        return self._body_str.encode("utf-8")
 
     def body(self) -> str:
         return self._body_str
-    def _set_body(self, body: str) -> None:
-        self._body_str = body
+
     def json(self) -> dict:
         try:
             return json.loads(self._body_str)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in response body: {e}")
 
+    @property
+    def ok(self) -> bool:
+        return 200 <= self.status_code < 300
+
+    def __getitem__(self, key):
+        return self.headers.get(key)
+
     def __repr__(self):
         return f"<HttpeResponse status={self.status} content_length={self.content_length}>"
-
-
 
 
 
@@ -159,8 +187,8 @@ class HttpeClient:
         request_data = "\n".join(request_lines)
         parsed_response = self._connection_send(request_data)
 
-        if(parsed_response.status != "200 OK"):
-            print("Inti error")
+        if(parsed_response.status_code != 200):
+            print("Failed to get share aes key")
             return #Handle errors
         parsed_res = parsed_response.body()
         parsed_res = json.loads(parsed_res)
@@ -170,8 +198,8 @@ class HttpeClient:
         cert = sec.fernet_decrypt(enc_cert,self._aes_key)
         valid_cert = httpe_cert.verify_cert(cert,self.host,"public.pem",self._server_rsa_pub_key)
         if(valid_cert != True):
-            print("Cert invalid")
-            return # Handle error
+            print("Failed to get a valid certificate")
+            return 
         
         # Check for valid cert
         self._token = enc_token
