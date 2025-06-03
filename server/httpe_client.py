@@ -193,9 +193,12 @@ class HttpeClient:
         request_lines.append("END")
         request_data = "\n".join(request_lines)
         parsed_response = self._connection_send(request_data)
+
         if(parsed_response.status != "200 OK"):
             print("Inti error")
             return #Handle errors
+        enc_token = parsed_response.body()
+        print(enc_token)
         self._aes_key_enc = enc_aes_key
         self._user_id_enc = enc_user_id
         self._enc_mode_active = True

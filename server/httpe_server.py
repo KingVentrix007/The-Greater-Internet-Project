@@ -7,6 +7,7 @@ from httpe_class import Response
 from datetime import datetime, timezone, timedelta
 import httpe_keys
 import httpe_secure as sec
+import uuid
 class Httpe:
     def __init__(self,server_host="127.0.0.1",Port=8080):
         self.routes = {}
@@ -38,16 +39,22 @@ class Httpe:
                         continue  # Allows checking for KeyboardInterrupt
             except KeyboardInterrupt:
                 print("\nShutting down HTTPE server...")
+    def _create_token(self, user_id):
+        token = {"user_id":user_id,"session_id":str(uuid.uuid4()),"timestamp":datetime.now(timezone.utc).isoformat()}
+        return token
     def _handle_share_aes(self,data:dict):
         try:
             aes_key_enc = data.get("aes_key",None)
             user_id_enc = data.get("user_id",None)
+            
             # print(aes_key_enc)
             # print(user_id_enc)
             aes_key = sec.rsa_decrypt_key(aes_key_enc,httpe_keys.get_private_key(True))
             user_id = sec.decrypt_user_id(user_id_enc,httpe_keys.get_private_key(True))
+            token = self._create_token(user_id)
+            token_enc = sec.fernet_encrypt(json.dumps(token),httpe_keys.get_master_key())
             httpe_keys.set_user_key(aes_key,user_id)
-            res = Response("Success")
+            res = Response(token_enc)
             return res
         except Exception as e:
             print(e)

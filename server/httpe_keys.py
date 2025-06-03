@@ -46,3 +46,6 @@ def set_user_key(user_key,user_id):
 def get_user_key(user_id):
     global user_keys
     return user_keys[user_id]
+def get_master_key():
+    global server_master_aes
+    return server_master_aes
