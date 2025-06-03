@@ -66,6 +66,7 @@ class Httpe:
         enc_data = None
         for line in data:
             if line.startswith("ID:"):
+                #TODO Max this decrypt and validate the token
                 user_id_enc = line.split(":", 1)[1].strip()
                 user_id = sec.decrypt_user_id(user_id_enc,httpe_keys.get_private_key())
                 aes_key_to_use = httpe_keys.get_user_key(user_id)
