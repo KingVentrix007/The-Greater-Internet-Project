@@ -7,7 +7,7 @@ import httpe_cert           # Must have verify_cert(cert, host, pem_path, pubkey
 import json
 
 class HttpeResponse:
-    """Parses custom HTTP-like responses in the format: headers + END + body"""
+    """Parses HTTPE responses in the format: headers + END + body"""
 
     def __init__(self, raw_response: str):
         self.raw_response = raw_response.strip()
@@ -99,26 +99,32 @@ class HttpeClient:
             return None
 
     def _send_request_enc(self, method, location, headers=None, body=""):
+        # print(type(body),"|",type(""))
+        if(type(body) != type("")):
+            raise TypeError(f"Body must be of type str, current type is {type(body)}")
         """Send an encrypted packet after key exchange"""
         if headers is None:
             headers = {}
 
         try:
-            headers.setdefault("client_id", self._client_id)
+            headers.setdefault("client_id", str(self._client_id))
             headers.setdefault("packet_id", str(uuid.uuid4()))
             headers.setdefault("is_com_setup", False)
             headers.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
             headers.setdefault("compressions", "false")
 
-            request_lines = [f"METHOD:{method.upper()}", f"LOCATION:{location}", "HEADERS:"]
-            request_lines += [f"{k}:{v}" for k, v in headers.items()]
+            request_lines = [f"METHOD:{method.upper()}", f"LOCATION:{str(location)}", "HEADERS:"]
+            request_lines += [f"{str(k)}:{str(v)}" for k, v in headers.items()]
             request_lines.append("END")
 
             if method.upper() == "POST":
                 request_lines.append(body)
                 request_lines.append("END")
-
-            plain_request = "\n".join(request_lines)
+            # print(request_lines)
+            try:
+                plain_request = "\n".join(request_lines)
+            except Exception as e:
+                print(f"_send_request_enc plain_text error {e}")
             enc_request = sec.fernet_encrypt(plain_request, self._aes_key)
 
             packet = [
@@ -128,12 +134,17 @@ class HttpeClient:
                 enc_request,
                 "END"
             ]
-            full_data = "\n".join(packet)
-
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((self.host, self.port))
-                s.sendall(full_data.encode())
-                response = self._receive_full_response(s)
+            try:
+                full_data = "\n".join(packet)
+            except Exception as e:
+                print(f"full_data error {e}")
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect((self.host, self.port))
+                    s.sendall(full_data.encode())
+                    response = self._receive_full_response(s)
+            except Exception as e:
+                print(f"_send_request_enc send error {e}")
 
             res = HttpeResponse(response)
             decrypted_body = sec.fernet_decrypt(res.body(), self._aes_key)

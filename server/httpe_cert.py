@@ -8,7 +8,13 @@ from cryptography.hazmat.primitives.asymmetric import padding
 import json
 
 
-def create_corticate(hostname="localhost",valid_time_days=100,cert_pub_key=None,private_key_path="private_key.pem") -> dict:
+def create_corticate(hostname="localhost",valid_time_days=100,cert_pub_key=None,private_key_path="private_key.pem",save=False,load=False) -> dict:
+    if(load == True and save == True):
+        return None
+    if(load == True):
+        with ("cert.crte","r") as f:
+            cert = json.load(f)
+            return cert
     private_key = load_private_key(private_key_path)
     cert_internal = {
     "hostname": hostname,
@@ -23,6 +29,13 @@ def create_corticate(hostname="localhost",valid_time_days=100,cert_pub_key=None,
     ),
     hashes.SHA256())
     cert = {"cert": cert_internal,"hash":hashed_cert.hex(),"signature":signature.hex()}
+    try:
+        if(save == True):
+            with open("cert.crte","w") as f:
+                cert_plain = json.dumps(cert)
+                f.write(cert_plain)
+    except Exception as e:
+        print("cert saving error",e)
     return cert
 
 

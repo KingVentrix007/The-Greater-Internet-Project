@@ -74,7 +74,7 @@ class Httpe:
             user_id = sec.decrypt_user_id(user_id_enc,httpe_keys.get_private_key(True))
             token = self._create_token(user_id)
             token_enc = sec.fernet_encrypt(json.dumps(token),httpe_keys.get_master_key())
-            certificate = httpe_cert.create_corticate(self.host,10,httpe_keys.get_public_key(True))
+            certificate = httpe_cert.create_corticate(self.host,10,httpe_keys.get_public_key(True),save=True)
             certificate_enc = sec.fernet_encrypt(json.dumps(certificate),aes_key)
             ret_data = {"token":token_enc,"certificate":certificate_enc}
 
