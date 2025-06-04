@@ -3,7 +3,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.fernet import Fernet
 import json
 
-user_keys = {}
+# user_keys = {}
 server_master_aes = Fernet.generate_key()
 # Generate RSA private key (2048 bits)
 private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -26,6 +26,9 @@ public_pem = public_key.public_bytes(
 private_key_str = private_pem.decode('utf-8')
 public_key_str = public_pem.decode('utf-8')
 
+
+
+
 # Create a JSON-friendly dictionary
 def get_public_key(string=True):
     if(string):
@@ -38,14 +41,6 @@ def get_private_key(string=True):
     else:
         return private_key
 
-def set_user_key(user_key,user_id):
-    global user_keys
-    if(user_key):
-        user_keys[user_id] = user_key
-
-def get_user_key(user_id):
-    global user_keys
-    return user_keys[user_id]
 def get_master_key():
     global server_master_aes
     return server_master_aes

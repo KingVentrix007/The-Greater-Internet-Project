@@ -17,7 +17,7 @@ print(res2.status)
 print(res2.json())
 
 
-data = {"data":"45622"}
-res = client.send_request("POST","/PTS",body=data)
-print(res.status)
-print(res.json())
+# data = {"data":"45622"}
+# res = client.send_request("POST","/PTS",body=data)
+# print(res.status)
+# print(res.json())

@@ -19,6 +19,7 @@ class Httpe:
         self.valid_token_ids = []
         self.valid_token_ids_per_user = {}
         self._banned_ips = {}
+        self.user_keys = {}
     
 
 
@@ -78,7 +79,8 @@ class Httpe:
             certificate_enc = sec.fernet_encrypt(json.dumps(certificate),aes_key)
             ret_data = {"token":token_enc,"certificate":certificate_enc}
 
-            httpe_keys.set_user_key(aes_key,user_id)
+            # httpe_keys.set_user_key(aes_key,user_id)
+            self.user_keys[user_id] = aes_key
             res = Response(json.dumps(ret_data))
             return res
         except Exception as e:
@@ -102,7 +104,7 @@ class Httpe:
                 if(self._validate_token(json_token,user_id) == False):
                     print("NONE")
                     return None,None
-                aes_key_to_use = httpe_keys.get_user_key(user_id)
+                aes_key_to_use = self.user_keys[user_id]#httpe_keys.get_user_key(user_id)
                 found_id = True
             elif(found_id == True):
                 enc_data = line
@@ -232,7 +234,7 @@ class Httpe:
                         result = Response(str(result))  # fallback
                     response = result.serialize()
                 else:
-                    result = self._parse_handler(handler,sig,json.loads(body),httpe_keys.get_user_key(header_user_id))
+                    result = self._parse_handler(handler,sig,json.loads(body),self.user_keys[header_user_id])
                     if not isinstance(result, Response):
                         result = Response(str(result))  # fallback
                     response = result.serialize()
