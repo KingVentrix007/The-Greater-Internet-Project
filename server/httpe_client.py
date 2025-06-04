@@ -1,9 +1,9 @@
 import socket
 import uuid
-from datetime import datetime,timezone
+from datetime import datetime, timezone
 from cryptography.fernet import Fernet
-import httpe_secure as sec
-import httpe_cert
+import httpe_secure as sec  # Must have fernet_encrypt, fernet_decrypt, rsa_encrypt_key, encrypt_user_id
+import httpe_cert           # Must have verify_cert(cert, host, pem_path, pubkey)
 import json
 
 class HttpeResponse:
@@ -21,7 +21,7 @@ class HttpeResponse:
     def _parse(self):
         if "END" not in self.raw_response:
             raise ValueError("Malformed response: missing 'END' delimiter")
-        print(self.raw_response)
+
         header_section, body_section = self.raw_response.split("END", 1)
         header_lines = header_section.strip().splitlines()
         self._body_str = body_section.strip()
@@ -43,8 +43,9 @@ class HttpeResponse:
         except (ValueError, TypeError):
             self.content_length = -1
 
-    def _set_body(self, body):
+    def _set_body(self, body: str):
         self._body_str = body
+
     @property
     def text(self) -> str:
         return self._body_str
@@ -72,13 +73,12 @@ class HttpeResponse:
     def __repr__(self):
         return f"<HttpeResponse status={self.status} content_length={self.content_length}>"
 
-
-
 class HttpeClient:
+    """Custom secure HTTP-like client using symmetric AES and RSA for initial handshake"""
+
     def __init__(self, host="127.0.0.1", port=8080):
         self.host = host
         self.port = port
-        #Privates
         self._client_id = None
         self._aes_key = None
         self._server_rsa_pub_key = None
@@ -87,132 +87,149 @@ class HttpeClient:
         self._enc_mode_active = False
         self.secure = False
         self._token = None
-    def send_request(self, method, location, headers=None, body="",use_httpe=True):
-        if(self.secure == False and use_httpe == True):
-            self._init_connection()
-        return self._send_request_enc(method, location, headers, body)
-    def _send_request_enc(self, method, location, headers=None,body=""):
+
+    def send_request(self, method, location, headers=None, body="", use_httpe=True):
+        """Send an encrypted request to the server, establishing connection if needed"""
+        try:
+            if not self.secure and use_httpe:
+                self._init_connection()
+            return self._send_request_enc(method, location, headers, body)
+        except Exception as e:
+            print(f"Error in send_request: {e}")
+            return None
+
+    def _send_request_enc(self, method, location, headers=None, body=""):
+        """Send an encrypted packet after key exchange"""
         if headers is None:
             headers = {}
 
-        # Add standard HTTPE headers
-        headers.setdefault("client_id", self._client_id)
-        headers.setdefault("packet_id", str(uuid.uuid4()))
-        headers.setdefault("is_com_setup", False)
-        headers.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
-        headers.setdefault("compressions", "false")
-        
-        request_lines_to_enc = [
-            
-            f"METHOD:{method.upper()}",
-            f"LOCATION:{location}",
-            "HEADERS:"
-        ]
-        for key, value in headers.items():
-            request_lines_to_enc.append(f"{key}:{value}")
-        request_lines_to_enc.append("END")
+        try:
+            headers.setdefault("client_id", self._client_id)
+            headers.setdefault("packet_id", str(uuid.uuid4()))
+            headers.setdefault("is_com_setup", False)
+            headers.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
+            headers.setdefault("compressions", "false")
 
-        if method.upper() == "POST":
-            print("POST")
-            request_lines_to_enc.append(body)
-            request_lines_to_enc.append("END")
-        request_data = "\n".join(request_lines_to_enc)
-        enc_request_data = sec.fernet_encrypt(request_data,self._aes_key)
-        packet_start = [
-            "VERSION:HTTPE/1.0",
-            "TYPE:REQ_ENC",
-            f"TOKEN:{self._token}",
-            f"{enc_request_data}",
-            "END"
+            request_lines = [f"METHOD:{method.upper()}", f"LOCATION:{location}", "HEADERS:"]
+            request_lines += [f"{k}:{v}" for k, v in headers.items()]
+            request_lines.append("END")
+
+            if method.upper() == "POST":
+                request_lines.append(body)
+                request_lines.append("END")
+
+            plain_request = "\n".join(request_lines)
+            enc_request = sec.fernet_encrypt(plain_request, self._aes_key)
+
+            packet = [
+                "VERSION:HTTPE/1.0",
+                "TYPE:REQ_ENC",
+                f"TOKEN:{self._token}",
+                enc_request,
+                "END"
             ]
-        data_to_send = "\n".join(packet_start)
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.host, self.port))
-            s.sendall(data_to_send.encode())
-            response = self._receive_full_response(s)
-            ret_res = HttpeResponse(response)
-            enc_body = ret_res.body()
-            plain_body = sec.fernet_decrypt(enc_body,self._aes_key)
-            ret_res._set_body(plain_body)
-            return ret_res
-    def _receive_full_response(self, s):
-        chunks = []
-        while True:
-            chunk = s.recv(1024)
-            if not chunk:
-                break
-            chunks.append(chunk)
-        return b''.join(chunks).decode()
-    def _connection_send(self,request_data):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.host, self.port))
-            s.sendall(request_data.encode())
-            response = self._receive_full_response(s)
-            parsed_response = HttpeResponse(response)
-            # json_data = parsed_response.json()
-            return parsed_response
+            full_data = "\n".join(packet)
+
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((self.host, self.port))
+                s.sendall(full_data.encode())
+                response = self._receive_full_response(s)
+
+            res = HttpeResponse(response)
+            decrypted_body = sec.fernet_decrypt(res.body(), self._aes_key)
+            res._set_body(decrypted_body)
+            return res
+        except Exception as e:
+            print(f"Error in _send_request_enc: {e}")
+            return None
+
+    def _receive_full_response(self, s: socket.socket) -> str:
+        """Receives full data from socket"""
+        try:
+            chunks = []
+            while True:
+                chunk = s.recv(1024)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            return b''.join(chunks).decode()
+        except Exception as e:
+            raise ConnectionError(f"Error receiving data: {e}")
+
+    def _connection_send(self, request_data: str) -> HttpeResponse:
+        """Sends a raw request and returns parsed response"""
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((self.host, self.port))
+                s.sendall(request_data.encode())
+                response = self._receive_full_response(s)
+            return HttpeResponse(response)
+        except Exception as e:
+            print(f"Connection send failed: {e}")
+            return None
+
     def _init_connection(self):
-        #STEP 1 GET RSA PUBLIC KEY FROM SERVER
-        self._client_id = uuid.uuid4()
-        self._aes_key = Fernet.generate_key().decode('utf-8')
-        request_lines = [
-            "VERSION:HTTPE/1.0",
-            "TYPE:GET_RSA",
-            "METHOD:POST",
-        ]
-        request_lines.append("END")
-        request_data = "\n".join(request_lines)
+        """Initial secure handshake with server"""
+        try:
+            self._client_id = uuid.uuid4()
+            self._aes_key = Fernet.generate_key().decode()
 
-        parsed_response = self._connection_send(request_data)
-        json_data = parsed_response.json()
-        self._server_rsa_pub_key = json_data.get("rsa",None)
+            # Step 1: Get RSA public key
+            request = "\n".join([
+                "VERSION:HTTPE/1.0",
+                "TYPE:GET_RSA",
+                "METHOD:POST",
+                "END"
+            ])
+            rsa_response = self._connection_send(request)
+            if not rsa_response or not rsa_response.ok:
+                print("Failed to retrieve RSA public key from server.")
+                return
 
-        if(self._server_rsa_pub_key == None):
-            # Handle error
-            return
-        #STEP 2 SEND AES KEY To SERVER, RSA encrypted
-        #   Also sends ID in header
-        request_lines = [
-            "VERSION:HTTPE/1.0",
-            "TYPE:SHARE_AES",
-            "METHOD:POST",
-            "HEADERS:"
-        ]
-        print(self._server_rsa_pub_key,"\n\n",type(self._server_rsa_pub_key))
-        enc_aes_key = sec.rsa_encrypt_key(self._aes_key.encode(),(self._server_rsa_pub_key))
-        enc_user_id = sec.encrypt_user_id(str(self._client_id),self._server_rsa_pub_key)
-        headers = {}
-        headers.setdefault("aes_key",enc_aes_key)
-        headers.setdefault("user_id",enc_user_id)
-        for key, value in headers.items():
-            request_lines.append(f"{key}:{value}")
-        request_lines.append("END")
-        request_data = "\n".join(request_lines)
-        parsed_response = self._connection_send(request_data)
-        print(parsed_response.status_code)
-        if(parsed_response.status_code != 200):
-            print("Failed to get share aes key")
-            return #Handle errors
-        parsed_res = parsed_response.body()
-        parsed_res = json.loads(parsed_res)
-        # print(enc_token)
-        enc_token = parsed_res["token"]
-        enc_cert  = parsed_res["certificate"]
-        cert = sec.fernet_decrypt(enc_cert,self._aes_key)
-        valid_cert = httpe_cert.verify_cert(cert,self.host,"public.pem",self._server_rsa_pub_key)
-        if(valid_cert != True):
-            print("Failed to get a valid certificate")
-            return 
-        
-        # Check for valid cert
-        self._token = enc_token
-        self._aes_key_enc = enc_aes_key
-        self._user_id_enc = enc_user_id
-        self._enc_mode_active = True
+            json_data = rsa_response.json()
+            self._server_rsa_pub_key = json_data.get("rsa")
+            if not self._server_rsa_pub_key:
+                print("RSA key missing in server response.")
+                return
 
+            # Step 2: Send AES key and ID (RSA encrypted)
+            enc_aes = sec.rsa_encrypt_key(self._aes_key.encode(), self._server_rsa_pub_key)
+            enc_user_id = sec.encrypt_user_id(str(self._client_id), self._server_rsa_pub_key)
 
-        
-            
+            request_lines = [
+                "VERSION:HTTPE/1.0",
+                "TYPE:SHARE_AES",
+                "METHOD:POST",
+                "HEADERS:",
+                f"aes_key:{enc_aes}",
+                f"user_id:{enc_user_id}",
+                "END"
+            ]
+            aes_request = "\n".join(request_lines)
+            response = self._connection_send(aes_request)
 
+            if not response or not response.ok:
+                print("Server rejected AES key sharing.")
+                return
 
+            response_data = response.json()
+            enc_token = response_data.get("token")
+            enc_cert = response_data.get("certificate")
 
+            if not enc_token or not enc_cert:
+                print("Missing token or certificate in response.")
+                return
+
+            cert = sec.fernet_decrypt(enc_cert, self._aes_key)
+            if not httpe_cert.verify_cert(cert, self.host, "public.pem", self._server_rsa_pub_key):
+                print("Invalid certificate received from server.")
+                return
+
+            self._token = enc_token
+            self._aes_key_enc = enc_aes
+            self._user_id_enc = enc_user_id
+            self._enc_mode_active = True
+            self.secure = True
+
+        except Exception as e:
+            print(f"Handshake failed: {e}")
