@@ -9,4 +9,4 @@ data = {"data":"12234"}
 
 res = client.send_request("POST","/PTS",body=json.dumps(data))
 print(res.status)
-print(res.body())
+print(res.json())

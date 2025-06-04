@@ -18,7 +18,7 @@ class Httpe:
         self.port = Port
         self.valid_token_ids = []
         self.valid_token_ids_per_user = {}
-        self.redirects = {}
+        self._banned_ips = {}
     
 
 
@@ -157,7 +157,7 @@ class Httpe:
                         break
                 
             except Exception as e:
-                err_res =  Response.error(message="Internal Server Error",status="500 INTERNAL SERVER ERROR")
+                err_res =  Response.error(message="Internal Server Error",status_code=500)
                 conn.sendall(err_res.serialize().encode())
                 return
             # print(type(data))
@@ -190,7 +190,8 @@ class Httpe:
                 elif(initial_packet_type == "REQ_ENC"):
                     new_lines,user_id_from_token =  self._handle_enc_request(lines)
                     if(new_lines == None or user_id_from_token == None):
-                        err_res =  Response.error(message=f"Error With Client{e}",status="400 DECRYPTION ERROR")
+                        #! Remove {e} in prod
+                        err_res =  Response.error(message=f"Error With Client handling code: {e}",status_code=500)
                         conn.sendall(err_res.serialize().encode())
                         return
                     new_lines = new_lines.splitlines()
@@ -200,7 +201,7 @@ class Httpe:
             
             header_user_id = headers.get("client_id",None)
             if(str(header_user_id) != str(user_id_from_token)):
-                err_res =  Response.error(message="STOLEN TOKEN",status="400 BAD STOLEN")
+                err_res =  Response.error(message="Invalid Token",status_code=608)
                 conn.sendall(err_res.serialize().encode())
                 return
             if(packet_id == None):
@@ -210,13 +211,13 @@ class Httpe:
             print(f"HTTPE {method} {location} from {addr} with headers {headers}")
             timestamp = headers.get("timestamp", None)
             if(timestamp == None):
-                err_res =  Response.error(message="Invalid Timestamp",status="400 BAD REQUEST")
+                err_res =  Response.error(message="Invalid Timestamp",status_code=608)
                 conn.sendall(err_res.serialize().encode())
                 return
             timestamp = datetime.fromisoformat(timestamp)
             now = datetime.now(timezone.utc)
             if now - timestamp > timedelta(minutes=2):
-                err_res =  Response.error(message="Old Timestamp",status="400 BAD REQUEST")
+                err_res =  Response.error(message="Old Timestamp",status_code=607)
                 conn.sendall(err_res.serialize().encode())
                 return
             handler = self.routes.get((location, method,is_encrypted_packet))
@@ -244,7 +245,8 @@ class Httpe:
             conn.sendall(response.encode())
 
         except Exception as e:
-            err_res =  Response.error(message=f"Error With Client{e}",status="400 SYSTEM ERROR")
+            #! Remove {e} in prod
+            err_res =  Response.error(message=f"Error With Client handling code :{e}",status_code=500)
             conn.sendall(err_res.serialize().encode())
             return
         finally:
@@ -255,7 +257,7 @@ class Httpe:
             print(val,sig.parameters)
             if val not in sig.parameters:
                 
-                err_res =  Response.error(message="Invalid Parameter",status="400 BAD REQUEST")
+                err_res =  Response.error(message="Invalid Parameter",status_code=400)
         #         # 
                 return err_res
         for name, param in sig.parameters.items():
@@ -263,7 +265,7 @@ class Httpe:
             if(name in body):
                 kwargs[name] = body[name]
             else:
-                err_res =  Response.error(message="Invalid Parameter",status="400 BAD REQUEST")
+                err_res =  Response.error(message="Invalid Parameter",status_code=400)
                 # 
                 return err_res
         res_data = handler(**kwargs)
@@ -278,7 +280,9 @@ class Httpe:
     def redirect(self,redirect_url,status=302,**kwargs):
         paths = [key[0] for key in self.routes.keys()]
         if(redirect_url not in paths):
-            return "Error"
+            err_res =  Response.error(message="Redirect Url Invalid",status_code=500)
+            return err_res
+        
         else:
             body = {"redirect_url_endpoint":redirect_url}
             res = Response(json.dumps(body),status_code=status)
