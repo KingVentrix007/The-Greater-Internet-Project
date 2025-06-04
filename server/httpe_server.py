@@ -18,6 +18,8 @@ class Httpe:
         self.port = Port
         self.valid_token_ids = []
         self.valid_token_ids_per_user = {}
+        self.redirects = {}
+    
 
 
     def path(self, route, method="GET",requires_enc=True):
@@ -248,8 +250,6 @@ class Httpe:
         finally:
             conn.close()
     def _parse_handler(self, handler,sig,body,aes_key):
-        # for name, param in sig.parameters.items():
-        #     print(name, param.default, param.kind) 
         kwargs = {}
         for val in body.keys():
             print(val,sig.parameters)
@@ -269,3 +269,9 @@ class Httpe:
         res_data = handler(**kwargs)
         enc_data = sec.fernet_encrypt(json.dumps(res_data),aes_key)
         return enc_data
+    def redirect(self,redirect_url,status=302,**kwargs):
+        paths = [key[0] for key in self.routes.keys()]
+        if(redirect_url not in paths):
+            return "Error"
+        else:
+            pass
