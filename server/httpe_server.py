@@ -267,6 +267,12 @@ class Httpe:
                 # 
                 return err_res
         res_data = handler(**kwargs)
+        if(isinstance(res_data, Response)):
+            plain_b = res_data.body
+            error_code = res_data.status_code
+            enc_data = sec.fernet_encrypt(json.dumps(plain_b),aes_key)
+            enc_res =Response(enc_data,status_code=error_code)
+            return enc_res
         enc_data = sec.fernet_encrypt(json.dumps(res_data),aes_key)
         return enc_data
     def redirect(self,redirect_url,status=302,**kwargs):
@@ -274,4 +280,6 @@ class Httpe:
         if(redirect_url not in paths):
             return "Error"
         else:
-            pass
+            body = {"redirect_url_endpoint":redirect_url}
+            res = Response(json.dumps(body),status_code=status)
+            return res

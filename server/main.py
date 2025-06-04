@@ -7,7 +7,9 @@ def test_get():
 
 @server.path("/PTS",method="POST")
 def test_post(data):
-    print(f"{data}")
+    return server.redirect("/PTS2")
+@server.path("/PTS2",method="POST")
+def pts2(data):
     return data
 
 

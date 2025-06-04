@@ -1,6 +1,9 @@
+import httpe_error
 class Response:
     def __init__(self, body="", status="200 OK",status_code=200, headers=None):
         self.body = body
+        # if(status ==  None):
+        #     status = httpe_error.get_error_description(status_code)
         self.status = status
         self.status_code = status_code
 
@@ -10,7 +13,7 @@ class Response:
         response_lines = [
             "RESPONSE:HTTPE/1.0",
             f"STATUS:{self.status}",
-            f"STATUS_CODE:{self.status_code}"
+            f"STATUS_CODE:{self.status_code}",
             f"CONTENT_LENGTH:{len(self.body)}",
         ]
         for key, value in self.headers.items():

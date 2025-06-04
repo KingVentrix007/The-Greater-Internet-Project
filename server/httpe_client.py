@@ -21,7 +21,7 @@ class HttpeResponse:
     def _parse(self):
         if "END" not in self.raw_response:
             raise ValueError("Malformed response: missing 'END' delimiter")
-
+        print(self.raw_response)
         header_section, body_section = self.raw_response.split("END", 1)
         header_lines = header_section.strip().splitlines()
         self._body_str = body_section.strip()
@@ -43,6 +43,8 @@ class HttpeResponse:
         except (ValueError, TypeError):
             self.content_length = -1
 
+    def _set_body(self, body):
+        self._body_str = body
     @property
     def text(self) -> str:
         return self._body_str
@@ -84,6 +86,7 @@ class HttpeClient:
         self._user_id_enc = None
         self._enc_mode_active = False
         self.secure = False
+        self._token = None
     def send_request(self, method, location, headers=None, body="",use_httpe=True):
         if(self.secure == False and use_httpe == True):
             self._init_connection()
@@ -186,7 +189,7 @@ class HttpeClient:
         request_lines.append("END")
         request_data = "\n".join(request_lines)
         parsed_response = self._connection_send(request_data)
-
+        print(parsed_response.status_code)
         if(parsed_response.status_code != 200):
             print("Failed to get share aes key")
             return #Handle errors
