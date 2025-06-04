@@ -20,9 +20,39 @@ class Httpe:
         self.valid_token_ids_per_user = {}
         self._banned_ips = {}
         self.user_keys = {}
+        self.rsa_private_key = None
+        self.rsa_public_key_shared = None
+        self.master_aes_key = os.urandom(256) #TODO, move away from Fernet and use 256 bit aes
+        self.cert = None
+        self._load_keys()
+        self.load_cert()
     
 
-
+    def _load_keys(self):
+        try:
+            with open("private_key.edoi","r") as f:
+                key_data = json.load(f)
+                expire_data = key_data['valid_to']
+                #TODO check expire date
+                key = key_data["key"]
+                self.rsa_private_key = key
+            with open("public_key.edoi","r") as f:
+                key_data = json.load(f)
+                expire_data = key_data['valid_to']
+                #TODO check expire date
+                key = key_data["key"]
+                self.rsa_public_key_shared = key
+        except Exception as e:
+            print(f"Load keys error {e}")
+            raise Exception(e)
+        
+    def load_cert(self):
+        try:
+            with open("cert.crte","r") as f:
+                self.cert = json.load(f)
+        except Exception as e:
+            print(f"Load keys error {e}")
+            raise Exception(e)
     def path(self, route, method="GET",requires_enc=True):
         def decorator(func):
             self.routes[(route, method,requires_enc)] = func
@@ -71,11 +101,11 @@ class Httpe:
         try:
             aes_key_enc = data.get("aes_key",None)
             user_id_enc = data.get("user_id",None)
-            aes_key = sec.rsa_decrypt_key(aes_key_enc,httpe_keys.get_private_key(True))
-            user_id = sec.decrypt_user_id(user_id_enc,httpe_keys.get_private_key(True))
+            aes_key = sec.rsa_decrypt_key(aes_key_enc,self.rsa_private_key)
+            user_id = sec.decrypt_user_id(user_id_enc,self.rsa_private_key)
             token = self._create_token(user_id)
             token_enc = sec.fernet_encrypt(json.dumps(token),httpe_keys.get_master_key())
-            certificate = httpe_cert.create_corticate(self.host,10,httpe_keys.get_public_key(True),save=True)
+            certificate = self.cert
             certificate_enc = sec.fernet_encrypt(json.dumps(certificate),aes_key)
             ret_data = {"token":token_enc,"certificate":certificate_enc}
 
@@ -104,7 +134,7 @@ class Httpe:
                 if(self._validate_token(json_token,user_id) == False):
                     print("NONE")
                     return None,None
-                aes_key_to_use = self.user_keys[user_id]#httpe_keys.get_user_key(user_id)
+                aes_key_to_use = self.user_keys[user_id]
                 found_id = True
             elif(found_id == True):
                 enc_data = line
@@ -180,7 +210,7 @@ class Httpe:
             headers,version,is_initial_packet,initial_packet_type,method,location,body  = self._handle_packet_contents(lines)
             if(is_initial_packet == True):
                 if(initial_packet_type == "GET_RSA"):
-                    send_rsa_pub = {"rsa":httpe_keys.get_public_key()}
+                    send_rsa_pub = {"rsa":self.rsa_public_key_shared}
                     rsa_rez = Response(json.dumps(send_rsa_pub))
                     conn.sendall(rsa_rez.serialize().encode())
                     return

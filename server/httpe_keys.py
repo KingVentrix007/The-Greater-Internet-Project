@@ -1,5 +1,6 @@
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
+from datetime import datetime, timezone, timedelta
 from cryptography.fernet import Fernet
 import json
 
@@ -26,6 +27,15 @@ public_pem = public_key.public_bytes(
 private_key_str = private_pem.decode('utf-8')
 public_key_str = public_pem.decode('utf-8')
 
+def save_keys_rsa_keys():
+    private_key_save = {"valid_to":(datetime.now(timezone.utc) + timedelta(days=100)).isoformat(),"key":private_key_str}
+    public_key_save = {"valid_to":(datetime.now(timezone.utc) + timedelta(days=100)).isoformat(),"key":public_key_str}
+    with open("private_key.edoi", "w") as f:
+        json.dump(private_key_save, f)
+    with open("public_key.edoi", "w") as f:
+        json.dump(public_key_save,f)
+# def load_rsa_keys():
+
 
 
 
@@ -44,3 +54,6 @@ def get_private_key(string=True):
 def get_master_key():
     global server_master_aes
     return server_master_aes
+
+if __name__ == "__main__":
+    save_keys_rsa_keys()
