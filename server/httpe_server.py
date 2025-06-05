@@ -70,6 +70,8 @@ class Httpe:
                 key = key_data["key"]
                 self.rsa_public_key_shared = key
         except Exception as e:
+            self._log_internal_error(e)
+
             print(f"Load keys error {e}")
             raise Exception(e)
         
@@ -78,6 +80,8 @@ class Httpe:
             with open("cert.crte","r") as f:
                 self.cert = json.load(f)
         except Exception as e:
+            self._log_internal_error(e)
+
             print(f"Load keys error {e}")
             raise Exception(e)
     def path(self, route, method="GET",requires_enc=True):
@@ -144,12 +148,16 @@ class Httpe:
                 certificate_enc = temp_class.encrypt(json.dumps(certificate).encode())
                 ret_data = {"token":token_enc,"certificate":certificate_enc}
             except Exception as e:
+                self._log_internal_error(e)
+
                 print(f"Failed to enc {e}")
             # httpe_keys.set_user_key(aes_key,user_id)
             self.user_keys[user_id] = aes_key
             res = Response(json.dumps(ret_data))
             return res
         except Exception as e:
+            self._log_internal_error(e)
+
             print(f"_handle_share_aes error {e}")
     def _handle_enc_request(self,data:str):
         user_id_enc = None
@@ -164,6 +172,8 @@ class Httpe:
                     plain_token = self.master_aes_class.decrypt(enc_token)
                     json_token = json.loads(plain_token)
                 except Exception as e:
+                    self._log_internal_error(e)
+
                     return None,None
                 # print(json_token)
                 user_id = json_token["user_id"]
@@ -233,6 +243,7 @@ class Httpe:
                         break
                 
             except Exception as e:
+                self._log_internal_error(e)
                 err_res =  Response.error(message="Internal Server Error",status_code=500)
                 conn.sendall(err_res.serialize().encode())
                 return
@@ -271,6 +282,8 @@ class Httpe:
                     new_lines,user_id_from_token =  self._handle_enc_request(lines)
                     if(new_lines == None or user_id_from_token == None):
                         #! Remove {e} in prod
+                        self._log_internal_error(e)
+
                         err_res =  Response.error(message=f"Error With Client handling code: {e}",status_code=500)
                         conn.sendall(err_res.serialize().encode())
                         return
@@ -309,6 +322,8 @@ class Httpe:
             try:
                 self._log_request(path=location,client_ip=addr,header=headers,data=body,valid=True)
             except Exception as e:
+                self._log_internal_error(e)
+
                 print(f"Failed to lof file {e}")
             if handler:
                 sig = inspect.signature(handler)
@@ -333,6 +348,8 @@ class Httpe:
             conn.sendall(response.encode())
 
         except Exception as e:
+            self._log_internal_error(e)
+
             #! Remove {e} in prod
             err_res =  Response.error(message=f"Error With Client handling code :{e}",status_code=500)
             conn.sendall(err_res.serialize().encode())
