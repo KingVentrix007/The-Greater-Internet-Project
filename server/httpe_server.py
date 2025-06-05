@@ -39,7 +39,6 @@ class Httpe:
                 now = datetime.now(timezone.utc)
                 if now - timestamp > timedelta(minutes=20):
                     raise Exception("Private key expired")
-                #TODO check expire date
                 key = key_data["key"]
                 self.rsa_private_key = key
             with open("public_key.edoi","r") as f:
