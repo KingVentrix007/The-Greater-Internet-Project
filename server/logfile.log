@@ -1,0 +1,8 @@
+[I]2025-06-05T11:59:01Z: Request to /PTS by ('127.0.0.1', 50723). Header: {'client_id': 'cddeb07e-467b-4587-8e77-78ca649f085b', 'packet_id': 'f9a83ad7-5f90-4939-8538-16d645f52bb4', 'is_com_setup': 'False', 'timestamp': '2025-06-05T09:59:01.164150+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-05T11:59:01Z: Request to /PTS by ('127.0.0.1', 50726). Header: {'client_id': 'cb2ffa51-c279-4bdc-9a8b-abd01a6af2d8', 'packet_id': '1a4ddf38-ab94-4320-86db-0e978b3a53f1', 'is_com_setup': 'False', 'timestamp': '2025-06-05T09:59:01.239659+00:00', 'compressions': 'false'} Body: {"data": "456"}
+
+[I]2025-06-05T12:06:48Z: Request to /PTS by ('127.0.0.1', 51303). Header: {'client_id': '3b3c2c61-c6b7-4872-9fba-9c330d04af59', 'packet_id': '2fbf2c88-b676-4085-8d30-12e0f46b9cca', 'is_com_setup': 'False', 'timestamp': '2025-06-05T10:06:48.470035+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-05T12:06:48Z: Request to /PTS by ('127.0.0.1', 51306). Header: {'client_id': 'b03ab8e0-09e8-4a38-9194-dd0ed699f6a8', 'packet_id': '5a729149-a5af-4a28-b129-8fc2d5b1c52f', 'is_com_setup': 'False', 'timestamp': '2025-06-05T10:06:48.539230+00:00', 'compressions': 'false'} Body: {"data": "456"}
+

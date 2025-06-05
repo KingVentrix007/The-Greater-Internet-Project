@@ -11,8 +11,9 @@ import base64
 import httpe_fernet
 import signal
 import sys
+import logging
 class Httpe:
-    def __init__(self,server_host="127.0.0.1",Port=8080):
+    def __init__(self,server_host="127.0.0.1",Port=8080,running_version="1.0"):
         self.routes = {}
         self.host = server_host
         self.port = Port
@@ -28,6 +29,10 @@ class Httpe:
         self.cert = None
         self._load_keys()
         self.load_cert()
+        self.version = running_version
+        self._log_file = None
+        self._log_file = open("server_log.log","a")
+        logging.basicConfig(filename='logfile.log', level=logging.INFO, format='[I]%(asctime)s: %(message)s', datefmt='%Y-%m-%dT%H:%M:%SZ')
     
     def _shutdown(self, signum, frame):
         print("\nShutting down HTTPE server...")
@@ -40,6 +45,8 @@ class Httpe:
         self.valid_token_ids_per_user.clear()
         if(len(self.valid_token_ids) > 0 or len(self.valid_token_ids_per_user) > 0):
             print("[!] Failed to purge token IDs")
+        print("Saving logs")
+        self._log_file.close()
         
         self._running = False
     def _load_keys(self):
@@ -143,7 +150,7 @@ class Httpe:
             res = Response(json.dumps(ret_data))
             return res
         except Exception as e:
-            print("123",e)
+            print(f"_handle_share_aes error {e}")
     def _handle_enc_request(self,data:str):
         user_id_enc = None
         aes_key_to_use = None
@@ -157,23 +164,19 @@ class Httpe:
                     plain_token = self.master_aes_class.decrypt(enc_token)
                     json_token = json.loads(plain_token)
                 except Exception as e:
-                    print(">>>",e)
                     return None,None
                 # print(json_token)
                 user_id = json_token["user_id"]
                 if(self._validate_token(json_token,user_id) == False):
-                    print("NONE")
                     return None,None
                 aes_key_to_use = self.user_keys[user_id]
                 found_id = True
             elif(found_id == True):
                 enc_data = line
                 break
-        print("Doing this")
         # decrypted_data = sec.fernet_decrypt(enc_data,aes_key_to_use)
         temp_class = httpe_fernet.HttpeFernet(aes_key_to_use)
         decrypted_data = temp_class.decrypt(enc_data).decode()
-        print(decrypted_data)
         return decrypted_data,user_id
     def _handle_packet_contents(self,lines):
         headers = {}
@@ -208,6 +211,14 @@ class Httpe:
             elif not reading_headers:
                 body += line + "\n"
         return headers,version,is_initial_packet,initial_packet_type,method,location,body
+    def _log_request(self, path, valid, client_ip, header, data):
+        logging.info(f"Request to {path} by {client_ip}. Header: {header} Body: {data}")
+
+    def _log_failed_verification(self, client_id, client_ip,notes):
+        logging.warning(f"Failed to verify user {client_id} from {client_ip}. {notes}")
+
+    def _log_internal_error(self, error: Exception):
+        logging.error(f"Internal server error: {error}", exc_info=True)
     def _handle_client(self, conn, addr):
         try:
             try:
@@ -241,6 +252,10 @@ class Httpe:
             # print(text)
             reading_headers = False
             headers,version,is_initial_packet,initial_packet_type,method,location,body  = self._handle_packet_contents(lines)
+            print(version)
+            if(version != f"HTTPE/{self.version}"):
+                err_res =  Response.error(message="Invalid Version",status_code=400)
+                conn.sendall(err_res.serialize().encode())
             if(is_initial_packet == True):
                 if(initial_packet_type == "GET_RSA"):
                     send_rsa_pub = {"rsa":self.rsa_public_key_shared}
@@ -266,27 +281,35 @@ class Httpe:
             
             header_user_id = headers.get("client_id",None)
             if(str(header_user_id) != str(user_id_from_token)):
+                self._log_failed_verification(header_user_id,addr,"clientID x TokenID mismatch")
                 err_res =  Response.error(message="Invalid Token",status_code=608)
                 conn.sendall(err_res.serialize().encode())
                 return
             if(packet_id == None):
-                err_res =  Response.error(message="packet_id missing",status="400 BAD REQUEST")
+                self._log_failed_verification(header_user_id,addr,"invalid packet")
+                err_res =  Response.error(message="packet_id missing",status_code =400)
                 conn.sendall(err_res.serialize().encode())
                 return
             # print(f"HTTPE {method} {location} from {addr} with headers {headers}")
             timestamp = headers.get("timestamp", None)
             if(timestamp == None):
                 err_res =  Response.error(message="Invalid Timestamp",status_code=608)
+                self._log_failed_verification(header_user_id,addr,"invalid packet")
                 conn.sendall(err_res.serialize().encode())
                 return
             timestamp = datetime.fromisoformat(timestamp)
             now = datetime.now(timezone.utc)
             if now - timestamp > timedelta(minutes=2):
+                self._log_failed_verification(header_user_id,addr,"Possible packet reuse")
                 err_res =  Response.error(message="Old Timestamp",status_code=607)
                 conn.sendall(err_res.serialize().encode())
                 return
+            
             handler = self.routes.get((location, method,is_encrypted_packet))
-
+            try:
+                self._log_request(path=location,client_ip=addr,header=headers,data=body,valid=True)
+            except Exception as e:
+                print(f"Failed to lof file {e}")
             if handler:
                 sig = inspect.signature(handler)
                 if(len(sig.parameters) == 0):
@@ -326,7 +349,6 @@ class Httpe:
         #         # 
                 return err_res
         for name, param in sig.parameters.items():
-            print(name)
             if(name in body):
                 kwargs[name] = body[name]
             else:
