@@ -1,16 +1,16 @@
 import os
 import socket
-from threading import Thread
 import threading
 import inspect
 import json
 from httpe_class import Response
 from datetime import datetime, timezone, timedelta
-import httpe_keys
 import httpe_secure as sec
 import uuid
 import base64
 import httpe_fernet
+import signal
+import sys
 class Httpe:
     def __init__(self,server_host="127.0.0.1",Port=8080):
         self.routes = {}
@@ -24,12 +24,24 @@ class Httpe:
         self.rsa_public_key_shared = None
         self.master_aes_class = httpe_fernet.HttpeFernet()
         self.master_aes_key = self.master_aes_class.get_key()
-
+        self._running = True
         self.cert = None
         self._load_keys()
         self.load_cert()
     
-
+    def _shutdown(self, signum, frame):
+        print("\nShutting down HTTPE server...")
+        print("[v] Purging users")
+        self.user_keys.clear()
+        if(len(self.user_keys) > 0):
+            print("[!] Failed to purge users")
+        print("[v] Purging token ids")
+        self.valid_token_ids.clear()
+        self.valid_token_ids_per_user.clear()
+        if(len(self.valid_token_ids) > 0 or len(self.valid_token_ids_per_user) > 0):
+            print("[!] Failed to purge token IDs")
+        
+        self._running = False
     def _load_keys(self):
         try:
             with open("private_key.edoi","r") as f:
@@ -72,13 +84,14 @@ class Httpe:
             print(f"{method} {route} ({enc_status}) -> {func.__name__}")
     def serve(self, host="127.0.0.1", port=8080):
         print(f"HTTPE server running on {host}:{port}...")
+        signal.signal(signal.SIGINT, self._shutdown)  # Handle Ctrl+C
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((host, port))
             s.listen()
             s.settimeout(1.0)  # <-- check every 1 second for interrupt
 
             try:
-                while True:
+                while self._running:
                     try:
                         conn, addr = s.accept()
                         threading.Thread(target=self._handle_client, args=(conn, addr), daemon=True).start()
@@ -86,6 +99,7 @@ class Httpe:
                         continue  # Allows checking for KeyboardInterrupt
             except KeyboardInterrupt:
                 print("\nShutting down HTTPE server...")
+                return
     def _create_token(self, user_id):
         
         token = {"user_id":user_id,"session_id":str(uuid.uuid4()),"timestamp":datetime.now(timezone.utc).isoformat(),"noise":base64.b64encode(os.urandom(128)).decode()}
