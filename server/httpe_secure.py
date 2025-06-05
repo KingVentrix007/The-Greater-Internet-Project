@@ -13,16 +13,6 @@ def load_public_key(pem_str):
 def load_private_key(pem_str, password=None):
     return serialization.load_pem_private_key(pem_str.encode(), password=password, backend=default_backend())
 
-# -- Encrypt message with Fernet AES --
-def fernet_encrypt(plaintext, fernet_key):
-    f = Fernet(fernet_key)
-    token = f.encrypt(plaintext.encode())
-    return token.decode()
-
-# -- Decrypt message with Fernet AES --
-def fernet_decrypt(token, fernet_key):
-    f = Fernet(fernet_key)
-    return f.decrypt(token.encode()).decode()
 
 # -- Encrypt Fernet key with RSA public key --
 def rsa_encrypt_key(fernet_key, public_key_pem):

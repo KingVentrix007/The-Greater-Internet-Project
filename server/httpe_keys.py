@@ -55,5 +55,6 @@ def get_master_key():
     global server_master_aes
     return server_master_aes
 
+
 if __name__ == "__main__":
     save_keys_rsa_keys()

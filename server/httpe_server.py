@@ -10,7 +10,7 @@ import httpe_keys
 import httpe_secure as sec
 import uuid
 import base64
-import httpe_cert
+import httpe_fernet
 class Httpe:
     def __init__(self,server_host="127.0.0.1",Port=8080):
         self.routes = {}
@@ -22,7 +22,9 @@ class Httpe:
         self.user_keys = {}
         self.rsa_private_key = None
         self.rsa_public_key_shared = None
-        self.master_aes_key = os.urandom(256) #TODO, move away from Fernet and use 256 bit aes
+        self.master_aes_class = httpe_fernet.HttpeFernet()
+        self.master_aes_key = self.master_aes_class.get_key()
+
         self.cert = None
         self._load_keys()
         self.load_cert()
@@ -33,13 +35,20 @@ class Httpe:
             with open("private_key.edoi","r") as f:
                 key_data = json.load(f)
                 expire_data = key_data['valid_to']
+                timestamp = datetime.fromisoformat(expire_data)
+                now = datetime.now(timezone.utc)
+                if now - timestamp > timedelta(minutes=20):
+                    raise Exception("Private key expired")
                 #TODO check expire date
                 key = key_data["key"]
                 self.rsa_private_key = key
             with open("public_key.edoi","r") as f:
                 key_data = json.load(f)
                 expire_data = key_data['valid_to']
-                #TODO check expire date
+                timestamp = datetime.fromisoformat(expire_data)
+                now = datetime.now(timezone.utc)
+                if now - timestamp > timedelta(minutes=20):
+                    raise Exception("Public key expired")
                 key = key_data["key"]
                 self.rsa_public_key_shared = key
         except Exception as e:
@@ -104,17 +113,24 @@ class Httpe:
             aes_key = sec.rsa_decrypt_key(aes_key_enc,self.rsa_private_key)
             user_id = sec.decrypt_user_id(user_id_enc,self.rsa_private_key)
             token = self._create_token(user_id)
-            token_enc = sec.fernet_encrypt(json.dumps(token),httpe_keys.get_master_key())
-            certificate = self.cert
-            certificate_enc = sec.fernet_encrypt(json.dumps(certificate),aes_key)
-            ret_data = {"token":token_enc,"certificate":certificate_enc}
-
+            # token_enc = sec.fernet_encrypt(json.dumps(token),httpe_keys.get_master_key())
+            try:
+                token_enc = self.master_aes_class.encrypt(json.dumps(token).encode())
+                certificate = self.cert
+                key_bytes = base64.urlsafe_b64decode(aes_key)
+                aes_key = key_bytes
+                # print(len(key_bytes))  # Should be 32 for AES-256
+                temp_class = httpe_fernet.HttpeFernet(aes_key)
+                certificate_enc = temp_class.encrypt(json.dumps(certificate).encode())
+                ret_data = {"token":token_enc,"certificate":certificate_enc}
+            except Exception as e:
+                print(f"Failed to enc {e}")
             # httpe_keys.set_user_key(aes_key,user_id)
             self.user_keys[user_id] = aes_key
             res = Response(json.dumps(ret_data))
             return res
         except Exception as e:
-            print(e)
+            print("123",e)
     def _handle_enc_request(self,data:str):
         user_id_enc = None
         aes_key_to_use = None
@@ -124,10 +140,11 @@ class Httpe:
             if line.startswith("TOKEN:"):
                 enc_token = line.split(":", 1)[1].strip()
                 try:
-                    plain_token = sec.fernet_decrypt(enc_token,httpe_keys.get_master_key())
+                    # plain_token = sec.fernet_decrypt(enc_token,httpe_keys.get_master_key())
+                    plain_token = self.master_aes_class.decrypt(enc_token)
                     json_token = json.loads(plain_token)
                 except Exception as e:
-                    print(e)
+                    print(">>>",e)
                     return None,None
                 # print(json_token)
                 user_id = json_token["user_id"]
@@ -139,8 +156,11 @@ class Httpe:
             elif(found_id == True):
                 enc_data = line
                 break
-        decrypted_data = sec.fernet_decrypt(enc_data,aes_key_to_use)
-        # print(decrypted_data)
+        print("Doing this")
+        # decrypted_data = sec.fernet_decrypt(enc_data,aes_key_to_use)
+        temp_class = httpe_fernet.HttpeFernet(aes_key_to_use)
+        decrypted_data = temp_class.decrypt(enc_data).decode()
+        print(decrypted_data)
         return decrypted_data,user_id
     def _handle_packet_contents(self,lines):
         headers = {}
@@ -240,7 +260,7 @@ class Httpe:
                 err_res =  Response.error(message="packet_id missing",status="400 BAD REQUEST")
                 conn.sendall(err_res.serialize().encode())
                 return
-            print(f"HTTPE {method} {location} from {addr} with headers {headers}")
+            # print(f"HTTPE {method} {location} from {addr} with headers {headers}")
             timestamp = headers.get("timestamp", None)
             if(timestamp == None):
                 err_res =  Response.error(message="Invalid Timestamp",status_code=608)
@@ -301,13 +321,15 @@ class Httpe:
                 # 
                 return err_res
         res_data = handler(**kwargs)
+        temp_class = httpe_fernet.HttpeFernet(aes_key)
         if(isinstance(res_data, Response)):
             plain_b = res_data.body
             error_code = res_data.status_code
-            enc_data = sec.fernet_encrypt(json.dumps(plain_b),aes_key)
+            enc_data = temp_class.encrypt(json.dumps(plain_b).encode("utf-8"))
             enc_res =Response(enc_data,status_code=error_code)
             return enc_res
-        enc_data = sec.fernet_encrypt(json.dumps(res_data),aes_key)
+        enc_data = temp_class.encrypt(json.dumps(res_data).encode("utf-8"))
+
         return enc_data
     def redirect(self,redirect_url,status=302,**kwargs):
         paths = [key[0] for key in self.routes.keys()]

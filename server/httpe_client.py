@@ -1,11 +1,11 @@
 import socket
 import uuid
 from datetime import datetime, timezone
-from cryptography.fernet import Fernet
 import httpe_secure as sec  # Must have fernet_encrypt, fernet_decrypt, rsa_encrypt_key, encrypt_user_id
 import httpe_cert           # Must have verify_cert(cert, host, pem_path, pubkey)
 import json
-
+import httpe_fernet
+import base64
 class HttpeResponse:
     """Parses HTTPE responses in the format: headers + END + body"""
 
@@ -125,8 +125,11 @@ class HttpeClient:
                 plain_request = "\n".join(request_lines)
             except Exception as e:
                 print(f"_send_request_enc plain_text error {e}")
-            enc_request = sec.fernet_encrypt(plain_request, self._aes_key)
-
+            # enc_request = sec.fernet_encrypt(plain_request, self._aes_key)
+            try:
+                enc_request = self._fernet_class.encrypt(plain_request.encode("utf-8"))
+            except Exception as e:
+                print(f"enc_request error {e}")
             packet = [
                 "VERSION:HTTPE/1.0",
                 "TYPE:REQ_ENC",
@@ -147,7 +150,15 @@ class HttpeClient:
                 print(f"_send_request_enc send error {e}")
 
             res = HttpeResponse(response)
-            decrypted_body = sec.fernet_decrypt(res.body(), self._aes_key)
+            # decrypted_body = sec.fernet_decrypt(res.body(), self._aes_key)
+            # print(res.body())
+            # print(res.status_code)
+            # print(res._body_str)
+            try:
+                
+                decrypted_body = self._fernet_class.decrypt(res.body()).decode()
+            except Exception as e:
+                print(f"Error in decrypted_body {e}")
             res._set_body(decrypted_body)
             return res
         except Exception as e:
@@ -183,7 +194,9 @@ class HttpeClient:
         """Initial secure handshake with server"""
         try:
             self._client_id = uuid.uuid4()
-            self._aes_key = Fernet.generate_key().decode()
+            self._fernet_class = httpe_fernet.HttpeFernet()
+            self._aes_key = self._fernet_class.get_key()
+            self._aes_key =  base64.urlsafe_b64encode(self._aes_key).decode()
 
             # Step 1: Get RSA public key
             request = "\n".join([
@@ -204,7 +217,7 @@ class HttpeClient:
                 return
 
             # Step 2: Send AES key and ID (RSA encrypted)
-            enc_aes = sec.rsa_encrypt_key(self._aes_key.encode(), self._server_rsa_pub_key)
+            enc_aes = sec.rsa_encrypt_key(self._aes_key.encode("utf-8"), self._server_rsa_pub_key)
             enc_user_id = sec.encrypt_user_id(str(self._client_id), self._server_rsa_pub_key)
 
             request_lines = [
@@ -231,7 +244,8 @@ class HttpeClient:
                 print("Missing token or certificate in response.")
                 return
 
-            cert = sec.fernet_decrypt(enc_cert, self._aes_key)
+            # cert = sec.fernet_decrypt(enc_cert, self._aes_key)
+            cert = self._fernet_class.decrypt(enc_cert).decode("utf-8")
             if not httpe_cert.verify_cert(cert, self.host, "public.pem", self._server_rsa_pub_key):
                 print("Invalid certificate received from server.")
                 return
