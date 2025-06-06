@@ -7,7 +7,8 @@ client = httpe_client.HttpeClient()
 cleint2 = httpe_client.HttpeClient()
 data = {"data":"12234"}
 
-res = client.send_request("POST","/PTS",body=json.dumps(data))
+# res = client.send_request("POST","/PTS",body=json.dumps(data))
+res = client.send_request("GET","/hello-world")
 print(res.status)
 print(res.json())
 data = {"data":"456"}

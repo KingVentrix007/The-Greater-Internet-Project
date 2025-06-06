@@ -137,7 +137,6 @@ class Httpe:
             aes_key = sec.rsa_decrypt_key(aes_key_enc,self.rsa_private_key)
             user_id = sec.decrypt_user_id(user_id_enc,self.rsa_private_key)
             token = self._create_token(user_id)
-            # token_enc = sec.fernet_encrypt(json.dumps(token),httpe_keys.get_master_key())
             try:
                 token_enc = self.master_aes_class.encrypt(json.dumps(token).encode())
                 certificate = self.cert
@@ -151,7 +150,6 @@ class Httpe:
                 self._log_internal_error(e)
 
                 print(f"Failed to enc {e}")
-            # httpe_keys.set_user_key(aes_key,user_id)
             self.user_keys[user_id] = aes_key
             res = Response(json.dumps(ret_data))
             return res
@@ -168,7 +166,6 @@ class Httpe:
             if line.startswith("TOKEN:"):
                 enc_token = line.split(":", 1)[1].strip()
                 try:
-                    # plain_token = sec.fernet_decrypt(enc_token,httpe_keys.get_master_key())
                     plain_token = self.master_aes_class.decrypt(enc_token)
                     json_token = json.loads(plain_token)
                 except Exception as e:
@@ -330,7 +327,10 @@ class Httpe:
                 if(len(sig.parameters) == 0):
 
 
-                    result = handler()
+                    result = self._parse_handler(handler,sig,None,self.user_keys[header_user_id])
+                    if not isinstance(result, Response):
+                        result = Response(str(result))  # fallback
+                    response = result.serialize()
                     if not isinstance(result, Response):
                         result = Response(str(result))  # fallback
                     response = result.serialize()
@@ -357,22 +357,26 @@ class Httpe:
         finally:
             conn.close()
     def _parse_handler(self, handler,sig,body,aes_key):
-        kwargs = {}
-        for val in body.keys():
-            print(val,sig.parameters)
-            if val not in sig.parameters:
-                
-                err_res =  Response.error(message="Invalid Parameter",status_code=400)
-        #         # 
-                return err_res
-        for name, param in sig.parameters.items():
-            if(name in body):
-                kwargs[name] = body[name]
-            else:
-                err_res =  Response.error(message="Invalid Parameter",status_code=400)
-                # 
-                return err_res
-        res_data = handler(**kwargs)
+        if(body != None):
+            kwargs = {}
+            for val in body.keys():
+                print(val,sig.parameters)
+                if val not in sig.parameters:
+                    
+                    err_res =  Response.error(message="Invalid Parameter",status_code=400)
+            #         # 
+                    return err_res
+            for name, param in sig.parameters.items():
+                if(name in body):
+                    kwargs[name] = body[name]
+                else:
+                    err_res =  Response.error(message="Invalid Parameter",status_code=400)
+                    # 
+                    return err_res
+            
+            res_data = handler(**kwargs)
+        else:
+            res_data = handler()
         temp_class = httpe_fernet.HttpeFernet(aes_key)
         if(isinstance(res_data, Response)):
             plain_b = res_data.body

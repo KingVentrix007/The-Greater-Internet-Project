@@ -6,3 +6,22 @@
 
 [I]2025-06-05T12:06:48Z: Request to /PTS by ('127.0.0.1', 51306). Header: {'client_id': 'b03ab8e0-09e8-4a38-9194-dd0ed699f6a8', 'packet_id': '5a729149-a5af-4a28-b129-8fc2d5b1c52f', 'is_com_setup': 'False', 'timestamp': '2025-06-05T10:06:48.539230+00:00', 'compressions': 'false'} Body: {"data": "456"}
 
+[I]2025-06-05T12:33:45Z: Failed to verify user 6dae533c-66cc-4cfc-868c-ada8d285f67f from ('127.0.0.1', 52669). Possible packet reuse
+[I]2025-06-05T12:34:16Z: Request to /PTS by ('127.0.0.1', 52702). Header: {'client_id': '747f5556-906a-4c7d-ac88-54385d7043cc', 'packet_id': '1eb50bd0-c262-4dd7-aba4-a7f6e1ffbab4', 'is_com_setup': 'False', 'timestamp': '2025-06-05 10:34:16.691598+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-05T12:34:16Z: Request to /PTS by ('127.0.0.1', 52705). Header: {'client_id': '05c83ecf-8403-4244-b432-58d40ecb6221', 'packet_id': '95b9efc5-78bb-48ec-bb6d-34028662a25e', 'is_com_setup': 'False', 'timestamp': '2025-06-05 10:34:16.762090+00:00', 'compressions': 'false'} Body: {"data": "456"}
+
+[I]2025-06-05T12:34:48Z: Failed to verify user f48f24cc-4f43-452e-b8d3-3ab7a68622eb from ('127.0.0.1', 52837). Possible packet reuse
+[I]2025-06-06T05:47:06Z: Failed to verify user bc1b4525-bee5-4486-95e0-16b6818ed8d6 from ('127.0.0.1', 51068). Possible packet reuse
+[I]2025-06-06T05:47:28Z: Request to /PTS by ('127.0.0.1', 51093). Header: {'client_id': '19fc2443-d938-49cf-ac81-943be47865f3', 'packet_id': '6b0ad924-229c-4034-96e5-f77f5190f2fe', 'is_com_setup': 'False', 'timestamp': '2025-06-06 03:47:28.799778+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-06T05:47:28Z: Request to /PTS by ('127.0.0.1', 51096). Header: {'client_id': 'c7751dc3-0a29-4f9a-ac29-8940a51bb8d5', 'packet_id': '4a3024e7-3845-4425-a268-e6b2e0b89c25', 'is_com_setup': 'False', 'timestamp': '2025-06-06 03:47:28.869783+00:00', 'compressions': 'false'} Body: {"data": "456"}
+
+[I]2025-06-06T05:47:55Z: Request to /PTS by ('127.0.0.1', 51120). Header: {'client_id': 'ff5ec830-4fab-4998-8fce-2411df03a7a6', 'packet_id': '11aa7a08-6aa8-418a-82ab-fde076ec2ed2', 'is_com_setup': 'False', 'timestamp': '2025-06-06 03:47:55.098617+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-06T05:47:55Z: Request to /PTS by ('127.0.0.1', 51121). Header: {'client_id': 'ff5ec830-4fab-4998-8fce-2411df03a7a6', 'packet_id': '7f7b2366-1bb9-4e73-ac31-a6e053a23d2d', 'is_com_setup': 'False', 'timestamp': '2025-06-06 03:47:55.100616+00:00', 'compressions': 'false'} Body: 
+[I]2025-06-06T05:47:55Z: Request to /PTS by ('127.0.0.1', 51124). Header: {'client_id': '487c42fb-aad8-4f43-ad55-fe36888f6367', 'packet_id': '7ea06ac3-05e9-4e1e-8d41-5a0fdfd0904d', 'is_com_setup': 'False', 'timestamp': '2025-06-06 03:47:55.169127+00:00', 'compressions': 'false'} Body: {"data": "456"}
+
+[I]2025-06-06T05:48:37Z: Request to /hello-world by ('127.0.0.1', 51277). Header: {'client_id': '5dff6012-2a78-4858-8362-f79bd31faa59', 'packet_id': 'c75703cc-9fbb-4b84-8d1c-806b250a543d', 'is_com_setup': 'False', 'timestamp': '2025-06-06 03:48:37.658739+00:00', 'compressions': 'false'} Body: 
+[I]2025-06-06T05:48:37Z: Request to /PTS by ('127.0.0.1', 51280). Header: {'client_id': 'f33fdb39-d72a-4c53-b10f-341a0b0939d7', 'packet_id': '32dded70-2853-41dd-aa82-53b76464cdba', 'is_com_setup': 'False', 'timestamp': '2025-06-06 03:48:37.728743+00:00', 'compressions': 'false'} Body: {"data": "456"}
+

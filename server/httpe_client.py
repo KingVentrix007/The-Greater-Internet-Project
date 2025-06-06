@@ -1,6 +1,6 @@
 import socket
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone,timedelta
 import httpe_secure as sec  # Must have fernet_encrypt, fernet_decrypt, rsa_encrypt_key, encrypt_user_id
 import httpe_cert           # Must have verify_cert(cert, host, pem_path, pubkey)
 import json
@@ -110,7 +110,7 @@ class HttpeClient:
             headers.setdefault("client_id", str(self._client_id))
             headers.setdefault("packet_id", str(uuid.uuid4()))
             headers.setdefault("is_com_setup", False)
-            headers.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
+            headers.setdefault("timestamp", datetime.now(timezone.utc))
             headers.setdefault("compressions", "false")
 
             request_lines = [f"METHOD:{method.upper()}", f"LOCATION:{str(location)}", "HEADERS:"]
