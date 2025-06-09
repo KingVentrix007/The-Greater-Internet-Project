@@ -44,7 +44,7 @@ class Node:
         return self.name
 
 # ! Use this to add neighbors to each node during creation
-
+#TODO, make client get hashes of neighbors, then send data to there, store ip+port combo with hash as key
 class NetNode():
     def __init__(self, name: str,port,bootstrap_ips:list):
         self.name = name
@@ -58,6 +58,7 @@ class NetNode():
         for ip in bootstrap_ips:
             self.neighbors_hash[ip] = None
         self.port = port
+        self.ip = '127.0.0.1'
         self.max_neighbors = 5
         self.seen_messages = set()
         self.found_route = False
@@ -110,49 +111,31 @@ class NetNode():
             
     
         pass # Will send RSA public key
-    def send_data(self, data, addr=None, conn=None):
-        # import uuid, socket, time, json
-
-        # Ensure message has an ID
-        message_id = data.get("message_id", str(uuid.uuid4()))
+    def send_data(self,data,addr=None,conn=None):
+        message_id = data.get("message_id",None)
+        if(message_id is None):
+            message_id = str(uuid.uuid4())
         data['message_id'] = message_id
-
-        # Encode the JSON data
+        host, port = addr  # Unpack the address tuple
         try:
             json_str = json.dumps(data)
             encoded = json_str.encode('utf-8')
-        except Exception as e:
-            print(f"[!] Failed to encode data: {e}")
-            return
 
-        # Use existing connection if available
-        if conn:
-            try:
-                conn.sendall(encoded)
-                time.sleep(0.05)
-                # print("[✓] Sent data via existing conn")
-            except Exception as e:
-                print(f"[!] Failed to send via conn: {e}")
-        elif addr:
-            try:
-                host, port = addr
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-                    client_socket.connect((host, port))
-                    client_socket.sendall(encoded)
-                time.sleep(0.05)
-                # print(f"[✓] Sent data via new connection to {host}:{port}")
-            except Exception as e:
-                print(f"[!] Failed to send via new socket: {e}")
-        else:
-            print("[!] No conn or addr provided to send_data()")
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+                client_socket.connect((host, port))
+                client_socket.sendall(encoded)
+            time.sleep(0.05)
+                # print(f"[√] Sent JSON to {host}:{port}")
+        except Exception as e:
+            print(e)
             # print(f"[!] Error sending JSON to {host}:{port} - {e}")
     def temp(self):
         route = []
         route_member = {"node_hash":"the nodes named, hashed ","salt":"the salt used to hash the name"}
         ## Packet:
         packet_find = {"type":"find","route":route,"hash":"the hash to find","key":"the last nodes RSA key(this nodes rsa if it is sending it)"}
-    def continue_find(self,route,hash_to_find,debug_route=None,target=None,salt=None):
-        packet = {"type":"find","route":route,"debug_route":debug_route,"hash":target,"salt":salt, "message_id": str(uuid.uuid4())}
+    def continue_find(self,route,hash_to_find,debug_route=None,target=None,salt=None,my_ip=None):
+        packet = {"type":"find","route":route,"debug_route":debug_route,"hash":target,"salt":salt, "message_id": str(uuid.uuid4()),"my_ip":my_ip}
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
         
@@ -174,6 +157,8 @@ class NetNode():
                 # if(self.neighbors_hash.get(key,None) == route[count - 1]):
                 self.send_data(path,ip)
         else:
+            host, port = addr
+            print(host,port)
             self.send_data(path,addr=addr)
     def hash_str(self,name,salt):
         digest = hashes.Hash(hashes.SHA256())
@@ -198,8 +183,10 @@ class NetNode():
             #     format=serialization.PublicFormat.SubjectPublicKeyInfo
             # ).decode(),
             "debug_route":debug_route,
-            "message_id": str(uuid.uuid4())
+            "message_id": str(uuid.uuid4()),
+            "my_ip":(self.ip,self.port)
         }
+        print((self.ip,self.port))
         for ip, key in self.neighbors.items():
             # will later handle key encryption
             self.send_data(packet,ip)
@@ -344,8 +331,11 @@ class NetNode():
                         print(f"{data['count']}")
                         that_hash = route[count]["hash"]
                         if(self.store_hash.get(that_hash,None) != None):
-                            print("That worked",self.store_hash.get(that_hash,None))
-                            self.return_path(data,self.store_hash.get(that_hash,None))
+                            print("That worked",tuple(self.store_hash.get(that_hash,None)))
+                            val = tuple(self.store_hash.get(that_hash,None))
+                            if(val == None):
+                                print("Eror")
+                            self.return_path(data,)
                         else:
                             self.return_path(data)
                     else:
@@ -364,6 +354,8 @@ class NetNode():
                 debug_route = list(data['debug_route'])
                 debug_route_f = debug_route[0]
                 name_to_find = debug_route_f['name']
+                last_ip = data.get("my_ip",None)
+                
                 # print(f"Find data: {data}")
                 first_node = route[0]
                 hash_to_find = target_hash
@@ -406,13 +398,19 @@ class NetNode():
                     debug_route_member = {"name":self.name,"len_route":len(route)}
                     debug_route = list(data['debug_route'])
                     debug_route.append(debug_route_member)
-                    self.store_hash[my_hash] = conn
-                    self.continue_find(route,hash_to_find=hash_to_find,debug_route=debug_route,target=target_hash,salt=salt)
+                    self.store_hash[route[len(route)-1].get("hash")] = last_ip
+                    my_ip = (self.ip,self.port)
+                    # print(">>",my_ip)
+                    # for ip, _ in self.neighbors.items():
+                    #     print(ip)
+                    # time.sleep(10)
+                    self.continue_find(route,hash_to_find=hash_to_find,debug_route=debug_route,target=target_hash,salt=salt,my_ip=my_ip)
             except Exception as e:
                 print(f"find error {e}|{data}")
 
     def listen(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+            server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server_socket.bind(('0.0.0.0', self.port))
             server_socket.listen()
             print(f"[+] Listening forever on port {self.port}...")
