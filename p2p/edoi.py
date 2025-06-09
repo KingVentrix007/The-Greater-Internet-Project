@@ -60,7 +60,8 @@ class NetNode():
         self.port = port
         self.max_neighbors = 5
         self.seen_messages = set()
-
+        self.found_route = False
+        self.store_hash = {}
     def _generate_keys(self):
         self.private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         self.public_key = self.private_key.public_key()
@@ -109,19 +110,41 @@ class NetNode():
             
     
         pass # Will send RSA public key
-    def send_data(self,data,addr):
-        host, port = addr  # Unpack the address tuple
+    def send_data(self, data, addr=None, conn=None):
+        # import uuid, socket, time, json
+
+        # Ensure message has an ID
+        message_id = data.get("message_id", str(uuid.uuid4()))
+        data['message_id'] = message_id
+
+        # Encode the JSON data
         try:
             json_str = json.dumps(data)
             encoded = json_str.encode('utf-8')
-
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-                client_socket.connect((host, port))
-                client_socket.sendall(encoded)
-            time.sleep(0.05)
-                # print(f"[√] Sent JSON to {host}:{port}")
         except Exception as e:
-            pass
+            print(f"[!] Failed to encode data: {e}")
+            return
+
+        # Use existing connection if available
+        if conn:
+            try:
+                conn.sendall(encoded)
+                time.sleep(0.05)
+                # print("[✓] Sent data via existing conn")
+            except Exception as e:
+                print(f"[!] Failed to send via conn: {e}")
+        elif addr:
+            try:
+                host, port = addr
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+                    client_socket.connect((host, port))
+                    client_socket.sendall(encoded)
+                time.sleep(0.05)
+                # print(f"[✓] Sent data via new connection to {host}:{port}")
+            except Exception as e:
+                print(f"[!] Failed to send via new socket: {e}")
+        else:
+            print("[!] No conn or addr provided to send_data()")
             # print(f"[!] Error sending JSON to {host}:{port} - {e}")
     def temp(self):
         route = []
@@ -138,17 +161,20 @@ class NetNode():
             # will later handle key encryption
             self.send_data(packet,ip)
 
-    def return_path(self,path):
+    def return_path(self,path,addr=None):
         message_id = path.get("message_id",None)
+        # if(message_id == None):print("retuern None")
         salt = path.get("salt",None)
         path["message_id"] = message_id or str(uuid.uuid4())
         count = path.get("count",None)
         route = path.get("route",None)
-        self.ask_for_hash(salt)
-        for ip, key in self.neighbors.items():
-            key = (ip,salt)
-            if(self.neighbors_hash.get(key,None) == route[count - 1]):
+        # self.ask_for_hash(salt)'
+        if(addr == None):
+            for ip, key in self.neighbors.items():
+                # if(self.neighbors_hash.get(key,None) == route[count - 1]):
                 self.send_data(path,ip)
+        else:
+            self.send_data(path,addr=addr)
     def hash_str(self,name,salt):
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
@@ -204,9 +230,11 @@ class NetNode():
         for ip, _ in self.neighbors.items():
             self.send_data(packet, ip)
 
-    def handle_conn(self,data,addr):
+    def handle_conn(self,data,addr,conn):
         message_id = data.get("message_id")
-        if message_id and message_id in self.seen_messages:
+        if message_id != None and message_id in self.seen_messages:
+            if(data.get("type",None) == "path"):
+                print("discard path: ",data.get("message_id"))
             return  # Drop duplicate
         if(not message_id):
             print("U missed one")
@@ -281,15 +309,28 @@ class NetNode():
 
         elif data["type"] == "path":
             try:
-                print(f"{self.name}: PATH received")
-                route = data['route']
-                count = int(data["count"])
                 debug_route = data["debug_route"]
+                count = int(data["count"])
+                name_route = []
+                for mem in debug_route:
+                    name_route.append(mem.get("name"))
+                out = ' → '.join(name_route)
+                # print(out)
+                print("------")
+                print(f"Current postion: {count}")
+                print(f"This node: {self.name}:Needed Node: {debug_route[count].get("name")}\nPATH received: {out}")
+                
+                print("---------")
+                # print(f"current node {debug_route[count]}")
+                # print("")
+                route = data['route']
+                
+                
 
                 my_member = route[count]
                 my_hash = self.compute_hashed_identity(my_member["salt"])
                 my_member_deb = debug_route[count]
-                print(f"Name:{self.name}:{my_member_deb["name"]}")
+                # print(f"Name:{self.name}:{my_member_deb["name"]}")
                 if(self.name == my_member_deb['name']):
                     print("Match")
                     if my_hash == my_member["hash"]:
@@ -300,17 +341,23 @@ class NetNode():
                     print(f"{self.name}: Stepping back: {count}")
                     if count > 0:
                         data['count'] = count - 1
-                        self.return_path(data)
+                        print(f"{data['count']}")
+                        that_hash = route[count]["hash"]
+                        if(self.store_hash.get(that_hash,None) != None):
+                            print("That worked",self.store_hash.get(that_hash,None))
+                            self.return_path(data,self.store_hash.get(that_hash,None))
+                        else:
+                            self.return_path(data)
                     else:
                         print(f"{self.name}: Back at main")
                         self.send_to_target(route, "Hello from start node!")
                 else:
-                    pass
+                    return
                     # print(f"{self.name}: Hash mismatch in path backtracking")
 
             except Exception as e:
                 print(f"Path error: {e}")
-        elif(data['type'] == "find"):
+        elif(data['type'] == "find" and self.found_route != True):
             try:
                 target_hash = data["hash"]
                 route = list(data['route'])
@@ -327,10 +374,10 @@ class NetNode():
                     debug_route_member = {"name":self.name,"len_route":len(route)}
                     debug_route = list(data['debug_route'])
                     debug_route.append(debug_route_member)
-                    
-                    ret_data = {"type":"path","hash":target_hash,"salt": salt,"route":route,"count":len(route)-1,"debug_route":debug_route, "message_id": str(uuid.uuid4())}
+                    # message_id = data.get("message_id",None)
+                    ret_data = {"type":"path","hash":target_hash,"salt": salt,"route":route,"count":len(route)-1,"debug_route":debug_route}
                     # print(f"Failed to find({self.name})")
-                    self.return_path(ret_data)
+                    # self.return_path(ret_data)
                     # print("Failed to find")
                 # if(my_hash == hash_to_find):
                     # print(f"name: {self.name}|{name_to_find}")
@@ -340,8 +387,17 @@ class NetNode():
                     debug_route_member = {"name":self.name,"len_route":len(route)}
                     debug_route = list(data['debug_route'])
                     debug_route.append(debug_route_member)
-                    ret_data = {"type":"path","route":route,"count":len(route)-1,"debug_route":debug_route,"hash":target_hash,"salt":salt, "message_id": str(uuid.uuid4())}
-                    print(f"{self.name}: FOUND THE ROUTE")
+                    ret_data = {"type":"path","route":route,"count":len(route)-2,"debug_route":debug_route,"hash":target_hash,"salt":salt}
+                    print(f"LAST NODE : {debug_route[len(route)-2]}")
+                    # ret_data = {"type":"path","hash":target_hash,"salt": salt,"route":route,"count":len(route)-1,"debug_route":debug_route}
+
+                    print(f"{self.name}: {data.get("message_id")}: FOUND THE ROUTE:")
+                    self.found_route = True
+                    name_route = []
+                    for mem in debug_route:
+                        name_route.append(mem.get("name"))
+                    out = ' → '.join(name_route)
+                    print(out)
                     self.return_path(ret_data)
                     # Will now send ret data BACK up the route
                 else:
@@ -350,6 +406,7 @@ class NetNode():
                     debug_route_member = {"name":self.name,"len_route":len(route)}
                     debug_route = list(data['debug_route'])
                     debug_route.append(debug_route_member)
+                    self.store_hash[my_hash] = conn
                     self.continue_find(route,hash_to_find=hash_to_find,debug_route=debug_route,target=target_hash,salt=salt)
             except Exception as e:
                 print(f"find error {e}|{data}")
@@ -381,7 +438,7 @@ class NetNode():
                         # print(f"[√] Received JSON: {json_data}")
                         # in_ip,in_port = addr
                         # self.neighbors[addr] = None
-                        self.handle_conn(json_data,addr)
+                        self.handle_conn(json_data,addr,conn)
 
                     except json.JSONDecodeError as e:
                         print(f"[!] JSON decode error: {e}")
@@ -432,7 +489,13 @@ def main():
         bootstrap_ips = random.sample(bootstrap_candidates, NEIGHBOR_COUNT)
         node = NetNode(name=name, port=port, bootstrap_ips=bootstrap_ips)
         nodes.append(node)
-
+    for node in nodes:
+        for ip, _ in node.neighbors.items():
+            # Find the actual node object corresponding to this IP
+            for other_node in nodes:
+                if ('127.0.0.1', other_node.port) == ip:
+                    if (('127.0.0.1', node.port) not in other_node.neighbors):
+                        other_node.neighbors[('127.0.0.1', node.port)] = None
     # Start listeners
     for node in nodes:
         threading.Thread(target=node.listen, daemon=True).start()
