@@ -12,6 +12,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
 import socket
 import json
+import time
+from collections import deque
 # --- Node Definition ---
 class Node:
     def __init__(self, name: str):
@@ -75,14 +77,14 @@ class NetNode():
         for ip, key in self.neighbors.items():
             if key is None:
                 # Simulate requesting a public key from the neighbor
-                print(f"Requesting public key from {ip}...")
+                # print(f"Requesting public key from {ip}...")
                 
                 # This part will request a key from that server
                 fake_key = None
                 
                 # Store the received key
                 self.neighbors[ip] = fake_key
-                print(f"Received and stored key from {ip}: {fake_key}")
+                # print(f"Received and stored key from {ip}: {fake_key}")
             
     
         pass # Will send RSA public key
@@ -95,40 +97,53 @@ class NetNode():
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
                 client_socket.connect((host, port))
                 client_socket.sendall(encoded)
-                print(f"[√] Sent JSON to {host}:{port}")
+            time.sleep(0.05)
+                # print(f"[√] Sent JSON to {host}:{port}")
         except Exception as e:
-            print(f"[!] Error sending JSON to {host}:{port} - {e}")
+            pass
+            # print(f"[!] Error sending JSON to {host}:{port} - {e}")
     def temp(self):
         route = []
         route_member = {"node_hash":"the nodes named, hashed ","salt":"the salt used to hash the name"}
         ## Packet:
         packet_find = {"type":"find","route":route,"hash":"the hash to find","key":"the last nodes RSA key(this nodes rsa if it is sending it)"}
-    def continue_find(self,route,hash_to_find):
-        packet = {"type":"find","route":route,"hash":hash_to_find}
+    def continue_find(self,route,hash_to_find,debug_route=None,target=None,salt=None):
+        packet = {"type":"find","route":route,"hash":hash_to_find,"debug_route":debug_route,"hash":target,"salt":salt}
         for ip, key in self.neighbors.items():
             # will later handle key encryption
             self.send_data(packet,ip)
+
     def return_path(self,path):
         for ip, key in self.neighbors.items():
             self.send_data(path,ip)
+    def hash_str(self,name,salt):
+        digest = hashes.Hash(hashes.SHA256())
+        digest.update((name + salt).encode())
+        return digest.finalize().hex()
     def start_find(self, target_name: str, salt: str):
-        target_hash = self.compute_hashed_identity(salt)
+        target_hash = self.hash_str(target_name, salt)  # FIXED
         my_hash = self.compute_hashed_identity(salt)
         route_member = {"hash": my_hash, "salt": salt}
         route = [route_member]
+        debug_route_member = {"name":self.name,"len_route":len(route)}
+        route = [route_member]
+        debug_route = [debug_route_member]
 
         packet = {
             "type": "find",
             "route": route,
             "hash": target_hash,
             "salt": salt,
-            "key": self.public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            ).decode()
+            # "key": self.public_key.public_bytes(
+            #     encoding=serialization.Encoding.PEM,
+            #     format=serialization.PublicFormat.SubjectPublicKeyInfo
+            # ).decode(),
+            "debug_route":debug_route
         }
-
-        self.continue_find(route, target_hash)
+        for ip, key in self.neighbors.items():
+            # will later handle key encryption
+            self.send_data(packet,ip)
+        # self.continue_find(route, target_hash)
 
     def handle_conn(self,data,addr):
         if(data["type"] == "get_rsa"):
@@ -136,36 +151,69 @@ class NetNode():
             key_data = {"key",key}
             self.send_data(key_data, addr)
         elif(data["type"] == "path"):
-            route = data[route]
-            count = data["count"]
-            my_member = route[count]
-            route_hash = my_member["hash"]
-            route_salt = my_member["salt"]
-            my_hash = self.compute_hashed_identity(route_salt)
-            if(my_hash == route_hash and count != 0):
-                count-=1
-                ret_data = data
-                ret_data['count'] = count
-                self.return_path(ret_data)
-            elif(my_hash == route_hash and count == 0):
-                print("Back at main")
+            try:
+                
+                route = data['route']
+                count = int(data["count"])
+                debug_route = data["debug_route"]
+                # print(count,len(route),f"\n[{debug_route}]\n")
+                my_member = route[count-1]
+                route_hash = my_member["hash"]
+                route_salt = my_member["salt"]
+                my_hash = self.compute_hashed_identity(route_salt)
+                if(my_hash == route_hash and count > 0):
+                    count-=1
+                    ret_data = data
+                    ret_data['count'] = count
+                    self.return_path(ret_data)
+                elif(my_hash == route_hash and count == 0):
+                    print("Back at main")
+            except Exception as e:
+                print(f"Path error {e}")
             # pass
         elif(data['type'] == "find"):
-            hash_to_find = data["hash"]
-            salt = data['salt']
-            my_hash = self.compute_hashed_identity(salt)
-            route = list(data['route'])
-            if(my_hash == hash_to_find):
-                route_member = {"hash":my_hash,"salt":salt}
-                route.append(route_member)
-                ret_data = {"type":"path","route":route,"count":len(route)}
-                self.return_path(ret_data)
-                # Will now send ret data BACK up the route
-
-            else:
-                route_member = {"hash":my_hash,"salt":salt}
-                route.append(route_member)
-                self.continue_find(route,hash_to_find=hash_to_find)
+            try:
+                target_hash = data["hash"]
+                route = list(data['route'])
+                debug_route = list(data['debug_route'])
+                debug_route_f = debug_route[0]
+                name_to_find = debug_route_f['name']
+                # print(f"Find data: {data}")
+                first_node = route[0]
+                hash_to_find = target_hash
+                salt = data["salt"]
+                my_hash = self.compute_hashed_identity(salt)
+                if(len(route) > 20):
+                    route_member = {"hash":my_hash,"salt":salt}
+                    debug_route_member = {"name":self.name,"len_route":len(route)}
+                    debug_route = list(data['debug_route'])
+                    debug_route.append(debug_route_member)
+                    
+                    ret_data = {"type":"path","hash":target_hash,"salt": salt,"route":route,"count":len(route),"debug_route":debug_route}
+                    print(f"Failed to find({self.name})")
+                    self.return_path(ret_data)
+                    # print("Failed to find")
+                if(my_hash == hash_to_find):
+                    print(f"name: {self.name}|{name_to_find}")
+                if(my_hash == hash_to_find):
+                    route_member = {"hash":my_hash,"salt":salt}
+                    route.append(route_member)
+                    debug_route_member = {"name":self.name,"len_route":len(route)}
+                    debug_route = list(data['debug_route'])
+                    debug_route.append(debug_route_member)
+                    ret_data = {"type":"path","route":route,"count":len(route),"debug_route":debug_route,"hash":target_hash,"salt":salt}
+                    # print("FOUND THE ROUTE",ret_data)
+                    self.return_path(ret_data)
+                    # Will now send ret data BACK up the route
+                else:
+                    route_member = {"hash":my_hash,"salt":salt}
+                    route.append(route_member)
+                    debug_route_member = {"name":self.name,"len_route":len(route)}
+                    debug_route = list(data['debug_route'])
+                    debug_route.append(debug_route_member)
+                    self.continue_find(route,hash_to_find=hash_to_find,debug_route=debug_route,target=target_hash,salt=salt)
+            except Exception as e:
+                print(f"find error {e}|{data}")
 
     def listen(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
@@ -176,7 +224,7 @@ class NetNode():
             while True:
                 conn, addr = server_socket.accept()
                 with conn:
-                    print(f"[+] Connection from {addr}")
+                    # print(f"[+] Connection from {addr}")
 
                     data_chunks = []
                     while True:
@@ -188,10 +236,10 @@ class NetNode():
                     full_data = b''.join(data_chunks)
                     try:
                         decoded = full_data.decode('utf-8')
-                        print(f"[>] Full raw data: {decoded}")
+                        # print(f"[>] Full raw data: {decoded}")
 
                         json_data = json.loads(decoded)
-                        print(f"[√] Received JSON: {json_data}")
+                        # print(f"[√] Received JSON: {json_data}")
                         self.handle_conn(json_data,addr)
 
                     except json.JSONDecodeError as e:
@@ -199,7 +247,35 @@ class NetNode():
                     except Exception as e:
                         print(f"[!] General error: {e}")
                     finally:
-                        print("[*] Connection closed.\n")
+                        pass
+                        # print("[*] Connection closed.\n")
+
+
+def build_neighbor_map(nodes):
+    neighbor_map = {}
+    for node in nodes:
+        neighbor_map[node.name] = [neighbor.name for neighbor in nodes if (neighbor.port, None) in node.neighbors]
+    return neighbor_map
+
+def find_path(neighbor_map, start_name, target_name):
+    visited = set()
+    queue = deque([[start_name]])
+
+    while queue:
+        path = queue.popleft()
+        current = path[-1]
+
+        if current == target_name:
+            return path
+
+        if current not in visited:
+            visited.add(current)
+            for neighbor in neighbor_map.get(current, []):
+                new_path = list(path)
+                new_path.append(neighbor)
+                queue.append(new_path)
+
+    return None
 
 BASE_PORT = 5000
 NUM_NODES = 200
@@ -222,34 +298,48 @@ def main():
 
     print("[+] All nodes launched and listening.")
 
-    # Optionally wait a bit to let servers spin up
-    import time
     time.sleep(2)
 
-    # Start building networks
     for node in nodes:
         threading.Thread(target=node.build_network).start()
 
     time.sleep(2)
+
+    # Build name-to-node map for lookup
+    name_map = {node.name: node for node in nodes}
 
     # Select start and target node
     start_node, target_node = random.sample(nodes, 2)
     print(f"[→] Start node: {start_node.name}")
     print(f"[🎯] Target node: {target_node.name}")
 
-    # Use same salt for everyone
-    salt = "fixed_salt_123"
+    # Check if they are connected via declared neighbor relationships
+    neighbor_map = {}
+    for node in nodes:
+        neighbor_names = []
+        for ip, _ in node.neighbors.items():
+            for n in nodes:
+                if n.port == ip[1]:  # match by port
+                    neighbor_names.append(n.name)
+        neighbor_map[node.name] = neighbor_names
 
-    # Start the search
+    # Find a naive unencrypted path
+    path = find_path(neighbor_map, start_node.name, target_node.name)
+    if path:
+        print(f"[🧭] Path exists from {start_node.name} to {target_node.name}: {' → '.join(path)}")
+        print(f"Path len: {len(path)}")
+    else:
+        print(f"[❌] No path found between {start_node.name} and {target_node.name}")
+
+    # Start the hashed search
+    salt = "fixed_salt_123"
     start_node.start_find(target_name=target_node.name, salt=salt)
 
-    # Keep the main thread alive
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
         print("[*] Shutting down.")
-
 main()
 
 
