@@ -51,8 +51,12 @@ class NetNode():
         self.id = uuid.uuid4().hex
         self._generate_keys()
         self.neighbors = {}
+        self.neighbors_hash = {}
+
         for ip in bootstrap_ips:
             self.neighbors[ip] = None
+        for ip in bootstrap_ips:
+            self.neighbors_hash[ip] = None
         self.port = port
         self.max_neighbors = 5
         self.seen_messages = set()
@@ -72,7 +76,21 @@ class NetNode():
         digest = hashes.Hash(hashes.SHA256())
         digest.update((self.name + salt).encode())
         return digest.finalize().hex()
-    
+    def ask_for_hash(self,salt):
+        packet = {"type":"hash_req","salt":salt}
+        json_str = json.dumps(packet)
+        encoded = json_str.encode('utf-8')
+        for ip, key in self.neighbors.items(): 
+            host, port = ip
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+                client_socket.connect((host, port))
+                client_socket.sendall(encoded)
+            time.sleep(0.05)
+    def log_hashes(self,ip,packet):
+        n_hash = packet["hash"]
+        n_salt = packet["salt"]
+        key = (n_salt, ip)
+        self.neighbors_hash[key] = n_hash
     def build_network(self):
         if(len(self.neighbors) < self.max_neighbors):
             # Will handle finding more neighbors
@@ -111,18 +129,26 @@ class NetNode():
         ## Packet:
         packet_find = {"type":"find","route":route,"hash":"the hash to find","key":"the last nodes RSA key(this nodes rsa if it is sending it)"}
     def continue_find(self,route,hash_to_find,debug_route=None,target=None,salt=None):
-        packet = {"type":"find","route":route,"hash":hash_to_find,"debug_route":debug_route,"hash":target,"salt":salt, "message_id": str(uuid.uuid4())}
+        packet = {"type":"find","route":route,"debug_route":debug_route,"hash":target,"salt":salt, "message_id": str(uuid.uuid4())}
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
+        
         for ip, key in self.neighbors.items():
+            
             # will later handle key encryption
             self.send_data(packet,ip)
 
     def return_path(self,path):
         message_id = path.get("message_id",None)
+        salt = path.get("salt",None)
         path["message_id"] = message_id or str(uuid.uuid4())
+        count = path.get("count",None)
+        route = path.get("route",None)
+        self.ask_for_hash(salt)
         for ip, key in self.neighbors.items():
-            self.send_data(path,ip)
+            key = (ip,salt)
+            if(self.neighbors_hash.get(key,None) == route[count - 1]):
+                self.send_data(path,ip)
     def hash_str(self,name,salt):
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
@@ -191,6 +217,24 @@ class NetNode():
             key = self.public_key
             key_data = {"key",key}
             self.send_data(key_data, addr)
+        elif(data["type"] == "hash_req"):
+            use_salt = data["salt"]
+            my_hash = self.compute_hashed_identity(use_salt)
+            res = {"type":"hash_res","hash":my_hash,"salt":use_salt}
+            host,port = addr
+            try:
+                json_str = json.dumps(data)
+                encoded = json_str.encode('utf-8')
+
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+                    client_socket.connect((host, port))
+                    client_socket.sendall(encoded)
+                time.sleep(0.05)
+                    # print(f"[√] Sent JSON to {host}:{port}")
+            except Exception as e:
+                pass
+        elif(data["type"] == "hash_res"):
+            self.log_hashes(addr,data)
         elif data['type'] == "return":
             try:
                 route = data["route"]
