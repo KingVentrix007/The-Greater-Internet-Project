@@ -16,32 +16,32 @@ import time
 from collections import deque
 import uuid
 # --- Node Definition ---
-class Node:
-    def __init__(self, name: str):
-        self.name = name
-        self.id = uuid.uuid4().hex
-        self._generate_keys()
-        self.neighbors: List['Node'] = []
+# class Node:
+#     def __init__(self, name: str):
+#         self.name = name
+#         self.id = uuid.uuid4().hex
+#         self._generate_keys()
+#         self.neighbors: List['Node'] = []
         
 
-    def _generate_keys(self):
-        self.private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-        self.public_key = self.private_key.public_key()
+#     def _generate_keys(self):
+#         self.private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+#         self.public_key = self.private_key.public_key()
 
-    def encrypt(self, data: bytes) -> bytes:
-        return hybrid_encrypt(data, self.public_key)
+#     def encrypt(self, data: bytes) -> bytes:
+#         return hybrid_encrypt(data, self.public_key)
 
-    def decrypt(self, data: bytes) -> Optional[bytes]:
-        return hybrid_decrypt(data, self.private_key)
+#     def decrypt(self, data: bytes) -> Optional[bytes]:
+#         return hybrid_decrypt(data, self.private_key)
 
     
-    def compute_hashed_identity(self, salt: str) -> str:
-        digest = hashes.Hash(hashes.SHA256())
-        digest.update((self.name + salt).encode())
-        return digest.finalize().hex()
+#     def compute_hashed_identity(self, salt: str) -> str:
+#         digest = hashes.Hash(hashes.SHA256())
+#         digest.update((self.name + salt).encode())
+#         return digest.finalize().hex()
 
-    def __repr__(self):
-        return self.name
+#     def __repr__(self):
+#         return self.name
 
 # ! Use this to add neighbors to each node during creation
 #TODO Make stored ip,port combos to hash, time bombed, Decide on encryption
