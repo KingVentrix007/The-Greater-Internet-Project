@@ -286,8 +286,16 @@ class NetNode():
                             "count": count - 1,
                             "payload": payload
                         }
-                        for ip, _ in self.neighbors.items():
-                            self.send_data(next_packet, ip,"type return")
+                        hash_to_search = route[count-1]["hash"]
+                        try:
+                            val = tuple(self.store_hash.get(hash_to_search,None))
+                        except:
+                            val = None
+                        if(val != None):
+                            self.send_data(next_packet, val,"type return")
+                        else:
+                            for ip, _ in self.neighbors.items():
+                                self.send_data(next_packet, ip,"type return")
                     else:
                         print(f"[⬅️] Final ACK received at {self.name}: {payload}")
             except Exception as e:
