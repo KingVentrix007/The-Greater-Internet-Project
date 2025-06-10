@@ -6,6 +6,66 @@ import json
 from cryptography.hazmat.primitives import hashes
 import uuid
 global_port = 0
+global_paths = {}
+
+def handle_conn(data):
+     
+    global global_paths
+    packet_type = data['type']
+    #  print(packet_type)
+    target_hash = data.get("hash",None)
+    sub_type = data.get("sub_type","default")
+    if(packet_type == "path"):
+        if(sub_type == "default"):
+            # print("Hello")
+            route = data.get("route",None)
+            if(global_paths.get(target_hash,None) == None):
+                global_paths[target_hash] = route
+            # print("Found path")
+    elif(packet_type == "return"):
+         payload = data["payload"]
+         print("Message: ",payload)
+    
+
+
+
+
+def send_to_target(route, payload,server_ip,server_port):
+        count = 1
+        packet = {
+            "type": "forward",
+            "route": route,
+            "count": count,
+            "payload": payload
+        }
+        # Send to next hop
+        next_hop = route[count]
+        # print("Next hop",next_hop)
+        time.sleep(1)
+        message_id = packet.get("message_id",None)
+        packet["message_id"] = message_id or str(uuid.uuid4())
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+            client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            client_socket.connect((server_ip, server_port))
+            # print(f"[+] Sending to EDOI node at {server_ip}:{server_port}")
+
+            # Send a message to the EDOI node
+            message = json.dumps(packet).encode('utf-8')
+            client_socket.sendall(message)
+            
+            # print("[√] Message sent successfully.")
+def client_comm(target,target_hash,server_ip,server_port):
+    print(f"Waiting to connect to target {target}")
+    path = global_paths.get(target_hash,None)
+    while path == None:
+        time.sleep(0.05)
+        path = global_paths.get(target_hash,None)
+    print(f"Connected to {target}")
+
+    while True:
+        data_to_send = input("Enter data to send: ")
+        send_to_target(path,data_to_send,server_ip,server_port)
+
 def listen_for_message():
 
     # Listens for incoming messages on the specified port
@@ -18,7 +78,7 @@ def listen_for_message():
             while True:
                 conn, addr = server_socket.accept()
                 with conn:
-                    print(f"[+] Connection from {addr}")
+                    # print(f"[+] Connection from {addr}")
 
                     data_chunks = []
                     while True:
@@ -36,15 +96,16 @@ def listen_for_message():
                         # print(f"[√] Received JSON: {json_data}")
                         # in_ip,in_port = addr
                         # neighbors[addr] = None
-                        # handle_conn(json_data,addr,conn)
-                        print(f"[√] Received JSON: {json_data}")
+                        handle_conn(json_data)
+                        
+                        # print(f"[√] Received JSON: {json_data}")
                     except json.JSONDecodeError as e:
                         print(f"[!]JSON decode error: {e}")
                     except Exception as e:
                         print(f"[!]General error: {e}")
                     finally:
-                        # pass
-                        print("[*] Connection closed.\n")
+                        pass
+                        # print("[*] Connection closed.\n")
 
 
 def compute_hashed_identity(name:str, salt: str) -> str:
@@ -108,6 +169,7 @@ def connect_to_edoi():
         init_connect(ip,port,client_port=int(client_port))
         time.sleep(2)
         do_request(client_hash,secure_salt,int(client_port),target_hash,"127.0.0.1",port)     
+        client_comm(target,target_hash,ip,port)
         while(True):
              time.sleep(1)       
     except Exception as e:
