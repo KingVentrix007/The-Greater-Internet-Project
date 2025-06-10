@@ -12,8 +12,9 @@ import httpe_fernet
 import signal
 import sys
 import logging
+import threading
 class Httpe:
-    def __init__(self,server_host="127.0.0.1",Port=8080,running_version="1.0"):
+    def __init__(self,server_host="127.0.0.1",Port=8080,running_version="1.0",name="edoi node",use_edoi_node=False):
         self.routes = {}
         self.host = server_host
         self.port = Port
@@ -33,7 +34,9 @@ class Httpe:
         self._log_file = None
         self._log_file = open("server_log.log","a")
         logging.basicConfig(filename='logfile.log', level=logging.INFO, format='[I]%(asctime)s: %(message)s', datefmt='%Y-%m-%dT%H:%M:%SZ')
-    
+        # Used if EDOI node
+        self.is_edoi_node = use_edoi_node
+        self.node_name = name
     def _shutdown(self, signum, frame):
         print("\nShutting down HTTPE server...")
         print("[v] Purging users")
@@ -94,6 +97,7 @@ class Httpe:
             enc_status = "Encrypted" if requires_enc else "Unencrypted"
             print(f"{method} {route} ({enc_status}) -> {func.__name__}")
     def serve(self, host="127.0.0.1", port=8080):
+        
         print(f"HTTPE server running on {host}:{port}...")
         signal.signal(signal.SIGINT, self._shutdown)  # Handle Ctrl+C
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -111,6 +115,8 @@ class Httpe:
             except KeyboardInterrupt:
                 print("\nShutting down HTTPE server...")
                 return
+        
+                                # print("[*] Connection closed.\n")
     def _create_token(self, user_id):
         
         token = {"user_id":user_id,"session_id":str(uuid.uuid4()),"timestamp":datetime.now(timezone.utc).isoformat(),"noise":base64.b64encode(os.urandom(128)).decode()}
@@ -242,7 +248,8 @@ class Httpe:
             except Exception as e:
                 self._log_internal_error(e)
                 err_res =  Response.error(message="Internal Server Error",status_code=500)
-                conn.sendall(err_res.serialize().encode())
+                # conn.sendall(err_res.serialize().encode())
+                self.send_packet(conn,addr=addr,packet=err_res.serialize().encode())
                 return
             # print(type(data))
             text = data.decode()
@@ -263,18 +270,21 @@ class Httpe:
             print(version)
             if(version != f"HTTPE/{self.version}"):
                 err_res =  Response.error(message="Invalid Version",status_code=400)
-                conn.sendall(err_res.serialize().encode())
+                # conn.sendall(err_res.serialize().encode())
+                self.send_packet(conn,addr,packet=err_res.serialize().encode())
             if(is_initial_packet == True):
                 if(initial_packet_type == "GET_RSA"):
                     send_rsa_pub = {"rsa":self.rsa_public_key_shared}
                     rsa_rez = Response(json.dumps(send_rsa_pub))
-                    conn.sendall(rsa_rez.serialize().encode())
+                    # conn.sendall(rsa_rez.serialize().encode())
+                    self.send_packet(conn,addr,packet=rsa_rez.serialize().encode())
                     return
                 elif(initial_packet_type == "SHARE_AES"):
                     # print(headers)
                     res_data = self._handle_share_aes(headers)
-                    conn.sendall(res_data.serialize().encode())
-                    return
+                    # conn.sendall(res_data.serialize().encode())
+                    self.send_packet(conn,addr,packet=res_data.serialize().encode())
+                    # return
                 elif(initial_packet_type == "REQ_ENC"):
                     new_lines,user_id_from_token =  self._handle_enc_request(lines)
                     if(new_lines == None or user_id_from_token == None):
@@ -282,7 +292,8 @@ class Httpe:
                         self._log_internal_error(e)
 
                         err_res =  Response.error(message=f"Error With Client handling code: {e}",status_code=500)
-                        conn.sendall(err_res.serialize().encode())
+                        # conn.sendall(err_res.serialize().encode())
+                        self.send_packet(conn,addr,packet=err_res.serialize().encode())
                         return
                     new_lines = new_lines.splitlines()
                     is_encrypted_packet = True
@@ -293,26 +304,30 @@ class Httpe:
             if(str(header_user_id) != str(user_id_from_token)):
                 self._log_failed_verification(header_user_id,addr,"clientID x TokenID mismatch")
                 err_res =  Response.error(message="Invalid Token",status_code=608)
-                conn.sendall(err_res.serialize().encode())
+                # conn.sendall(err_res.serialize().encode())
+                self.send_packet(conn,addr,packet=err_res.serialize().encode())
                 return
             if(packet_id == None):
                 self._log_failed_verification(header_user_id,addr,"invalid packet")
                 err_res =  Response.error(message="packet_id missing",status_code =400)
-                conn.sendall(err_res.serialize().encode())
+                # conn.sendall(err_res.serialize().encode())
+                self.send_packet(conn,addr,packet=err_res.serialize().encode())
                 return
             # print(f"HTTPE {method} {location} from {addr} with headers {headers}")
             timestamp = headers.get("timestamp", None)
             if(timestamp == None):
                 err_res =  Response.error(message="Invalid Timestamp",status_code=608)
                 self._log_failed_verification(header_user_id,addr,"invalid packet")
-                conn.sendall(err_res.serialize().encode())
+                # conn.sendall(err_res.serialize().encode())
+                self.send_packet(conn,addr,packet=err_res.serialize().encode())
                 return
             timestamp = datetime.fromisoformat(timestamp)
             now = datetime.now(timezone.utc)
             if now - timestamp > timedelta(minutes=2):
                 self._log_failed_verification(header_user_id,addr,"Possible packet reuse")
                 err_res =  Response.error(message="Old Timestamp",status_code=607)
-                conn.sendall(err_res.serialize().encode())
+                # conn.sendall(err_res.serialize().encode())
+                self.send_packet(conn,addr,packet=err_res.serialize().encode())
                 return
             
             handler = self.routes.get((location, method,is_encrypted_packet))
@@ -345,14 +360,15 @@ class Httpe:
                         result = Response(str(result))  # fallback
                 response = result.serialize()
 
-            conn.sendall(response.encode())
-
+            # conn.sendall(response.encode())
+            self.send_packet(conn,addr,packet=response.encode())
         except Exception as e:
             self._log_internal_error(e)
 
             #! Remove {e} in prod
             err_res =  Response.error(message=f"Error With Client handling code :{e}",status_code=500)
-            conn.sendall(err_res.serialize().encode())
+            # conn.sendall(err_res.serialize().encode())
+            self.send_packet(conn,addr,packet=err_res.serialize().encode())
             return
         finally:
             conn.close()
@@ -397,3 +413,8 @@ class Httpe:
             body = {"redirect_url_endpoint":redirect_url}
             res = Response(json.dumps(body),status_code=status)
             return res
+    
+    def send_packet(self,conn,addr,data):
+        if(self.is_edoi_node == False):
+            conn.sendall(data)
+    # def edoi_net_rec()

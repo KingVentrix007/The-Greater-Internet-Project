@@ -548,6 +548,7 @@ class NetNode():
                     # debug_route_member = {"name":self.name,"len_route":len(route)}
                     # debug_route = list(data['debug_route'])
                     # debug_route.append(debug_route_member)
+                    
                     self.store_hash[route[len(route)-1].get("hash")] = last_ip
                     my_ip = (self.ip,self.port)
                     # print(">>",my_ip)
