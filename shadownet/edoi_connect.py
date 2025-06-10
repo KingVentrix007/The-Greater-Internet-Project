@@ -1,3 +1,4 @@
+#TODO PORT to work with EDOI proper
 import time
 import socket
 import threading
