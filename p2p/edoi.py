@@ -68,6 +68,19 @@ class NetNode():
         self.send_loop_count = 0
         self.find_hashes_handled = set()
         self.found_end_route = {}
+
+        self.found_paths = {}
+        # self.build_neighbors() #! USe this in dev
+    def build_neighbors(self):
+        self.neighbors_tmp = set()
+        for ip,key in self.neighbors.items():
+            self.neighbors_tmp.add(ip)
+        for ip in self.neighbors_tmp:
+            tup = ('127.0.0.1',self.port)
+            packet = {"type":"neighbors","ip_key":tup}
+            ret = self.send_data(packet,addr=ip,init_con=True)
+            if(ret == False):
+                time.sleep(1)
     def _generate_keys(self):
         self.private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         self.public_key = self.private_key.public_key()
@@ -98,6 +111,13 @@ class NetNode():
         n_salt = packet["salt"]
         key = (n_salt, ip)
         self.neighbors_hash[key] = n_hash
+    def post_packet(self,packet,target_name):
+        target_hash = self.start_find(target_name,"fixed_salt")
+        path = self.found_paths.get(target_hash,None)
+        while path == None:
+            time.sleep(0.05)
+            path = self.found_paths.get(target_hash,None)
+        self.send_to_target(list(path),packet)
     def build_network(self):
         if(len(self.neighbors) < self.max_neighbors):
             # Will handle finding more neighbors
@@ -116,7 +136,7 @@ class NetNode():
             
     
         pass # Will send RSA public key
-    def send_data(self,data,addr=None,conn=None,debug_node_name=None):
+    def send_data(self,data,addr=None,conn=None,debug_node_name=None,init_con=False):
         
         while(self.send_lock == True):
             pass
@@ -141,14 +161,17 @@ class NetNode():
             self.send_lock = False
                 # print(f"[√] Sent JSON to {host}:{port}")
         except Exception as e:
-            self.send_lock = False
-            time.sleep(0.05)
-            self.send_loop_count += 1
-            # if(self.send_loop_count < 10):
-                # self.send_data(data,addr=addr,debug_node_name=debug_node_n)
-            # print(e)
-            if(debug_node_n != "cont find"):
-                print(f"[!]{self.name} Error sending JSON to {host}:{port}:{debug_node_n} - {e}")
+            if(init_con == False):
+                self.send_lock = False
+                time.sleep(0.05)
+                self.send_loop_count += 1
+                # if(self.send_loop_count < 10):
+                    # self.send_data(data,addr=addr,debug_node_name=debug_node_n)
+                # print(e)
+                if(debug_node_n != "cont find"):
+                    print(f"[!]{self.name} Error sending JSON to {host}:{port}:{debug_node_n} - {e}")
+            else:
+                return False
     def temp(self):
         route = []
         route_member = {"node_hash":"the nodes named, hashed ","salt":"the salt used to hash the name"}
@@ -211,6 +234,7 @@ class NetNode():
             # will later handle key encryption
             self.send_data(packet,ip,debug_node_name="send packet")
         # self.continue_find(route, target_hash)
+        return target_hash
     def return_to_sender(self, route, payload):
         count = len(route) - 2
         packet = {
@@ -243,8 +267,8 @@ class NetNode():
             if(data.get("type",None) == "path"):
                 print("discard path: ",data.get("message_id"))
             return  # Drop duplicate
-        if(not message_id):
-            print("U missed one")
+        # if(not message_id):
+        #     print("U missed one")
         # Otherwise:
         if message_id:
             self.seen_messages.add(message_id)
@@ -252,6 +276,9 @@ class NetNode():
             key = self.public_key
             key_data = {"key",key}
             self.send_data(key_data, addr,"rsa get")
+        elif data['type'] == "neighbors":
+            ip_port = tuple(data.get("tup"))
+            self.neighbors[ip_port] = None
         elif(data["type"] == "hash_req"):
             use_salt = data["salt"]
             my_hash = self.compute_hashed_identity(use_salt)
@@ -336,6 +363,7 @@ class NetNode():
             self.handled_paths.add(message_id)
             try:
                 # debug_route = data["debug_route"]
+                
                 count = int(data["count"])
                 name_route = []
                 # for mem in debug_route:
@@ -354,7 +382,10 @@ class NetNode():
                 
 
                 my_member = route[count]
-                my_hash = self.compute_hashed_identity(my_member["salt"])
+                try:
+                    my_hash = self.compute_hashed_identity(my_member["salt"])
+                except Exception as e:
+                    print(f"Hashing error {e}")
                 # my_member_deb = debug_route[count]
                 # print(f"Name:{self.name}:{my_member_deb["name"]}")
                 # if(self.name == my_member_deb['name']):
@@ -390,13 +421,26 @@ class NetNode():
                             print("Error with cache")
                             # self.return_path(data,debug_node_name="other loop")
                     else:
-                        # print(f"{self.name}: Back at main")
-                        self.send_to_target(route, "Hello from start node!")
+                        print(f"{self.name}: Back at main")
+                        try:
+                            end_hash = route[len(route)-1]
+                        except Exception as e:
+                            print(f"End hash error {e}")
+                        try:
+                            self.found_paths[end_hash.get("name",None)] = str(route)
+                        except Exception as e:
+                            print(f"Logging found error {e}")
+                        try:
+                            self.send_to_target(route, "Hello from start node!")
+                        except Exception as e:
+                            print(f"Send error {e}")
                 else:
                     return
                     # print(f"{self.name}: Hash mismatch in path backtracking")
 
             except Exception as e:
+                for item in data.keys():
+                    print(data[item],"|",type(data[item]))
                 print(f"{self.name} Path error: {e}")
         elif(data['type'] == "find"):
             try:
@@ -420,6 +464,7 @@ class NetNode():
                 salt = data["salt"]
                 my_hash = self.compute_hashed_identity(salt)
                 if(len(route) > 20):
+                    print("Killing search")
                     # route_member = {"hash":my_hash,"salt":salt}
                     # debug_route_member = {"name":self.name,"len_route":len(route)}
                     # debug_route = list(data['debug_route'])
@@ -605,10 +650,19 @@ def main():
         print(f"Path len: {len(path)}")
     else:
         print(f"[❌] No path found between {start_node.name} and {target_node.name}")
-
+    # import base64
     # Start the hashed search
+    # salt_ur = os.urandom(32)
+    # salt = base64.b64
     salt = "fixed_salt_123"
-    start_node.start_find(target_name=target_node.name, salt=salt)
+    find_c = input(">>")
+    while find_c != "end":
+        data_in = input("Enter data to send: ")
+        packet = data_in
+        start_node.post_packet(packet,find_c)
+        find_c = input(">>")
+
+    # start_node.start_find(target_name=target_node.name, salt=salt)
 
     try:
         while True:
