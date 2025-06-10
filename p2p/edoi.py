@@ -44,12 +44,12 @@ class Node:
         return self.name
 
 # ! Use this to add neighbors to each node during creation
-#TODO, make client get hashes of neighbors, then send data to there, store ip+port combo with hash as key
+#TODO Make stored ip,port combos to hash, time bombed, Decide on encryption
 class NetNode():
     def __init__(self, name: str,port,bootstrap_ips:list):
         self.name = name
         self.id = uuid.uuid4().hex
-        self._generate_keys()
+        # self._generate_keys()
         self.neighbors = {}
         self.neighbors_hash = {}
 
@@ -113,11 +113,14 @@ class NetNode():
         self.neighbors_hash[key] = n_hash
     def post_packet(self,packet,target_name):
         target_hash = self.start_find(target_name,"fixed_salt")
+        print("Tarhet hash post",target_hash)
         path = self.found_paths.get(target_hash,None)
         while path == None:
             time.sleep(0.05)
             path = self.found_paths.get(target_hash,None)
-        self.send_to_target(list(path),packet)
+            # print(path)
+            print("polling",path)
+        self.send_to_target(path,packet)
     def build_network(self):
         if(len(self.neighbors) < self.max_neighbors):
             # Will handle finding more neighbors
@@ -234,6 +237,7 @@ class NetNode():
             # will later handle key encryption
             self.send_data(packet,ip,debug_node_name="send packet")
         # self.continue_find(route, target_hash)
+        print("Find target hash: ",target_hash)
         return target_hash
     def return_to_sender(self, route, payload):
         count = len(route) - 2
@@ -255,7 +259,9 @@ class NetNode():
             "payload": payload
         }
         # Send to next hop
-        next_hop = route[count]["hash"]
+        next_hop = route[count]
+        print("Next hop",next_hop)
+        time.sleep(1)
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
         for ip, _ in self.neighbors.items():
@@ -427,11 +433,14 @@ class NetNode():
                         except Exception as e:
                             print(f"End hash error {e}")
                         try:
-                            self.found_paths[end_hash.get("name",None)] = str(route)
+                            self.found_paths[end_hash.get("hash",None)] = route
+                            print("end_hash.get('name',None) == ",end_hash.get("hash",None))
                         except Exception as e:
                             print(f"Logging found error {e}")
                         try:
-                            self.send_to_target(route, "Hello from start node!")
+                            # print("send route",route)
+                            # self.send_to_target(route, "Hello from start node!")
+                            pass
                         except Exception as e:
                             print(f"Send error {e}")
                 else:
@@ -717,3 +726,6 @@ def hybrid_decrypt(data: bytes, private_key) -> Optional[bytes]:
         return plaintext
     except Exception:
         return None
+
+# f13e17308af7a8a97ed09c2c9904a5d29b54509bf468cd1eb0e6b50dfd243dce
+# f13e17308af7a8a97ed09c2c9904a5d29b54509bf468cd1eb0e6b50dfd243dce
