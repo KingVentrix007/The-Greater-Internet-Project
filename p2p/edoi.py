@@ -155,7 +155,7 @@ class NetNode():
         ## Packet:
         packet_find = {"type":"find","route":route,"hash":"the hash to find","key":"the last nodes RSA key(this nodes rsa if it is sending it)"}
     def continue_find(self,route,hash_to_find,debug_route=None,target=None,salt=None,my_ip=None):
-        packet = {"type":"find","route":route,"debug_route":debug_route,"hash":target,"salt":salt, "message_id": str(uuid.uuid4()),"my_ip":my_ip}
+        packet = {"type":"find","route":route,"hash":target,"salt":salt, "message_id": str(uuid.uuid4()),"my_ip":my_ip}
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
         
@@ -178,7 +178,7 @@ class NetNode():
                 self.send_data(path,ip,debug_node_name=f"Scan send: {debug_node_name}")
         else:
             host, port = addr
-            print(host,port)
+            # print(host,port)
             self.send_data(path,addr=addr,debug_node_name=debug_node_name)
     def hash_str(self,name,salt):
         digest = hashes.Hash(hashes.SHA256())
@@ -189,9 +189,9 @@ class NetNode():
         my_hash = self.compute_hashed_identity(salt)
         route_member = {"hash": my_hash, "salt": salt}
         route = [route_member]
-        debug_route_member = {"name":self.name,"len_route":len(route)}
+        # debug_route_member = {"name":self.name,"len_route":len(route)}
         route = [route_member]
-        debug_route = [debug_route_member]
+        # debug_route = [debug_route_member]
 
         packet = {
             "type": "find",
@@ -202,11 +202,11 @@ class NetNode():
             #     encoding=serialization.Encoding.PEM,
             #     format=serialization.PublicFormat.SubjectPublicKeyInfo
             # ).decode(),
-            "debug_route":debug_route,
+            
             "message_id": str(uuid.uuid4()),
             "my_ip":(self.ip,self.port)
         }
-        print((self.ip,self.port))
+        # print((self.ip,self.port))
         for ip, key in self.neighbors.items():
             # will later handle key encryption
             self.send_data(packet,ip,debug_node_name="send packet")
@@ -327,12 +327,12 @@ class NetNode():
                 return
             self.handled_paths.add(message_id)
             try:
-                debug_route = data["debug_route"]
+                # debug_route = data["debug_route"]
                 count = int(data["count"])
                 name_route = []
-                for mem in debug_route:
-                    name_route.append(mem.get("name"))
-                out = ' → '.join(name_route)
+                # for mem in debug_route:
+                #     name_route.append(mem.get("name"))
+                # out = ' → '.join(name_route)
                 # print(out)
                 # print("------")
                 # print(f"Current postion: {count}")
@@ -347,27 +347,27 @@ class NetNode():
 
                 my_member = route[count]
                 my_hash = self.compute_hashed_identity(my_member["salt"])
-                my_member_deb = debug_route[count]
+                # my_member_deb = debug_route[count]
                 # print(f"Name:{self.name}:{my_member_deb["name"]}")
-                if(self.name == my_member_deb['name']):
-                    print("Match")
-                    if my_hash == my_member["hash"]:
-                        print("Hash work")
-                    else:
-                        print("Hash not work")
+                # if(self.name == my_member_deb['name']):
+                #     print("Match")
+                #     if my_hash == my_member["hash"]:
+                #         print("Hash work")
+                #     else:
+                #         print("Hash not work")
                 if my_hash == my_member["hash"]:
-                    print(f"{self.name}: Stepping back from: {count}")
+                    # print(f"{self.name}: Stepping back from: {count}")
                     if count > 0:
                         data['count'] = count - 1
                         # print(f"{data['count']}")
                         
                         that_hash = route[data['count']]["hash"]
-                        that_hash_name = debug_route[data['count']]
+                        # that_hash_name = debug_route[data['count']]
                         # print(f"Next node: {that_hash_name.get("name")}|Current node: {self.name}")
                         if(my_hash == that_hash):
-                            print("How?")/
+                            # print("How?")
                             that_hash = route[count-1]["hash"]
-                            that_hash_name = debug_route[count-1]
+                            # that_hash_name = debug_route[count-1]
                             data['count'] = count - 2
                         end_hash = route[len(route)-1]["hash"]
                         if(that_hash == end_hash):
@@ -377,7 +377,7 @@ class NetNode():
                             val = tuple(self.store_hash.get(that_hash,None))
                             if(val == None):
                                 print("Error")
-                            self.return_path(data,val,debug_node_name=that_hash_name.get("name","fAILED TO FET HASH name"))
+                            self.return_path(data,val)
                         else:
                             print("Error with cache")
                             # self.return_path(data,debug_node_name="other loop")
@@ -401,9 +401,9 @@ class NetNode():
                     return
                 self.find_hashes_handled.add(target_hash)
                 
-                debug_route = list(data['debug_route'])
-                debug_route_f = debug_route[0]
-                name_to_find = debug_route_f['name']
+                # debug_route = list(data['debug_route'])
+                # debug_route_f = debug_route[0]
+                # name_to_find = debug_route_f['name']
                 last_ip = data.get("my_ip",None)
                 self.store_hash[route[len(route)-1].get("hash")] = last_ip
                 # print(f"Find data: {data}")
@@ -412,12 +412,12 @@ class NetNode():
                 salt = data["salt"]
                 my_hash = self.compute_hashed_identity(salt)
                 if(len(route) > 20):
-                    route_member = {"hash":my_hash,"salt":salt}
-                    debug_route_member = {"name":self.name,"len_route":len(route)}
-                    debug_route = list(data['debug_route'])
-                    debug_route.append(debug_route_member)
+                    # route_member = {"hash":my_hash,"salt":salt}
+                    # debug_route_member = {"name":self.name,"len_route":len(route)}
+                    # debug_route = list(data['debug_route'])
+                    # debug_route.append(debug_route_member)
                     # message_id = data.get("message_id",None)
-                    ret_data = {"type":"path","hash":target_hash,"salt": salt,"route":route,"count":len(route)-1,"debug_route":debug_route}
+                    # ret_data = {"type":"path","hash":target_hash,"salt": salt,"route":route,"count":len(route)-1}
                     return
                     # print(f"Failed to find({self.name})")
                     # self.return_path(ret_data)
@@ -428,10 +428,10 @@ class NetNode():
                     self.found_end_route[target_hash] = route[0].get("hash")
                     route_member = {"hash":my_hash,"salt":salt}
                     route.append(route_member)
-                    debug_route_member = {"name":self.name,"len_route":len(route)}
-                    debug_route = list(data['debug_route'])
-                    debug_route.append(debug_route_member)
-                    ret_data = {"type":"path","route":route,"count":len(route)-2,"debug_route":debug_route,"hash":target_hash,"salt":salt}
+                    # debug_route_member = {"name":self.name,"len_route":len(route)}
+                    # debug_route = list(data['debug_route'])
+                    # debug_route.append(debug_route_member)
+                    ret_data = {"type":"path","route":route,"count":len(route)-2,"hash":target_hash,"salt":salt}
                     ret_data["message_id"] = str(uuid.uuid4())
                     # print(f"LAST NODE : {debug_route[len(route)-2]}")
                     # ret_data = {"type":"path","hash":target_hash,"salt": salt,"route":route,"count":len(route)-1,"debug_route":debug_route}
@@ -439,19 +439,19 @@ class NetNode():
                     # print(f"{self.name}: {data.get("message_id")}: FOUND THE ROUTE:")
                     self.found_route = True
                     name_route = []
-                    for mem in debug_route:
-                        name_route.append(mem.get("name"))
-                    out = ' → '.join(name_route)
+                    # for mem in debug_route:
+                    #     name_route.append(mem.get("name"))
+                    # out = ' → '.join(name_route)
                     # print(out)
 
                     that_hash = route[int(ret_data["count"])]["hash"]
-                    that_hash_name = debug_route[int(ret_data["count"])]["name"]
+                    # that_hash_name = debug_route[int(ret_data["count"])]["name"]
                     if(self.store_hash.get(that_hash,None) != None):
                         # print("That worked",tuple(self.store_hash.get(that_hash,None)))
                         val = tuple(self.store_hash.get(that_hash,None))
                         if(val == None):
                             print("Error")
-                        self.return_path(ret_data,val,debug_node_name="Find route hash")
+                        self.return_path(ret_data,val)
                     else:
                         print("No match")
                         # self.return_path(ret_data,debug_node_name="other run")
@@ -460,16 +460,16 @@ class NetNode():
                 else:
                     route_member = {"hash":my_hash,"salt":salt}
                     route.append(route_member)
-                    debug_route_member = {"name":self.name,"len_route":len(route)}
-                    debug_route = list(data['debug_route'])
-                    debug_route.append(debug_route_member)
+                    # debug_route_member = {"name":self.name,"len_route":len(route)}
+                    # debug_route = list(data['debug_route'])
+                    # debug_route.append(debug_route_member)
                     self.store_hash[route[len(route)-1].get("hash")] = last_ip
                     my_ip = (self.ip,self.port)
                     # print(">>",my_ip)
                     # for ip, _ in self.neighbors.items():
                     #     print(ip)
                     # time.sleep(10)
-                    self.continue_find(route,hash_to_find=hash_to_find,debug_route=debug_route,target=target_hash,salt=salt,my_ip=my_ip)
+                    self.continue_find(route,hash_to_find=hash_to_find,target=target_hash,salt=salt,my_ip=my_ip)
             except Exception as e:
                 print(f"{self.name} find error {e}|{data}")
 
