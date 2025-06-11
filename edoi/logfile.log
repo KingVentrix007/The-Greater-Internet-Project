@@ -376,3 +376,23 @@ Traceback (most recent call last):
   File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 346, in _handle_client
     lines = text.splitlines()
 AttributeError: 'NoneType' object has no attribute 'splitlines'
+[I]2025-06-11T14:26:46Z: Request to /PTS by ('127.0.0.1', 52570). Header: {'client_id': 'b8253887-d733-4fd8-93b3-10cec7f4fcc9', 'packet_id': '45dac87f-441d-494a-b432-8a218917fc76', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:26:44.369735+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:26:48Z: Request to /PTS by ('127.0.0.1', 52716). Header: {'client_id': 'b8253887-d733-4fd8-93b3-10cec7f4fcc9', 'packet_id': 'c9b1d63c-7c32-4068-8e6b-c90487638321', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:26:46.319220+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:26:49Z: Request to /PTS by ('127.0.0.1', 52867). Header: {'client_id': 'b8253887-d733-4fd8-93b3-10cec7f4fcc9', 'packet_id': '38521035-503d-4c8b-91d7-4944e875877e', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:26:48.223589+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:26:51Z: Request to /PTS by ('127.0.0.1', 53009). Header: {'client_id': 'b8253887-d733-4fd8-93b3-10cec7f4fcc9', 'packet_id': '2390084e-8e36-44a1-a197-ae8e62c99eb1', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:26:50.126070+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:26:53Z: Request to /PTS by ('127.0.0.1', 53148). Header: {'client_id': 'b8253887-d733-4fd8-93b3-10cec7f4fcc9', 'packet_id': 'a18c1892-b7a9-4f44-846b-d91b66a73766', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:26:52.043904+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:26:55Z: Request to /PTS by ('127.0.0.1', 53294). Header: {'client_id': 'b8253887-d733-4fd8-93b3-10cec7f4fcc9', 'packet_id': '2a0af34c-064c-4779-876a-908678988004', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:26:54.007673+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:26:57Z: Request to /PTS by ('127.0.0.1', 53436). Header: {'client_id': 'b8253887-d733-4fd8-93b3-10cec7f4fcc9', 'packet_id': '343a0de6-67dc-474a-aecc-2bc70fcaf639', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:26:55.990534+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:26:59Z: Request to /PTS by ('127.0.0.1', 53580). Header: {'client_id': 'b8253887-d733-4fd8-93b3-10cec7f4fcc9', 'packet_id': '0573d52f-963d-408e-b2ed-3eda878cabc1', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:26:57.895590+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:27:01Z: Request to /PTS by ('127.0.0.1', 53719). Header: {'client_id': 'b8253887-d733-4fd8-93b3-10cec7f4fcc9', 'packet_id': '036e3b14-479a-4577-a52a-6e837e122f0c', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:26:59.776466+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:27:03Z: Request to /PTS by ('127.0.0.1', 53862). Header: {'client_id': 'b8253887-d733-4fd8-93b3-10cec7f4fcc9', 'packet_id': '8b927470-fdf7-489c-a9cf-193240f062c3', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:27:01.736383+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
