@@ -32,17 +32,18 @@ class NetNode():
             self.neighbors_hash[ip] = None
         self.port = port # Port this server will listen on
         self.ip = '127.0.0.1' # IP server will listen on
-        self.max_neighbors = 5
-        self.seen_messages = set()
-        self.found_route = False
-        self.store_hash = {}
-        self.store_hash_time = {}
-        self.handled_paths = set()
-        self.send_lock = False
-        self.send_loop_count = 0
-        self.find_hashes_handled = set()
-        self.found_end_route = {}
+        self.max_neighbors = 5 # Max number of neighbors
+        self.seen_messages = set() # Set of all seed messages
+        self.found_route = False # Unused
+        self.store_hash = {} # Stored hash to IP combos per search
+        self.store_hash_time = {} # Time for store_hash, used to delete old
+        self.handled_paths = set() # Set of all handled path messages
+        self.send_lock = False # Lock to disable send to avoid threading error
+        self.send_loop_count = 0 # Loop to check for send count, unused in node mode
+        self.find_hashes_handled = set() # Set of all hashes already checked
+        self.found_end_route = {} # List of all end routes found
 
+        # Used if node is bas
         self.found_paths = {}
         self.failed_paths = {}
 
