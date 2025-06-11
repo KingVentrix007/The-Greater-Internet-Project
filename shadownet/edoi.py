@@ -47,8 +47,31 @@ class NetNode():
         self.found_paths = {}
         self.failed_paths = {}
 
+        #Flag to allow other outside nodes to connect
         self.is_connect_node = False
+        threading.Thread(target=self.memory_cleaner,daemon=True).start()
         # self.build_neighbors() #! USe this in dev
+    def memory_cleaner(self):
+        while True:
+            try:
+                rem_hash_val = []
+                for hash_val, time_str in list(self.store_hash_time.items()):
+                    try:
+                        # print(time_str,type(time_str))
+                        timestamp = datetime.fromisoformat(time_str)
+                    except ValueError:
+                        print(f"[WARN] Invalid ISO time string: {time_str}")
+                        continue
+                    now = datetime.now(timezone.utc)
+                    if now - timestamp > timedelta(seconds=3):
+                        # print("Clearing path:", hash_val)
+                        rem_hash_val.append(hash_val)
+                for i in rem_hash_val:
+                    self.store_hash.pop(i, None)
+                    self.store_hash_time.pop(i, None)
+            except Exception as e:
+                print("[ERROR] Memory cleaner exception:", e)
+            time.sleep(1)
     def build_neighbors(self):
         self.neighbors_tmp = set()
         for ip,key in self.neighbors.items():
@@ -134,7 +157,8 @@ class NetNode():
         while(self.send_lock == True):
             pass
         if(self.is_connect_node == True):
-            print(f"{self.name}: Send data to {addr}: Data: \n{data}")
+            # print(f"{self.name}: Send data to {addr}: Data: \n{data}")
+            pass
         # if(debug_node_name == None):
             # print("WHY?")
         debug_node_n  =debug_node_name
@@ -229,7 +253,7 @@ class NetNode():
             # will later handle key encryption
             self.send_data(packet,ip,debug_node_name="send packet")
         # self.continue_find(route, target_hash)
-        print("Find target hash: ",target_hash)
+        # print("Find target hash: ",target_hash)
         return target_hash
     def return_to_sender(self, route, payload):
         count = len(route) - 2
@@ -251,8 +275,8 @@ class NetNode():
             "payload": payload
         }
         # Send to next hop
-        next_hop = route[count]
-        print("Next hop",next_hop)
+        # next_hop = route[count]
+        # print("Next hop",next_hop)
         time.sleep(1)
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
@@ -325,6 +349,8 @@ class NetNode():
                         except:
                             val = None
                         if(val != None):
+                            self.store_hash_time[hash_to_search] = datetime.now(timezone.utc).isoformat()
+
                             self.send_data(next_packet, val,"type return")
                         else:
                             for ip, _ in self.neighbors.items():
@@ -420,6 +446,8 @@ class NetNode():
                             print("This shouldn't happen")
                         if(self.store_hash.get(that_hash,None) != None):
                             # print("That worked",tuple(self.store_hash.get(that_hash,None)))
+                            self.store_hash_time[that_hash] = datetime.now(timezone.utc).isoformat()
+
                             val = tuple(self.store_hash.get(that_hash,None))
                             if(val == None):
                                 print("Error")
@@ -465,8 +493,8 @@ class NetNode():
                     # print(f"{self.name}: Hash mismatch in path backtracking")
 
             except Exception as e:
-                for item in data.keys():
-                    print(data[item],"|",type(data[item]))
+                # for item in data.keys():
+                #     print(data[item],"|",type(data[item]))
                 print(f"{self.name} Path error: {e}")
         elif(data['type'] == "find"):
             try:
@@ -484,7 +512,7 @@ class NetNode():
                 # name_to_find = debug_route_f['name']
                 last_ip = data.get("my_ip",None)
                 self.store_hash[route[len(route)-1].get("hash")] = last_ip
-                self.store_hash_time[route[len(route)-1].get("hash")] = datetime.now(timezone.utc)
+                self.store_hash_time[route[len(route)-1].get("hash")] = datetime.now(timezone.utc).isoformat()
                 # TODO Make timeout for store_hash
 
                 # print(f"Find data: {data}")
@@ -503,6 +531,7 @@ class NetNode():
                     that_hash = route[int(ret_data["count"])]["hash"]
                     # that_hash_name = debug_route[int(ret_data["count"])]["name"]
                     if(self.store_hash.get(that_hash,None) != None):
+                        self.store_hash_time[that_hash] = datetime.now(timezone.utc).isoformat()
                         # print("That worked",tuple(self.store_hash.get(that_hash,None)))
                         val = tuple(self.store_hash.get(that_hash,None))
                         if(val == None):
@@ -539,6 +568,8 @@ class NetNode():
                     that_hash = route[int(ret_data["count"])]["hash"]
                     # that_hash_name = debug_route[int(ret_data["count"])]["name"]
                     if(self.store_hash.get(that_hash,None) != None):
+                        self.store_hash_time[that_hash] = datetime.now(timezone.utc).isoformat()
+
                         # print("That worked",tuple(self.store_hash.get(that_hash,None)))
                         val = tuple(self.store_hash.get(that_hash,None))
                         if(val == None):
@@ -655,7 +686,7 @@ def main():
     # Start listeners
     for node in nodes:
         threading.Thread(target=node.listen, daemon=True).start()
-
+        # threading.Thread(target=node.memory_cleaner,daemon=True).start()
     print("[+] All nodes launched and listening.")
 
     time.sleep(2)
