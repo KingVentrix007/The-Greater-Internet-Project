@@ -1,3 +1,4 @@
+from cryptography.hazmat.primitives import hashes
 import os
 import socket
 import threading
@@ -14,7 +15,7 @@ import sys
 import logging
 import threading
 class Httpe:
-    def __init__(self,server_host="127.0.0.1",Port=8080,running_version="1.0",name="edoi node",use_edoi_node=False):
+    def __init__(self,server_host="127.0.0.1",Port=8080,running_version="1.0",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None):
         self.routes = {}
         self.host = server_host
         self.port = Port
@@ -37,6 +38,8 @@ class Httpe:
         # Used if EDOI node
         self.is_edoi_node = use_edoi_node
         self.node_name = name
+        self.edoi_ip = edoi_ip
+        self.edoi_port = edoi_port
     def _shutdown(self, signum, frame):
         print("\nShutting down HTTPE server...")
         print("[v] Purging users")
@@ -232,6 +235,19 @@ class Httpe:
 
     def _log_internal_error(self, error: Exception):
         logging.error(f"Internal server error: {error}", exc_info=True)
+    def compute_hashed_identity(self,name:str, salt: str) -> str:
+        digest = hashes.Hash(hashes.SHA256())
+        digest.update((name + salt).encode())
+        return digest.finalize().hex()
+    def _send_connect(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+            client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            client_socket.connect((self.edoi_ip, self.edoi_port))
+            print(f"[+] Connected to EDOI node at {self.edoi_ip}:{self.edoi_port}")
+
+            # Send a message to the EDOI node
+            message = json.dumps({"type": "connect","tup":(self.ip,self.port)}).encode('utf-8')
+            client_socket.sendall(message)
     def _handle_client(self, conn, addr):
         try:
             try:
@@ -252,6 +268,63 @@ class Httpe:
                 self.send_packet(conn,addr=addr,packet=err_res.serialize().encode())
                 return
             # print(type(data))
+            if(self.is_edoi_node == True):
+                edoi_decoded = data.decode('utf-8')
+                try:
+                    edoi_json_data = json.loads(edoi_decoded)
+                except Exception as e:
+                    err_res =  Response.error(message=f"Internal Server Error {e}",status_code=500)
+                    # conn.sendall(err_res.serialize().encode())
+                    self.send_packet(conn,addr=addr,packet=err_res.serialize().encode())
+                    return
+                edoi_packet_type = data.get("type",None)
+                if(edoi_packet_type == "find"):
+                    route = data.get("route", None)
+                    target_hash = data.get("hash", None)
+                    if route and target_hash:
+                        salt = data.get("salt", None)
+                        name_hash = self.compute_hashed_identity(self.name, salt)
+                        if name_hash == target_hash:
+                            route_member = {"hash":name_hash,"salt":salt}
+                            route.append(route_member)
+                            ret_data = {"type":"path","route":route,"count":len(route)-2,"hash":target_hash,"salt":salt}
+                            ret_data["message_id"] = str(uuid.uuid4())
+                            try:
+                                json_str = json.dumps(ret_data)
+                                encoded = json_str.encode('utf-8')
+
+                                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+                                    client_socket.connect((self.edoi_ip, self.edoi_port))
+                                    client_socket.sendall(encoded)
+                                return
+                            except Exception as e:
+                                print(f"[!] Error sending data: {e}")
+                elif(edoi_packet_type == "forward"):
+                    count = data.get("count",None)
+                    route = data.get("route",None)
+                    end_point = route[count]
+                    salt = route[count]["salt"]
+
+                    end_hash = end_point.get("hash",None)
+                    my_hash = self.compute_hashed_identity(self.name,salt)
+                    if(my_hash == end_hash):
+                        pass
+                    else:
+                        return
+
+
+                try:
+                    data = edoi_json_data.get("payload",None)
+                except Exception as e:
+                    err_res =  Response.error(message=f"Internal Server Error {e}",status_code=500)
+                    # conn.sendall(err_res.serialize().encode())
+                    self.send_packet(conn,addr=addr,packet=err_res.serialize().encode())
+                    return
+
+
+
+
+
             text = data.decode()
             lines = text.splitlines()
 
@@ -414,7 +487,20 @@ class Httpe:
             res = Response(json.dumps(body),status_code=status)
             return res
     
-    def send_packet(self,conn,addr,data):
+    def send_packet(self,conn,addr,data,route=None):
         if(self.is_edoi_node == False):
             conn.sendall(data)
+        else:
+            count = len(route) - 2
+            packet = {
+                "type": "return",
+                "route": route,
+                "count": count,
+                "payload": data
+            }
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+                client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                client_socket.connect((self.edoi_ip, self.edoi_port))
+                message = json.dumps(packet).encode('utf-8')
+                client_socket.sendall(message)
     # def edoi_net_rec()
