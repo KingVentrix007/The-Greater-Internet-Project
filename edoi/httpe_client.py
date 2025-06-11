@@ -99,7 +99,7 @@ class HttpeClient:
         self.use_edoi = connect_to_edoi
         self.edoi_path = None
         self.edoi_target = edoi_target
-        self.salt = "fixed_salt"
+        self.salt = 'Fixed_SALT'#os.urandom(32).encode("latin-1")
         self.edoi_res = None
         self.got_edoi_res = False
         self.handle_con_in_use = False
@@ -108,6 +108,8 @@ class HttpeClient:
             self._send_connect()
             time.sleep(2)
             self.get_edoi_server_path()
+            time.sleep(2)
+            self._init_connection()
             
     def compute_hashed_identity(self,name:str, salt: str) -> str:
         digest = hashes.Hash(hashes.SHA256())
@@ -137,7 +139,7 @@ class HttpeClient:
             client_socket.sendall(json.dumps(packet).encode())
 
     def handle_edoi_conn(self,data):
-        print(data)
+        # print(data)
         edoi_packet_type = data.get("type",None)
         sub_type = data.get("sub_type","default")
         if(edoi_packet_type == "path" and self.edoi_path == None):
@@ -145,6 +147,7 @@ class HttpeClient:
                 # print("Hello")
                 route = data.get("route",None)
                 self.edoi_path = route
+                
                 print("Found path")
         elif(edoi_packet_type == "return"):
             payload = data["payload"]
@@ -172,20 +175,20 @@ class HttpeClient:
                             if not chunk:
                                 print("Got here")
                                 break  # Connection closed by client
-                            print("Chunk: ",chunk)
+                            # print("Chunk: ",chunk)
                             data_chunks.append(chunk)
 
                         full_data = b''.join(data_chunks)
                         try:
                             decoded = full_data.decode('utf-8')
-                            print(f"[>] Full raw data: {decoded}")
+                            # print(f"[>] Full raw data: {decoded}")
 
                             json_data = json.loads(decoded)
                             # print(f"[√] Received JSON: {json_data}")
                             # in_ip,in_port = addr
                             # neighbors[addr] = None
-                            threading.Thread(target=self.handle_edoi_conn,args=(json_data,), daemon=True).start()
-                            # threading.t self.handle_edoi_conn(json_data)
+                            # threading.Thread(target=self.handle_edoi_conn,args=(json_data,), daemon=True).start()
+                            self.handle_edoi_conn(json_data)
                                 
                             
                             # print(f"[√] Received JSON: {json_data}")
@@ -209,14 +212,16 @@ class HttpeClient:
         """Send an encrypted request to the server, establishing connection if needed"""
         try:
             if not self.secure and use_httpe:
-                self._init_connection()
+
+                print("Is connecting")
+                
             return self._send_request_enc(method, location, headers, body)
         except Exception as e:
             print(f"Error in send_request: {e}")
             return None
 
     def _send_request_enc(self, method, location, headers=None, body=""):
-        # print(type(body),"|",type(""))
+        print(type(body),"|",type(""))
         if(type(body) != type("")):
             raise TypeError(f"Body must be of type str, current type is {type(body)}")
         """Send an encrypted packet after key exchange"""
@@ -224,16 +229,19 @@ class HttpeClient:
             headers = {}
 
         try:
-            headers.setdefault("client_id", str(self._client_id))
-            headers.setdefault("packet_id", str(uuid.uuid4()))
-            headers.setdefault("is_com_setup", False)
-            headers.setdefault("timestamp", datetime.now(timezone.utc))
-            headers.setdefault("compressions", "false")
+            try:
+                headers.setdefault("client_id", str(self._client_id))
+                headers.setdefault("packet_id", str(uuid.uuid4()))
+                headers.setdefault("is_com_setup", False)
+                headers.setdefault("timestamp", datetime.now(timezone.utc))
+                headers.setdefault("compressions", "false")
 
-            request_lines = [f"METHOD:{method.upper()}", f"LOCATION:{str(location)}", "HEADERS:"]
-            request_lines += [f"{str(k)}:{str(v)}" for k, v in headers.items()]
-            request_lines.append("END")
-
+                request_lines = [f"METHOD:{method.upper()}", f"LOCATION:{str(location)}", "HEADERS:"]
+                request_lines += [f"{str(k)}:{str(v)}" for k, v in headers.items()]
+                request_lines.append("END")
+            except Exception as e:
+                print(f"Failed in setting headers {e}")
+            print("httpe_client_packet_id: ",headers.get("packet_id"))
             if method.upper() == "POST":
                 request_lines.append(body)
                 request_lines.append("END")
@@ -247,6 +255,7 @@ class HttpeClient:
                 enc_request = self._fernet_class.encrypt(plain_request.encode("utf-8"))
             except Exception as e:
                 print(f"enc_request error {e}")
+            print("type(self._token): ",type(self._token))
             packet = [
                 "VERSION:HTTPE/1.0",
                 "TYPE:REQ_ENC",
@@ -265,7 +274,7 @@ class HttpeClient:
                         s.sendall(full_data.encode())
                         response = self._receive_full_response(s)
                 else:
-                    self.edoi_send_to_target(full_data.encode())
+                    self.edoi_send_to_target(full_data)
                     response = self._receive_full_response(None)
 
                     print("Use EDOI")
@@ -278,7 +287,7 @@ class HttpeClient:
             # print(res.status_code)
             # print(res._body_str)
             try:
-                
+                print("res.body(): ",res.body())
                 decrypted_body = self._fernet_class.decrypt(res.body()).decode()
             except Exception as e:
                 print(f"Error in decrypted_body {e}")
@@ -326,6 +335,7 @@ class HttpeClient:
             while self.got_edoi_res == False:
                 pass
             ret_data = self.edoi_res
+            self.got_edoi_res = False
             return ret_data
 
     def _connection_send(self, request_data: str) -> HttpeResponse:
@@ -342,7 +352,9 @@ class HttpeClient:
                 return None
         else:
             self.edoi_send_to_target(request_data)
-            return self._receive_full_response(None)
+             
+            response = self._receive_full_response(None)
+            return HttpeResponse(response)
 
     def _init_connection(self):
         """Initial secure handshake with server"""
@@ -381,6 +393,8 @@ class HttpeClient:
                 "HEADERS:",
                 f"aes_key:{enc_aes}",
                 f"user_id:{enc_user_id}",
+                f"packet_id:{str(uuid.uuid4())}",
+                f"timestamp:{datetime.now(timezone.utc)}"
                 "END"
             ]
             aes_request = "\n".join(request_lines)
@@ -391,6 +405,7 @@ class HttpeClient:
                 return
 
             response_data = response.json()
+            print("response_data == ",response_data)
             enc_token = response_data.get("token")
             enc_cert = response_data.get("certificate")
 

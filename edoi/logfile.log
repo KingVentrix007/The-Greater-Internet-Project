@@ -55,3 +55,108 @@ Traceback (most recent call last):
   File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 291, in _handle_client
     name_hash = self.compute_hashed_identity(self.name, salt)
 AttributeError: 'Httpe' object has no attribute 'name'
+[I]2025-06-11T07:43:16Z: Internal server error: 'str' object has no attribute 'decode'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 337, in _handle_client
+    text = data.decode()
+AttributeError: 'str' object has no attribute 'decode'
+[I]2025-06-11T07:44:40Z: Internal server error: Object of type bytes is not JSON serializable
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 366, in _handle_client
+    self.send_packet(conn,addr,data=rsa_rez.serialize().encode(),route=route)
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 517, in send_packet
+    message = json.dumps(packet).encode('utf-8')
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\json\__init__.py", line 231, in dumps
+    return _default_encoder.encode(obj)
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\json\encoder.py", line 199, in encode
+    chunks = self.iterencode(o, _one_shot=True)
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\json\encoder.py", line 257, in iterencode
+    return _iterencode(o, 0)
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\json\encoder.py", line 179, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+TypeError: Object of type bytes is not JSON serializable
+[I]2025-06-11T07:46:44Z: Internal server error: local variable 'route' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 277, in _handle_client
+    edoi_json_data = json.loads(edoi_decoded)
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\json\__init__.py", line 357, in loads
+    return _default_decoder.decode(s)
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\json\decoder.py", line 353, in raw_decode
+    obj, end = self.scan_once(s, idx)
+json.decoder.JSONDecodeError: Unterminated string starting at: line 1 column 1022 (char 1021)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 282, in _handle_client
+    self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=route)
+UnboundLocalError: local variable 'route' referenced before assignment
+[I]2025-06-11T07:50:37Z: Failed to verify user None from ('127.0.0.1', 59235). invalid packet
+[I]2025-06-11T07:53:09Z: Failed to verify user None from ('127.0.0.1', 61377). invalid packet
+[I]2025-06-11T07:54:51Z: Failed to verify user None from ('127.0.0.1', 63678). invalid packet
+[I]2025-06-11T07:56:22Z: Failed to verify user None from ('127.0.0.1', 50087). invalid packet
+[I]2025-06-11T07:58:13Z: Internal server error: local variable 'route' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 277, in _handle_client
+    edoi_json_data = json.loads(edoi_decoded)
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\json\__init__.py", line 357, in loads
+    return _default_decoder.decode(s)
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\json\decoder.py", line 353, in raw_decode
+    obj, end = self.scan_once(s, idx)
+json.decoder.JSONDecodeError: Unterminated string starting at: line 1 column 2043 (char 2042)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 282, in _handle_client
+    self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=route)
+UnboundLocalError: local variable 'route' referenced before assignment
+[I]2025-06-11T08:01:15Z: Failed to verify user None from ('127.0.0.1', 55323). invalid packet
+[I]2025-06-11T08:05:42Z: Failed to verify user None from ('127.0.0.1', 57636). invalid packet
+[I]2025-06-11T08:05:43Z: Request to /hello-world by ('127.0.0.1', 57711). Header: {'client_id': 'b3d0794c-8505-4c65-b72e-c2f8d6246a19', 'packet_id': '028431b9-e6dd-456e-93b6-5a2d3c943c43', 'is_com_setup': 'False', 'timestamp': '2025-06-11 06:05:42.371055+00:00', 'compressions': 'false'} Body: 
+[I]2025-06-11T08:07:00Z: Internal server error: object of type 'NoneType' has no len()
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 277, in _handle_client
+    edoi_json_data = json.loads(edoi_decoded)
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\json\__init__.py", line 357, in loads
+    return _default_decoder.decode(s)
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\json\decoder.py", line 353, in raw_decode
+    obj, end = self.scan_once(s, idx)
+json.decoder.JSONDecodeError: Unterminated string starting at: line 1 column 1022 (char 1021)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 283, in _handle_client
+    self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=None)
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 510, in send_packet
+    count = len(route) - 2
+TypeError: object of type 'NoneType' has no len()
+[I]2025-06-11T08:07:59Z: Failed to verify user None from ('127.0.0.1', 62036). invalid packet
+[I]2025-06-11T08:08:01Z: Request to /hello-world by ('127.0.0.1', 62121). Header: {'client_id': 'd1137a40-492b-4c00-ae2b-382ffeba2563', 'packet_id': '01786230-e733-4868-a536-db725c2414fe', 'is_com_setup': 'False', 'timestamp': '2025-06-11 06:07:59.152174+00:00', 'compressions': 'false'} Body: 
+[I]2025-06-11T08:10:38Z: Failed to verify user None from ('127.0.0.1', 64186). invalid packet
+[I]2025-06-11T08:10:40Z: Request to /hello-world by ('127.0.0.1', 64237). Header: {'client_id': '06970b13-2e43-4697-b1bc-362bac773e50', 'packet_id': '47ff49b7-1ea3-47c5-b2c1-d5507e98f6dd', 'is_com_setup': 'False', 'timestamp': '2025-06-11 06:10:38.744690+00:00', 'compressions': 'false'} Body: 
+[I]2025-06-11T08:12:46Z: Failed to verify user None from ('127.0.0.1', 50431). invalid packet
+[I]2025-06-11T08:12:48Z: Request to /hello-world by ('127.0.0.1', 50614). Header: {'client_id': '9de97253-74f4-4d2d-8995-6d6975437135', 'packet_id': 'db49f259-5e99-46c8-949b-e39726b3fc6e', 'is_com_setup': 'False', 'timestamp': '2025-06-11 06:12:46.789115+00:00', 'compressions': 'false'} Body: 
+[I]2025-06-11T08:17:12Z: Failed to verify user None from ('127.0.0.1', 53199). invalid packet
+[I]2025-06-11T08:17:14Z: Request to /hello-world by ('127.0.0.1', 53521). Header: {'client_id': 'abbd1d6c-e76e-4d64-ac2d-d194fb8dd54c', 'packet_id': '015c5293-e23e-4c1b-8880-61c8e90fb87d', 'is_com_setup': 'False', 'timestamp': '2025-06-11 06:17:12.336630+00:00', 'compressions': 'false'} Body: 
+[I]2025-06-11T08:33:02Z: Failed to verify user None from ('127.0.0.1', 55894). invalid packet
+[I]2025-06-11T08:33:04Z: Request to /hello-world by ('127.0.0.1', 56080). Header: {'client_id': '7f016e13-ceff-4daa-bd94-ef53136fd9de', 'packet_id': '0b298361-57f4-4df7-9746-be1d63dba493', 'is_com_setup': 'False', 'timestamp': '2025-06-11 06:33:02.608781+00:00', 'compressions': 'false'} Body: 
+[I]2025-06-11T08:36:40Z: Failed to verify user None from ('127.0.0.1', 58289). invalid packet
+[I]2025-06-11T08:36:42Z: Request to /hello-world by ('127.0.0.1', 58366). Header: {'client_id': '542eada8-fd84-4174-9e3a-4fb2acb3cb49', 'packet_id': 'afef1b3f-a5e2-46e3-8976-6dcb9e5c8e46', 'is_com_setup': 'False', 'timestamp': '2025-06-11 06:36:40.202218+00:00', 'compressions': 'false'} Body: 
+[I]2025-06-11T08:38:17Z: Failed to verify user None from ('127.0.0.1', 60554). invalid packet
+[I]2025-06-11T08:38:19Z: Request to /hello-world by ('127.0.0.1', 60618). Header: {'client_id': 'da0050ca-8e7c-4f1b-9779-ae4922f63f22', 'packet_id': 'b427459b-ec08-48de-9f35-9404b07274d9', 'is_com_setup': 'False', 'timestamp': '2025-06-11 06:38:17.951408+00:00', 'compressions': 'false'} Body: 
+[I]2025-06-11T08:42:00Z: Failed to verify user None from ('127.0.0.1', 62842). invalid packet
+[I]2025-06-11T08:42:02Z: Request to /hello-world by ('127.0.0.1', 62973). Header: {'client_id': '7caa13d0-b99a-4130-9ccf-aeef0d450536', 'packet_id': '2b730c74-1c3b-4f72-b9bb-c2fb4d0d1512', 'is_com_setup': 'False', 'timestamp': '2025-06-11 06:42:00.977564+00:00', 'compressions': 'false'} Body: 
+[I]2025-06-11T08:45:05Z: Internal server error: Invalid isoformat string: '2025-06-11 06:45:03.647500+00:00END'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 418, in _handle_client
+    timestamp = datetime.fromisoformat(timestamp)
+ValueError: Invalid isoformat string: '2025-06-11 06:45:03.647500+00:00END'
+[I]2025-06-11T08:45:07Z: Request to /hello-world by ('127.0.0.1', 65351). Header: {'client_id': '663ba408-b5a2-4d8c-9b45-f664301f3339', 'packet_id': 'b8504dfe-eac8-42be-af9b-37cfd7a6d190', 'is_com_setup': 'False', 'timestamp': '2025-06-11 06:45:05.648624+00:00', 'compressions': 'false'} Body: 

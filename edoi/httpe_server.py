@@ -174,6 +174,7 @@ class Httpe:
         aes_key_to_use = None
         found_id = False
         enc_data = None
+        print("HTTPE_SERVER__handle_enc_request == ",data)
         for line in data:
             if line.startswith("TOKEN:"):
                 enc_token = line.split(":", 1)[1].strip()
@@ -196,6 +197,7 @@ class Httpe:
         # decrypted_data = sec.fernet_decrypt(enc_data,aes_key_to_use)
         temp_class = httpe_fernet.HttpeFernet(aes_key_to_use)
         decrypted_data = temp_class.decrypt(enc_data).decode()
+        print("HTTPE_DECRYPTED_DATA_decrypted_data == ",decrypted_data)
         return decrypted_data,user_id
     def _handle_packet_contents(self,lines):
         headers = {}
@@ -268,18 +270,19 @@ class Httpe:
                 self._log_internal_error(e)
                 err_res =  Response.error(message="Internal Server Error",status_code=500)
                 # conn.sendall(err_res.serialize().encode())
-                self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=route)
+                self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=None)
                 return
             # print(type(data))
             if(self.is_edoi_node == True):
                 edoi_decoded = data.decode('utf-8')
                 try:
                     edoi_json_data = json.loads(edoi_decoded)
-                    print(edoi_json_data)
+                    # print(edoi_json_data)
                 except Exception as e:
                     err_res =  Response.error(message=f"Internal Server Error {e}",status_code=500)
                     # conn.sendall(err_res.serialize().encode())
-                    self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=route)
+                    print(err_res.serialize().encode())
+                    self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=None)
                     return
                 # data = data.decode()
                 edoi_packet_type = edoi_json_data.get("type",None)
@@ -327,14 +330,18 @@ class Httpe:
                 except Exception as e:
                     err_res =  Response.error(message=f"Internal Server Error {e}",status_code=500)
                     # conn.sendall(err_res.serialize().encode())
+                    print(err_res.serialize().encode())
                     self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=route)
                     return
 
 
 
 
-            print(data)
-            text = data.decode()
+            # print(data)
+            try:
+                text = data.decode()
+            except AttributeError as e:
+                text = data
             lines = text.splitlines()
 
             version = None
@@ -381,6 +388,7 @@ class Httpe:
                     new_lines = new_lines.splitlines()
                     is_encrypted_packet = True
                     headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(new_lines)
+            # print("headers>>",headers)
             packet_id = headers.get("packet_id",None)
             
             header_user_id = headers.get("client_id",None)
@@ -393,7 +401,10 @@ class Httpe:
             if(packet_id == None):
                 self._log_failed_verification(header_user_id,addr,"invalid packet")
                 err_res =  Response.error(message="packet_id missing",status_code =400)
+                print("Outdata: ",headers,version,is_initial_packet,initial_packet_type,method,location,body)
                 # conn.sendall(err_res.serialize().encode())
+                print("\n\n")
+                print(err_res.serialize().encode())
                 self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
                 return
             # print(f"HTTPE {method} {location} from {addr} with headers {headers}")
@@ -451,7 +462,8 @@ class Httpe:
             #! Remove {e} in prod
             err_res =  Response.error(message=f"Error With Client handling code :{e}",status_code=500)
             # conn.sendall(err_res.serialize().encode())
-            self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
+            print(err_res.serialize().encode())
+            self.send_packet(conn,addr,data=err_res.serialize().encode(),route=None)
             return
         finally:
             conn.close()
@@ -506,7 +518,7 @@ class Httpe:
                 "type": "return",
                 "route": route,
                 "count": count,
-                "payload": data
+                "payload": data.decode("utf-8")
             }
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
                 client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
