@@ -37,7 +37,6 @@ class NetNode():
         self.seen_messages = set() # Set of all seed messages
         self.found_route = False # Unused
         self.store_hash = {} # Stored hash to IP combos per search
-        self.store_hash_v2 = defaultdict(set) # Store hash to IP combos per search, used for multiple routes
         self.store_hash_time = {} # Time for store_hash, used to delete old
         self.handled_paths = set() # Set of all handled path messages
         self.send_lock = False # Lock to disable send to avoid threading error
@@ -443,12 +442,7 @@ class NetNode():
                         end_hash = route[len(route)-1]["hash"]
                         if(that_hash == end_hash):
                             print("This shouldn't happen")
-                        if that_hash in self.store_hash_v2 and sub_type == "default":
-                            print("USing v2 cache for path:")
-                            for ip in self.store_hash_v2[that_hash]:
-                                print(self.name,data["type"],ip,sub_type)
-                                #HEre u are
-                                await self.return_path(data, ip)
+                        # 
 
                         if(self.store_hash.get(that_hash,None) != None):
                             # print("That worked",tuple(self.store_hash.get(that_hash,None)))
@@ -511,26 +505,26 @@ class NetNode():
                 route_hash = hash(tuple(frozenset(item.items()) for item in route))
                 route_id = (target_hash, route_hash)
 
-                if route_id in self.find_hashes_handled:
-                    return
-                self.find_hashes_handled.add(route_id)
-                # if(self.found_end_route.get(target_hash,None) == route[0].get("hash")):
+                # if route_id in self.find_hashes_handled:
                 #     return
-                # if(target_hash in self.find_hashes_handled):
-                #     if(target_hash == route[len(route)-1].get("hash")):
-                #         print(route)
+                
+                if(self.found_end_route.get(target_hash,None) == route[0].get("hash")):
+                    return
+                if(target_hash in self.find_hashes_handled):
+                    if(target_hash == route[len(route)-1].get("hash")):
+                        print(route)
                     # print("Handled find hash already, ignoring. Hash") 
-                    # return
+                    return
                 self.find_hashes_handled.add(target_hash)
-                self.found_hash_routes.add(hashable_route)
+                # self.find_hashes_handled.add(target_hash)
+                # self.found_hash_routes.add(hashable_route)
                 # debug_route = list(data['debug_route'])
                 # debug_route_f = debug_route[0]
                 # name_to_find = debug_route_f['name']
                 last_ip = data.get("my_ip",None)
                 self.store_hash[route[len(route)-1].get("hash")] = last_ip
-                # self.store_hash_v2[route_id] = last_ip
+                
                 # print("last_ip",type(last_ip))
-                self.store_hash_v2[route[-1]["hash"]].add(tuple(last_ip))
                 self.store_hash_time[route[len(route)-1].get("hash")] = datetime.now(timezone.utc).isoformat()
                 
 
@@ -590,13 +584,6 @@ class NetNode():
                     # print(out)
 
                     that_hash = route[int(ret_data["count"])]["hash"]
-                    if that_hash in self.store_hash_v2:
-                        print("Im here")
-                        self.store_hash_time[that_hash] = datetime.now(timezone.utc).isoformat()
-                        for ip in self.store_hash_v2[that_hash]:
-                            await self.return_path(ret_data, ip)
-                    else:
-                        print("No match")
                     # that_hash_name = debug_route[int(ret_data["count"])]["name"]
                     if(self.store_hash.get(that_hash,None) != None):
                         self.store_hash_time[that_hash] = datetime.now(timezone.utc).isoformat()
