@@ -15,6 +15,7 @@ import json
 import time
 from collections import deque
 import uuid
+from datetime import datetime, timezone, timedelta
 #TODO Make stored ip,port combos to hash, time bombed, Decide on encryption
 class NetNode():
     def __init__(self, name: str,port,bootstrap_ips:list):
@@ -34,6 +35,7 @@ class NetNode():
         self.seen_messages = set()
         self.found_route = False
         self.store_hash = {}
+        self.store_hash_time = {}
         self.handled_paths = set()
         self.send_lock = False
         self.send_loop_count = 0
@@ -480,6 +482,9 @@ class NetNode():
                 # name_to_find = debug_route_f['name']
                 last_ip = data.get("my_ip",None)
                 self.store_hash[route[len(route)-1].get("hash")] = last_ip
+                self.store_hash_time[route[len(route)-1].get("hash")] = datetime.now(timezone.utc)
+                # TODO Make timeout for store_hash
+
                 # print(f"Find data: {data}")
                 first_node = route[0]
                 hash_to_find = target_hash
