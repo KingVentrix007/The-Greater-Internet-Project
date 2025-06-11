@@ -11,4 +11,3 @@ res = client.send_request("POST","/PTS",body=json.dumps(data))
 # res = client.send_request("GET","/hello-world")
 print(res.status)
 print(res.json())
-

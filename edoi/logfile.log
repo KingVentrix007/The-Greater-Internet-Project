@@ -191,3 +191,9 @@ ValueError: Invalid isoformat string: '2025-06-11T07:23:09.749449+00:00END'
 
 [I]2025-06-11T11:05:38Z: Request to /PTS by ('127.0.0.1', 52136). Header: {'client_id': 'b152bc4d-800c-46a5-a8e2-ce1e3b78b73b', 'packet_id': 'e48f8a96-017a-4fd8-bb94-f6413ccc85ad', 'is_com_setup': 'False', 'timestamp': '2025-06-11 09:05:36.434310+00:00', 'compressions': 'false'} Body: {"data": "12234"}
 
+[I]2025-06-11T11:47:30Z: Request to /PTS by ('127.0.0.1', 57814). Header: {'client_id': '6faaf065-c9ae-463d-9f5f-6372de3536cc', 'packet_id': '4c199006-b63f-4368-9a86-70953977584b', 'is_com_setup': 'False', 'timestamp': '2025-06-11 09:47:28.495418+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T11:50:29Z: Request to /PTS by ('127.0.0.1', 65033). Header: {'client_id': 'a98a2b93-a3f5-4ae0-a711-e14c0504c607', 'packet_id': '9a19999d-e7ba-4f62-b7c6-0df1defdee36', 'is_com_setup': 'False', 'timestamp': '2025-06-11 09:50:28.083333+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T11:50:43Z: Request to /PTS by ('127.0.0.1', 51766). Header: {'client_id': '872acd9a-f8da-4309-a4b5-4206b2d0878f', 'packet_id': 'aaf966d2-0c00-4458-98a1-9e709a4ffe91', 'is_com_setup': 'False', 'timestamp': '2025-06-11 09:50:41.449494+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+

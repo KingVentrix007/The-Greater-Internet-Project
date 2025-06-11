@@ -1,3 +1,4 @@
+import os
 import socket
 import uuid
 from datetime import datetime, timezone,timedelta
@@ -81,6 +82,18 @@ class HttpeClient:
     """Custom secure HTTP-like client using symmetric AES and RSA for initial handshake"""
 
     def __init__(self, host="127.0.0.1", port=8080,connect_to_edoi=False,edoi_port=None,edoi_ip=None,edoi_client_name = None,edoi_target=None):
+        """
+        Initialize the class.
+
+        Args:
+            host (str): IP address to bind the server to. Defaults to "127.0.0.1". In EDOI mode, serves as the ip to listen on for incoming connections.
+            port (int): Port number for the server. Defaults to 8080. In EDOI mode, serves as the port to listen on for incoming connections.
+            connect_to_edoi (bool): Whether to connect to the EDOI network. Defaults to False.
+            edoi_port (int or None): The port to connect to for EDOI. Required if `connect_to_edoi` is True.
+            edoi_ip (str or None): The IP address of the EDOI node to connect to.
+            edoi_client_name (str or None): The client's identifier within the EDOI network.
+            edoi_target (str or None): The intended destination or service within EDOI to connect to.
+        """
         self.host = host
         self.port = port
         self._client_id = None
@@ -99,7 +112,7 @@ class HttpeClient:
         self.use_edoi = connect_to_edoi
         self.edoi_path = None
         self.edoi_target = edoi_target
-        self.salt = 'Fixed_SALT'#os.urandom(32).encode("latin-1")
+        self.salt = os.urandom(32).hex()
         self.edoi_res = None
         self.got_edoi_res = False
         self.handle_con_in_use = False
@@ -166,14 +179,14 @@ class HttpeClient:
                 while True:
                     conn, addr = server_socket.accept()
                     with conn:
-                        print(f"[+] Connection from {addr}")
+                        # print(f"[+] Connection from {addr}")
 
                         data_chunks = []
                         while True:
                             chunk = conn.recv(1024)
                             
                             if not chunk:
-                                print("Got here")
+                                # print("Got here")
                                 break  # Connection closed by client
                             # print("Chunk: ",chunk)
                             data_chunks.append(chunk)
@@ -198,7 +211,7 @@ class HttpeClient:
                             print(f"[!]General error: {e}")
                         finally:
                             pass
-                            print("[*] Connection closed.\n")
+                            # print("[*] Connection closed.\n")
     def _send_connect(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -221,7 +234,7 @@ class HttpeClient:
             return None
 
     def _send_request_enc(self, method, location, headers=None, body=""):
-        print(type(body),"|",type(""))
+        # print(type(body),"|",type(""))
         if(type(body) != type("")):
             raise TypeError(f"Body must be of type str, current type is {type(body)}")
         """Send an encrypted packet after key exchange"""
@@ -241,7 +254,7 @@ class HttpeClient:
                 request_lines.append("END")
             except Exception as e:
                 print(f"Failed in setting headers {e}")
-            print("httpe_client_packet_id: ",headers.get("packet_id"))
+            # print("httpe_client_packet_id: ",headers.get("packet_id"))
             if method.upper() == "POST":
                 request_lines.append(body)
                 request_lines.append("END")
@@ -255,7 +268,8 @@ class HttpeClient:
                 enc_request = self._fernet_class.encrypt(plain_request.encode("utf-8"))
             except Exception as e:
                 print(f"enc_request error {e}")
-            print("type(self._token): ",type(self._token))
+                return
+            # print("type(self._token): ",type(self._token))
             packet = [
                 "VERSION:HTTPE/1.0",
                 "TYPE:REQ_ENC",
@@ -267,6 +281,7 @@ class HttpeClient:
                 full_data = "\n".join(packet)
             except Exception as e:
                 print(f"full_data error {e}")
+                return
             try:
                 if(self.use_edoi == False):
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -277,7 +292,7 @@ class HttpeClient:
                     self.edoi_send_to_target(full_data)
                     response = self._receive_full_response(None)
 
-                    print("Use EDOI")
+                    # print("Use EDOI")
             except Exception as e:
                 print(f"_send_request_enc send error {e}")
 
@@ -287,10 +302,11 @@ class HttpeClient:
             # print(res.status_code)
             # print(res._body_str)
             try:
-                print("res.body(): ",res.body())
+                # print("res.body(): ",res.body())
                 decrypted_body = self._fernet_class.decrypt(res.body()).decode()
             except Exception as e:
                 print(f"Error in decrypted_body {e}")
+                return None
             res._set_body(decrypted_body)
             return res
         except Exception as e:
@@ -405,7 +421,7 @@ class HttpeClient:
                 return
 
             response_data = response.json()
-            print("response_data == ",response_data)
+            # print("response_data == ",response_data)
             enc_token = response_data.get("token")
             enc_cert = response_data.get("certificate")
 
