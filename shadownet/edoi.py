@@ -664,8 +664,8 @@ def main():
     # Select start and target node
     ##! This is debug dat. Only for testing purposes.
     start_node, target_node = random.sample(nodes, 2)
-    print(f"[→] Start node: {start_node.name}")
-    print(f"[🎯] Target node: {target_node.name}")
+    # print(f"[→] Start node: {start_node.name}")
+    # print(f"[🎯] Target node: {target_node.name}")
     
     # Check if they are connected via declared neighbor relationships
     neighbor_map = {}
@@ -679,11 +679,11 @@ def main():
 
     # Find a naive unencrypted path
     path = find_path(neighbor_map, start_node.name, target_node.name)
-    if path:
-        print(f"[🧭] Path exists from {start_node.name} to {target_node.name}: {' → '.join(path)}")
-        print(f"Path len: {len(path)}")
-    else:
-        print(f"[❌] No path found between {start_node.name} and {target_node.name}")
+    # if path:
+    #     print(f"[🧭] Path exists from {start_node.name} to {target_node.name}: {' → '.join(path)}")
+    #     print(f"Path len: {len(path)}")
+    # else:
+    #     print(f"[❌] No path found between {start_node.name} and {target_node.name}")
     ##! End of debug data.
     # import base64
     # Start the hashed search

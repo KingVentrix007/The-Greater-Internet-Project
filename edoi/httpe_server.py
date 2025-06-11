@@ -95,13 +95,13 @@ class Httpe:
             raise Exception(e)
     def path(self, route, method="GET",requires_enc=True):
         def decorator(func):
-            self.routes[(route, method,requires_enc)] = func
+            self.routes[(route, method)] = func
             return func
         return decorator
     def paths(self):
-        for (route, method, requires_enc), func in self.routes.items():
-            enc_status = "Encrypted" if requires_enc else "Unencrypted"
-            print(f"{method} {route} ({enc_status}) -> {func.__name__}")
+        for (route, method), func in self.routes.items():
+            # enc_status = "Encrypted" if requires_enc else "Unencrypted"
+            print(f"{method} {route} ) -> {func.__name__}")
     def serve(self, host="127.0.0.1", port=8080):
         
         print(f"HTTPE server running on {host}:{port}...")
@@ -356,7 +356,8 @@ class Httpe:
             # print(text)
             reading_headers = False
             headers,version,is_initial_packet,initial_packet_type,method,location,body  = self._handle_packet_contents(lines)
-            print(version)
+            print(">>",version)
+            print(">>",initial_packet_type)
             if(version != f"HTTPE/{self.version}"):
                 err_res =  Response.error(message="Invalid Version",status_code=400)
                 # conn.sendall(err_res.serialize().encode())
@@ -374,7 +375,7 @@ class Httpe:
                     res_data = self._handle_share_aes(headers)
                     # conn.sendall(res_data.serialize().encode())
                     self.send_packet(conn,addr,data=res_data.serialize().encode(),route=route)
-                    # return
+                    return
                 elif(initial_packet_type == "REQ_ENC"):
                     new_lines,user_id_from_token =  self._handle_enc_request(lines)
                     if(new_lines == None or user_id_from_token == None):
@@ -424,7 +425,8 @@ class Httpe:
                 self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
                 return
             
-            handler = self.routes.get((location, method,is_encrypted_packet))
+            handler = self.routes.get((location, method))
+            print(">>",location, method)
             try:
                 self._log_request(path=location,client_ip=addr,header=headers,data=body,valid=True)
             except Exception as e:
@@ -449,6 +451,7 @@ class Httpe:
                         result = Response(str(result))  # fallback
                     response = result.serialize()
             else:
+                # print("Cant find route for type:",initial_packet_type)
                 result = "Route Not Found"
                 if not isinstance(result, Response):
                         result = Response(str(result))  # fallback
@@ -513,6 +516,8 @@ class Httpe:
         if(self.is_edoi_node == False):
             conn.sendall(data)
         else:
+            if(route == None or len(route) < 2):
+                return
             count = len(route) - 2
             packet = {
                 "type": "return",

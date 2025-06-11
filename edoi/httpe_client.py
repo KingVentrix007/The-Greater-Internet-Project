@@ -394,7 +394,7 @@ class HttpeClient:
                 f"aes_key:{enc_aes}",
                 f"user_id:{enc_user_id}",
                 f"packet_id:{str(uuid.uuid4())}",
-                f"timestamp:{datetime.now(timezone.utc)}"
+                f"timestamp:{datetime.now(timezone.utc).isoformat()}",
                 "END"
             ]
             aes_request = "\n".join(request_lines)
