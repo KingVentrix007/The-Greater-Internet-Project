@@ -16,21 +16,22 @@ import time
 from collections import deque
 import uuid
 from datetime import datetime, timezone, timedelta
-#TODO Make stored ip,port combos to hash, time bombed, Decide on encryption
+
 class NetNode():
     def __init__(self, name: str,port,bootstrap_ips:list):
-        self.name = name
-        self.id = uuid.uuid4().hex
+        self.name = name # The name of this node on the network
+        self.id = uuid.uuid4().hex # Unique ID of node
         # self._generate_keys()
-        self.neighbors = {}
-        self.neighbors_hash = {}
+        self.neighbors = {} # List of all neighboring nodes (ip,port) combos, Previously stored RSA keys
+        self.neighbors_hash = {} # List of all neighboring nodes hash. 
 
+        # Initiate all neighbors with IP
         for ip in bootstrap_ips:
-            self.neighbors[ip] = None
+            self.neighbors[ip] = None 
         for ip in bootstrap_ips:
             self.neighbors_hash[ip] = None
-        self.port = port
-        self.ip = '127.0.0.1'
+        self.port = port # Port this server will listen on
+        self.ip = '127.0.0.1' # IP server will listen on
         self.max_neighbors = 5
         self.seen_messages = set()
         self.found_route = False
