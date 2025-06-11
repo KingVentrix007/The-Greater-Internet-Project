@@ -80,7 +80,7 @@ I'm still a student, so it might take me a little time to review and respond, bu
 ## ⚠️ Disclaimer
 
 This project is in **early development / beta**. Expect bugs, crashes, and rough edges.
-Spec sheets may be out of date.
+Spec sheets may be out of date. Code is quite messy and not well commented just yet
 Use with caution. Feedback is always welcome.
 
 
