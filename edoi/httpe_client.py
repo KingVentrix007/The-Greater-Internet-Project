@@ -81,7 +81,7 @@ class HttpeResponse:
 class HttpeClient:
     """Custom secure HTTP-like client using symmetric AES and RSA for initial handshake"""
 
-    def __init__(self, host="127.0.0.1", port=8080,connect_to_edoi=False,edoi_port=None,edoi_ip=None,edoi_client_name = None,edoi_target=None):
+    def __init__(self, host="127.0.0.1", port=8080,connect_to_edoi=False,edoi_port=None,edoi_ip=None,edoi_client_name = None,edoi_target=None,persistent=False):
         """
         Initialize the class.
 
@@ -111,11 +111,22 @@ class HttpeClient:
         self.name = edoi_client_name or uuid.uuid4()
         self.use_edoi = connect_to_edoi
         self.edoi_path = None
+        self.all_edoi_paths = []
+        self.no_path_res_count = 0 # Counts how many times we got no path response from the EDOI server
         self.edoi_target = edoi_target
         self.salt = os.urandom(32).hex()
         self.edoi_res = None
         self.got_edoi_res = False
         self.handle_con_in_use = False
+        self.persistent = persistent
+        self._shutdown_event = threading.Event()
+        self.running = False
+        if self.persistent == True:
+            self.running = True
+            # threading.Thread(target=self._keep_alive, daemon=True).start()
+            # if self.persistent:
+            # print("[~] Client is in persistent mode. Awaiting termination...")
+            self._shutdown_event.wait()  # Keep the thread alive
         if(self.use_edoi == True):
             threading.Thread(target=self.listen_for_message, daemon=True).start()
             self._send_connect()
@@ -150,18 +161,37 @@ class HttpeClient:
             "my_ip":('127.0.0.1',self.port)
         }
             client_socket.sendall(json.dumps(packet).encode())
+    def choose_path(self):
+        if len(self.all_edoi_paths) <= 1:
+            return self.edoi_path  # or raise an exception / handle as needed
 
+        # Find the path with the fewest nodes (i.e., shortest path)
+        shortest_path = min(self.all_edoi_paths, key=len)
+        print("Choosing shortest path with {} nodes.".format(len(shortest_path)) + "\nPath: " + str(shortest_path) + "\n")
+        return shortest_path
+            
     def handle_edoi_conn(self,data):
         # print(data)
         edoi_packet_type = data.get("type",None)
         sub_type = data.get("sub_type","default")
-        if(edoi_packet_type == "path" and self.edoi_path == None):
+        if(edoi_packet_type == "path"):
+            
             if(sub_type == "default"):
                 # print("Hello")
+                print("Go path")
                 route = data.get("route",None)
-                self.edoi_path = route
-                
-                print("Found path")
+                if(self.edoi_path == None):
+                    self.edoi_path = route
+                    self.all_edoi_paths.append(route)
+                    print("Found path")
+                else:
+                    print("Go new path")
+                    self.all_edoi_paths.append(route)
+            elif(sub_type == "no_path"):
+                self.no_path_res_count += 1
+                print("no path")
+                if(self.no_path_res_count > 5 and self.edoi_path == None):
+                    print("No path found for target. Please try again later. EDOI target: ",self.edoi_target)
         elif(edoi_packet_type == "return"):
             payload = data["payload"]
             # print("Message: ",payload)
@@ -316,7 +346,7 @@ class HttpeClient:
         count = 1
         packet = {
             "type": "forward",
-            "route": self.edoi_path,
+            "route": self.choose_path(),
             "count": count,
             "payload": payload
         }
@@ -443,3 +473,12 @@ class HttpeClient:
 
         except Exception as e:
             print(f"Handshake failed: {e}")
+    def terminate(self):
+        print("Terminating connection to server...")
+        self.running = False
+        if self.persistent:
+            self._shutdown_event.set()
+    def _keep_alive(self):
+        print("[*] Persistent mode active. Client will stay alive until terminate() is called.")
+        while self.running == True:
+            time.sleep(1)  # Keep thread alive, avoid busy loop

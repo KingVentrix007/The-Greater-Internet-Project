@@ -504,6 +504,7 @@ class NetNode():
                 if(self.found_end_route.get(target_hash,None) == route[0].get("hash")):
                     return
                 if(target_hash in self.find_hashes_handled):
+                    print("Handled find hash already, ignoring. Hash") 
                     return
                 self.find_hashes_handled.add(target_hash)
                 

@@ -295,7 +295,7 @@ class Httpe:
                         salt = edoi_json_data.get("salt", None)
                         name_hash = self.compute_hashed_identity(self.name, salt)
                         if name_hash == target_hash:
-                            ##print("Matched")
+                            print("Matched")
                             route_member = {"hash":name_hash,"salt":salt}
                             route.append(route_member)
                             ret_data = {"type":"path","route":route,"count":len(route)-2,"hash":target_hash,"salt":salt}

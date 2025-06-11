@@ -209,3 +209,170 @@ ValueError: Invalid isoformat string: '2025-06-11T07:23:09.749449+00:00END'
 
 [I]2025-06-11T13:53:51Z: Request to /PTS by ('127.0.0.1', 61104). Header: {'client_id': '9c4cc942-0c20-475d-b3f1-4f3780d4f246', 'packet_id': '62e54a1e-0b00-4eda-8683-8e010c4454db', 'is_com_setup': 'False', 'timestamp': '2025-06-11 11:53:49.377916+00:00', 'compressions': 'false'} Body: {"data": "12234"}
 
+[I]2025-06-11T14:04:45Z: Request to /PTS by ('127.0.0.1', 63557). Header: {'client_id': '07f03241-08e5-49dc-86ef-d9cd57b8e3c5', 'packet_id': '7acc834a-5bae-499a-ae20-01c0dcae056d', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:04:44.203233+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:05:39Z: Request to /PTS by ('127.0.0.1', 49602). Header: {'client_id': '342012c7-c2fc-4a20-bce7-d4e3192d406a', 'packet_id': '51e317a0-2196-4557-8ff8-a0602e21ec6a', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:05:37.821452+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:11:53Z: Request to /PTS by ('127.0.0.1', 52251). Header: {'client_id': 'a311b2a5-333a-4eba-97d8-cfdd0154a877', 'packet_id': '38c46195-a4d3-4165-8c74-539645bf3f57', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:11:51.893326+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:12:32Z: Request to /PTS by ('127.0.0.1', 54724). Header: {'client_id': 'c219e1ee-8e2c-4513-a131-d7de9e0f30ba', 'packet_id': '5d6c76c3-4b9c-4318-b328-dc3de30eddc5', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:12:30.992739+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:13:17Z: Request to /PTS by ('127.0.0.1', 57084). Header: {'client_id': '726f2de2-6fac-458f-ae71-6547d019da80', 'packet_id': '913f4ee3-8534-4e3b-98ff-dd4227d57c58', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:13:15.677887+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:14:16Z: Request to /PTS by ('127.0.0.1', 59397). Header: {'client_id': 'fe263dcd-9465-45be-8e30-332ff17eaf21', 'packet_id': '7476aef1-ceab-401f-bba7-f6ea292eb845', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:14:14.283356+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:15:07Z: Request to /PTS by ('127.0.0.1', 61825). Header: {'client_id': '5b27d3a6-0eeb-46c7-a1ad-7e47106febc6', 'packet_id': '7e8cd128-e376-4cf6-b381-ea83a277ab31', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:15:05.635757+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:15:09Z: Request to /PTS by ('127.0.0.1', 61917). Header: {'client_id': '5b27d3a6-0eeb-46c7-a1ad-7e47106febc6', 'packet_id': '01e86d75-a64b-4692-af74-2df92a1c8153', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:15:07.504152+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:15:11Z: Request to /PTS by ('127.0.0.1', 62009). Header: {'client_id': '5b27d3a6-0eeb-46c7-a1ad-7e47106febc6', 'packet_id': '762cd1fb-547d-455c-a3ca-becaa715120a', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:15:09.361920+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:15:12Z: Request to /PTS by ('127.0.0.1', 62102). Header: {'client_id': '5b27d3a6-0eeb-46c7-a1ad-7e47106febc6', 'packet_id': '01bedb60-bee4-49b9-a692-7aa7791e8aec', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:15:11.211442+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:15:14Z: Request to /PTS by ('127.0.0.1', 62193). Header: {'client_id': '5b27d3a6-0eeb-46c7-a1ad-7e47106febc6', 'packet_id': 'b938f500-7490-4beb-a3fd-6e6ec795b2d4', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:15:13.029521+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:15:16Z: Request to /PTS by ('127.0.0.1', 62287). Header: {'client_id': '5b27d3a6-0eeb-46c7-a1ad-7e47106febc6', 'packet_id': 'f91d73a2-b672-4a88-805e-462f9d1d8b2b', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:15:14.890104+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:15:18Z: Request to /PTS by ('127.0.0.1', 62378). Header: {'client_id': '5b27d3a6-0eeb-46c7-a1ad-7e47106febc6', 'packet_id': 'c4c1279b-eb35-4d2a-9656-930b7245678c', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:15:16.738065+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:15:20Z: Request to /PTS by ('127.0.0.1', 62470). Header: {'client_id': '5b27d3a6-0eeb-46c7-a1ad-7e47106febc6', 'packet_id': 'ba853410-4b39-467e-926e-736f25237147', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:15:18.592410+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:15:22Z: Request to /PTS by ('127.0.0.1', 62562). Header: {'client_id': '5b27d3a6-0eeb-46c7-a1ad-7e47106febc6', 'packet_id': '4f76a518-1465-42c8-a4d1-407537acf60d', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:15:20.452597+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:15:24Z: Request to /PTS by ('127.0.0.1', 62654). Header: {'client_id': '5b27d3a6-0eeb-46c7-a1ad-7e47106febc6', 'packet_id': 'b86e4f71-3a2f-47d2-92a6-1f8a6d7e3460', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:15:22.307302+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:15:58Z: Request to /PTS by ('127.0.0.1', 65110). Header: {'client_id': '9d3ba41d-94d0-4064-92c3-aa778aa5ee63', 'packet_id': 'd0e3725d-ffbe-440e-bf41-795ab8f070c2', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:15:56.593288+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:16:00Z: Request to /PTS by ('127.0.0.1', 65203). Header: {'client_id': '9d3ba41d-94d0-4064-92c3-aa778aa5ee63', 'packet_id': '488ded63-30a6-491a-9390-40a0958806f6', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:15:58.431167+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:16:02Z: Request to /PTS by ('127.0.0.1', 65295). Header: {'client_id': '9d3ba41d-94d0-4064-92c3-aa778aa5ee63', 'packet_id': '1fce8a51-b4eb-4cde-b33d-94d27ecc7426', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:16:00.276172+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:16:03Z: Request to /PTS by ('127.0.0.1', 65387). Header: {'client_id': '9d3ba41d-94d0-4064-92c3-aa778aa5ee63', 'packet_id': '5b3803ef-8a07-4dac-aad9-c6dc88efdbff', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:16:02.089780+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:16:05Z: Request to /PTS by ('127.0.0.1', 65478). Header: {'client_id': '9d3ba41d-94d0-4064-92c3-aa778aa5ee63', 'packet_id': '48dc88bd-ea2b-4017-94ab-50443422a98b', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:16:03.907697+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:16:07Z: Request to /PTS by ('127.0.0.1', 49187). Header: {'client_id': '9d3ba41d-94d0-4064-92c3-aa778aa5ee63', 'packet_id': '9007e388-a551-4092-9c42-0d995f997fd2', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:16:05.761324+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:16:09Z: Request to /PTS by ('127.0.0.1', 49280). Header: {'client_id': '9d3ba41d-94d0-4064-92c3-aa778aa5ee63', 'packet_id': '81b3f1e3-68f6-413c-b298-4691a3808e07', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:16:07.630102+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:16:11Z: Request to /PTS by ('127.0.0.1', 49371). Header: {'client_id': '9d3ba41d-94d0-4064-92c3-aa778aa5ee63', 'packet_id': 'aec11a81-0cac-4498-ae98-ea40008fa7de', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:16:09.457104+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:16:13Z: Request to /PTS by ('127.0.0.1', 49463). Header: {'client_id': '9d3ba41d-94d0-4064-92c3-aa778aa5ee63', 'packet_id': 'ec42e203-a748-4f98-a7ce-6bf9f698c7f0', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:16:11.289361+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:16:14Z: Request to /PTS by ('127.0.0.1', 49556). Header: {'client_id': '9d3ba41d-94d0-4064-92c3-aa778aa5ee63', 'packet_id': 'a0f07132-f369-4669-bd69-c3fe0641adfa', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:16:13.168117+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:16:54Z: Request to /PTS by ('127.0.0.1', 52141). Header: {'client_id': 'e72790fc-b95a-4b89-ad36-af70bbcf8eeb', 'packet_id': 'c70f6a80-8ca2-4ed5-a04c-bd22f739c36a', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:16:52.921569+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:16:56Z: Request to /PTS by ('127.0.0.1', 52232). Header: {'client_id': 'e72790fc-b95a-4b89-ad36-af70bbcf8eeb', 'packet_id': '1944b928-025f-46d9-b5dd-dac178fee007', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:16:54.766233+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:16:58Z: Request to /PTS by ('127.0.0.1', 52324). Header: {'client_id': 'e72790fc-b95a-4b89-ad36-af70bbcf8eeb', 'packet_id': '79fc2240-08b3-4e8d-930a-2deb6297427b', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:16:56.602668+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:17:00Z: Request to /PTS by ('127.0.0.1', 52518). Header: {'client_id': 'e72790fc-b95a-4b89-ad36-af70bbcf8eeb', 'packet_id': '3d885a61-a0ea-4de0-9ba8-4ff034f7432a', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:16:58.461789+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:17:02Z: Request to /PTS by ('127.0.0.1', 52611). Header: {'client_id': 'e72790fc-b95a-4b89-ad36-af70bbcf8eeb', 'packet_id': 'de333af3-9621-4e1d-8cf3-bb660180c638', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:17:00.352324+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:17:03Z: Request to /PTS by ('127.0.0.1', 52703). Header: {'client_id': 'e72790fc-b95a-4b89-ad36-af70bbcf8eeb', 'packet_id': '31a7f9af-e41a-4158-b23b-5246d5ca8b2e', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:17:02.182092+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:17:05Z: Request to /PTS by ('127.0.0.1', 52794). Header: {'client_id': 'e72790fc-b95a-4b89-ad36-af70bbcf8eeb', 'packet_id': '5582bdff-2232-4a1e-b088-58a42d23bfd9', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:17:04.010328+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:17:07Z: Request to /PTS by ('127.0.0.1', 52887). Header: {'client_id': 'e72790fc-b95a-4b89-ad36-af70bbcf8eeb', 'packet_id': 'd3fbbbf4-f9be-44c9-9afd-5197b2a63cc1', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:17:05.923029+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:17:09Z: Request to /PTS by ('127.0.0.1', 52978). Header: {'client_id': 'e72790fc-b95a-4b89-ad36-af70bbcf8eeb', 'packet_id': '2f54168e-07fa-41fb-9532-efe0cb776803', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:17:07.750163+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:17:11Z: Request to /PTS by ('127.0.0.1', 53072). Header: {'client_id': 'e72790fc-b95a-4b89-ad36-af70bbcf8eeb', 'packet_id': '257fe2e1-9530-4807-b1af-76706780b668', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:17:09.604092+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:18:59Z: Request to /PTS by ('127.0.0.1', 55386). Header: {'client_id': '3e4945a8-bf81-426d-b81e-886095245c42', 'packet_id': 'a0ad78d2-0f29-4f16-a4f4-9ff15e76b2db', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:18:57.326890+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:00Z: Request to /PTS by ('127.0.0.1', 55478). Header: {'client_id': '3e4945a8-bf81-426d-b81e-886095245c42', 'packet_id': 'c7431b88-1c45-494f-9990-73b7b66b1d72', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:18:59.193686+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:02Z: Request to /PTS by ('127.0.0.1', 55571). Header: {'client_id': '3e4945a8-bf81-426d-b81e-886095245c42', 'packet_id': 'ab7122c4-461d-4532-ac2d-6ca28fd1bc7b', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:01.062720+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:04Z: Request to /PTS by ('127.0.0.1', 55662). Header: {'client_id': '3e4945a8-bf81-426d-b81e-886095245c42', 'packet_id': '468d9c11-c5f7-4e9f-ba8d-f6150573719c', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:02.885169+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:06Z: Request to /PTS by ('127.0.0.1', 55755). Header: {'client_id': '3e4945a8-bf81-426d-b81e-886095245c42', 'packet_id': '9732a317-c0ac-4a15-b675-c020ba8ea22d', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:04.716675+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:08Z: Request to /PTS by ('127.0.0.1', 55847). Header: {'client_id': '3e4945a8-bf81-426d-b81e-886095245c42', 'packet_id': '867e525d-62d7-4628-bfad-8ab4eaa401bc', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:06.543723+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:10Z: Request to /PTS by ('127.0.0.1', 55938). Header: {'client_id': '3e4945a8-bf81-426d-b81e-886095245c42', 'packet_id': 'a5e29a1d-f5ff-48c3-ac3d-5248309543fc', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:08.393191+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:11Z: Request to /PTS by ('127.0.0.1', 56030). Header: {'client_id': '3e4945a8-bf81-426d-b81e-886095245c42', 'packet_id': '964a82a7-940b-4e8c-9ea3-32f940f81c27', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:10.243139+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:13Z: Request to /PTS by ('127.0.0.1', 56122). Header: {'client_id': '3e4945a8-bf81-426d-b81e-886095245c42', 'packet_id': '5578a377-64e8-4345-96b2-7d1250230e67', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:12.097068+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:15Z: Request to /PTS by ('127.0.0.1', 56215). Header: {'client_id': '3e4945a8-bf81-426d-b81e-886095245c42', 'packet_id': 'db0b3a91-ee32-40c6-a65d-35cbc2bdc4e5', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:13.914625+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:52Z: Request to /PTS by ('127.0.0.1', 58558). Header: {'client_id': '6ee8289b-5d70-4281-8aae-60385cce136d', 'packet_id': 'bb55286f-7bdd-4320-9ab3-73ce37a6a6ca', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:50.793903+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:54Z: Request to /PTS by ('127.0.0.1', 58650). Header: {'client_id': '6ee8289b-5d70-4281-8aae-60385cce136d', 'packet_id': '91db0645-4bfb-460d-83d3-ee1bd812312f', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:52.628864+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:56Z: Request to /PTS by ('127.0.0.1', 58741). Header: {'client_id': '6ee8289b-5d70-4281-8aae-60385cce136d', 'packet_id': '9243bc00-df39-4569-a401-50824ced3a09', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:54.485240+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:58Z: Request to /PTS by ('127.0.0.1', 58833). Header: {'client_id': '6ee8289b-5d70-4281-8aae-60385cce136d', 'packet_id': '05814745-ad5a-4361-9d38-219da123d5a5', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:56.327074+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:19:59Z: Request to /PTS by ('127.0.0.1', 58925). Header: {'client_id': '6ee8289b-5d70-4281-8aae-60385cce136d', 'packet_id': '51d027ac-1712-4b90-903b-1ca07a13e4f9', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:58.149088+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:20:01Z: Request to /PTS by ('127.0.0.1', 59017). Header: {'client_id': '6ee8289b-5d70-4281-8aae-60385cce136d', 'packet_id': '6233e74b-5f9f-4c49-8993-db69b4895902', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:19:59.992443+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:20:03Z: Request to /PTS by ('127.0.0.1', 59110). Header: {'client_id': '6ee8289b-5d70-4281-8aae-60385cce136d', 'packet_id': 'd2df05e5-5b4a-41ff-acf6-4974f8982e5d', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:20:01.862892+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:20:05Z: Request to /PTS by ('127.0.0.1', 59203). Header: {'client_id': '6ee8289b-5d70-4281-8aae-60385cce136d', 'packet_id': '27466fbd-f8f4-4b66-9de5-e314d699de75', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:20:03.683494+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:20:07Z: Request to /PTS by ('127.0.0.1', 59296). Header: {'client_id': '6ee8289b-5d70-4281-8aae-60385cce136d', 'packet_id': 'da08f337-3923-4fb9-b680-85f5bcc756aa', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:20:05.532090+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:20:09Z: Request to /PTS by ('127.0.0.1', 59387). Header: {'client_id': '6ee8289b-5d70-4281-8aae-60385cce136d', 'packet_id': '87ee73e5-bcac-49da-874d-71da24f3af04', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:20:07.352650+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:24:45Z: Request to /PTS by ('127.0.0.1', 62088). Header: {'client_id': 'd7351bc1-f094-4388-b80e-fd4915990438', 'packet_id': '311da232-3202-479a-b018-396bdbb5de31', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:24:43.372625+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:24:47Z: Request to /PTS by ('127.0.0.1', 62126). Header: {'client_id': 'd7351bc1-f094-4388-b80e-fd4915990438', 'packet_id': '09a6fe68-d3f0-4680-bcee-8cf46707ef91', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:24:45.298394+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:24:49Z: Request to /PTS by ('127.0.0.1', 62163). Header: {'client_id': 'd7351bc1-f094-4388-b80e-fd4915990438', 'packet_id': '2d463dd9-f47a-4c40-9922-8a5c12b0653b', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:24:47.214372+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:24:50Z: Request to /PTS by ('127.0.0.1', 62200). Header: {'client_id': 'd7351bc1-f094-4388-b80e-fd4915990438', 'packet_id': '65058b29-8697-42f6-9209-63f83a711bdb', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:24:49.142709+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:24:52Z: Request to /PTS by ('127.0.0.1', 62237). Header: {'client_id': 'd7351bc1-f094-4388-b80e-fd4915990438', 'packet_id': '0121fe75-605f-481a-876a-00111f9ef39f', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:24:51.049424+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:24:54Z: Request to /PTS by ('127.0.0.1', 62274). Header: {'client_id': 'd7351bc1-f094-4388-b80e-fd4915990438', 'packet_id': '3ab0ffcf-15c6-4484-89a3-e492d4efd0b8', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:24:52.946730+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:24:56Z: Request to /PTS by ('127.0.0.1', 62311). Header: {'client_id': 'd7351bc1-f094-4388-b80e-fd4915990438', 'packet_id': '2811be06-1400-42fe-bc35-73d1071673ff', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:24:54.876923+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:24:58Z: Request to /PTS by ('127.0.0.1', 62348). Header: {'client_id': 'd7351bc1-f094-4388-b80e-fd4915990438', 'packet_id': 'b6a3ba8c-c676-490e-a88e-70e3ba8fd5ea', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:24:56.804588+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:25:00Z: Request to /PTS by ('127.0.0.1', 62385). Header: {'client_id': 'd7351bc1-f094-4388-b80e-fd4915990438', 'packet_id': 'cfd3cf01-baac-4ef1-bc89-c27357a2b7a6', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:24:58.730175+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:25:02Z: Request to /PTS by ('127.0.0.1', 62422). Header: {'client_id': 'd7351bc1-f094-4388-b80e-fd4915990438', 'packet_id': '10428a29-306c-490d-8bba-d6a1d403a6fc', 'is_com_setup': 'False', 'timestamp': '2025-06-11 12:25:00.645016+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-11T14:25:35Z: Internal server error: 'NoneType' object has no attribute 'splitlines'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 346, in _handle_client
+    lines = text.splitlines()
+AttributeError: 'NoneType' object has no attribute 'splitlines'
+[I]2025-06-11T14:25:37Z: Internal server error: 'NoneType' object has no attribute 'splitlines'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 346, in _handle_client
+    lines = text.splitlines()
+AttributeError: 'NoneType' object has no attribute 'splitlines'
+[I]2025-06-11T14:25:38Z: Internal server error: 'NoneType' object has no attribute 'splitlines'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 346, in _handle_client
+    lines = text.splitlines()
+AttributeError: 'NoneType' object has no attribute 'splitlines'
+[I]2025-06-11T14:25:40Z: Internal server error: 'NoneType' object has no attribute 'splitlines'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 346, in _handle_client
+    lines = text.splitlines()
+AttributeError: 'NoneType' object has no attribute 'splitlines'
+[I]2025-06-11T14:25:41Z: Internal server error: 'NoneType' object has no attribute 'splitlines'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 346, in _handle_client
+    lines = text.splitlines()
+AttributeError: 'NoneType' object has no attribute 'splitlines'
+[I]2025-06-11T14:25:45Z: Internal server error: 'NoneType' object has no attribute 'splitlines'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 346, in _handle_client
+    lines = text.splitlines()
+AttributeError: 'NoneType' object has no attribute 'splitlines'
+[I]2025-06-11T14:25:47Z: Internal server error: 'NoneType' object has no attribute 'splitlines'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 346, in _handle_client
+    lines = text.splitlines()
+AttributeError: 'NoneType' object has no attribute 'splitlines'
