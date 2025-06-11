@@ -25,3 +25,33 @@
 [I]2025-06-06T05:48:37Z: Request to /hello-world by ('127.0.0.1', 51277). Header: {'client_id': '5dff6012-2a78-4858-8362-f79bd31faa59', 'packet_id': 'c75703cc-9fbb-4b84-8d1c-806b250a543d', 'is_com_setup': 'False', 'timestamp': '2025-06-06 03:48:37.658739+00:00', 'compressions': 'false'} Body: 
 [I]2025-06-06T05:48:37Z: Request to /PTS by ('127.0.0.1', 51280). Header: {'client_id': 'f33fdb39-d72a-4c53-b10f-341a0b0939d7', 'packet_id': '32dded70-2853-41dd-aa82-53b76464cdba', 'is_com_setup': 'False', 'timestamp': '2025-06-06 03:48:37.728743+00:00', 'compressions': 'false'} Body: {"data": "456"}
 
+[I]2025-06-11T06:01:36Z: Internal server error: 'bytes' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 282, in _handle_client
+    edoi_packet_type = data.get("type",None)
+AttributeError: 'bytes' object has no attribute 'get'
+[I]2025-06-11T06:03:41Z: Internal server error: 'bytes' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 282, in _handle_client
+    edoi_packet_type = data.get("type",None)
+AttributeError: 'bytes' object has no attribute 'get'
+[I]2025-06-11T06:08:26Z: Internal server error: 'bytes' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 283, in _handle_client
+    edoi_packet_type = data.get("type",None)
+AttributeError: 'bytes' object has no attribute 'get'
+[I]2025-06-11T06:09:51Z: Internal server error: 'bytes' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 283, in _handle_client
+    edoi_packet_type = data.get("type",None)
+AttributeError: 'bytes' object has no attribute 'get'
+[I]2025-06-11T06:10:55Z: Internal server error: 'str' object has no attribute 'get'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 284, in _handle_client
+    edoi_packet_type = data.get("type",None)
+AttributeError: 'str' object has no attribute 'get'
+[I]2025-06-11T06:11:48Z: Internal server error: 'Httpe' object has no attribute 'name'
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\edoi\httpe_server.py", line 291, in _handle_client
+    name_hash = self.compute_hashed_identity(self.name, salt)
+AttributeError: 'Httpe' object has no attribute 'name'

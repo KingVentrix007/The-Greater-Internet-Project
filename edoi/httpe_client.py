@@ -102,20 +102,21 @@ class HttpeClient:
         self.salt = "fixed_salt"
         self.edoi_res = None
         self.got_edoi_res = False
+        self.handle_con_in_use = False
         if(self.use_edoi == True):
             threading.Thread(target=self.listen_for_message, daemon=True).start()
             self._send_connect()
             time.sleep(2)
             self.get_edoi_server_path()
             
-    def compute_hashed_identity(name:str, salt: str) -> str:
+    def compute_hashed_identity(self,name:str, salt: str) -> str:
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
         return digest.finalize().hex()
     def get_edoi_server_path(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            client_socket.connect((self.ip, self.port))
+            client_socket.connect((self.edoi_ip, self.edoi_port))
             client_hash = self.compute_hashed_identity(self.name,self.salt)
             target_hash = self.compute_hashed_identity(self.edoi_target,self.salt)
             route_member = {"hash": client_hash, "salt": self.salt}
@@ -131,19 +132,20 @@ class HttpeClient:
             # ).decode(),
             
             "message_id": str(uuid.uuid4()),
-            "my_ip":('127.0.0.1',self.client_port)
+            "my_ip":('127.0.0.1',self.port)
         }
             client_socket.sendall(json.dumps(packet).encode())
 
     def handle_edoi_conn(self,data):
+        print(data)
         edoi_packet_type = data.get("type",None)
         sub_type = data.get("sub_type","default")
-        if(edoi_packet_type == "path"):
+        if(edoi_packet_type == "path" and self.edoi_path == None):
             if(sub_type == "default"):
                 # print("Hello")
                 route = data.get("route",None)
                 self.edoi_path = route
-                # print("Found path")
+                print("Found path")
         elif(edoi_packet_type == "return"):
             payload = data["payload"]
             # print("Message: ",payload)
@@ -161,26 +163,30 @@ class HttpeClient:
                 while True:
                     conn, addr = server_socket.accept()
                     with conn:
-                        # print(f"[+] Connection from {addr}")
+                        print(f"[+] Connection from {addr}")
 
                         data_chunks = []
                         while True:
                             chunk = conn.recv(1024)
+                            
                             if not chunk:
+                                print("Got here")
                                 break  # Connection closed by client
+                            print("Chunk: ",chunk)
                             data_chunks.append(chunk)
 
                         full_data = b''.join(data_chunks)
                         try:
                             decoded = full_data.decode('utf-8')
-                            # print(f"[>] Full raw data: {decoded}")
+                            print(f"[>] Full raw data: {decoded}")
 
                             json_data = json.loads(decoded)
                             # print(f"[√] Received JSON: {json_data}")
                             # in_ip,in_port = addr
                             # neighbors[addr] = None
-                            # handle_conn(json_data)
-                            self.handle_edoi_conn(json_data)
+                            threading.Thread(target=self.handle_edoi_conn,args=(json_data,), daemon=True).start()
+                            # threading.t self.handle_edoi_conn(json_data)
+                                
                             
                             # print(f"[√] Received JSON: {json_data}")
                         except json.JSONDecodeError as e:
@@ -189,7 +195,7 @@ class HttpeClient:
                             print(f"[!]General error: {e}")
                         finally:
                             pass
-                            # print("[*] Connection closed.\n")
+                            print("[*] Connection closed.\n")
     def _send_connect(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -197,7 +203,7 @@ class HttpeClient:
             print(f"[+] Connected to EDOI node at {self.edoi_ip}:{self.edoi_port}")
 
             # Send a message to the EDOI node
-            message = json.dumps({"type": "connect","tup":(self.ip,self.port)}).encode('utf-8')
+            message = json.dumps({"type": "connect","tup":(self.host,self.port)}).encode('utf-8')
             client_socket.sendall(message)
     def send_request(self, method, location, headers=None, body="", use_httpe=True):
         """Send an encrypted request to the server, establishing connection if needed"""
@@ -297,7 +303,7 @@ class HttpeClient:
         packet["message_id"] = message_id or str(uuid.uuid4())
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            client_socket.connect((self.edoi_ip, self.edoi_port))
+            client_socket.connect((self.edoi_ip, self.edoi_port)) #! Look here
             # print(f"[+] Sending to EDOI node at {server_ip}:{server_port}")
 
             # Send a message to the EDOI node
@@ -324,7 +330,7 @@ class HttpeClient:
 
     def _connection_send(self, request_data: str) -> HttpeResponse:
         """Sends a raw request and returns parsed response"""
-        if(self.use_edoi == True):
+        if(self.use_edoi == False):
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.connect((self.host, self.port))
