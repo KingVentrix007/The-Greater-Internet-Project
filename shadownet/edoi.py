@@ -158,6 +158,8 @@ class NetNode():
         message_id = data.get("message_id", str(uuid.uuid4()))
         data["message_id"] = message_id
         host, port = addr
+        if(port == 5400):
+            print(f"[!] {self.name} Sending data to {host}:{port} - {data}")
 
         try:
             json_str = json.dumps(data)
@@ -205,11 +207,13 @@ class NetNode():
         route = path.get("route",None)
         # self.ask_for_hash(salt)'
         if(addr == None):
+            print(f"{self.name} ALT SEND")
             for ip, key in self.neighbors.items():
                 # if(self.neighbors_hash.get(key,None) == route[count - 1]):
                 await self.send_data(path,ip,debug_node_name=f"Scan send: {debug_node_name}")
         else:
             host, port = addr
+            
             # print(host,port)
             await self.send_data(path,addr=addr,debug_node_name=debug_node_name)
     async def hash_str(self,name,salt):
@@ -292,7 +296,7 @@ class NetNode():
             key_data = {"key",key}
             await self.send_data(key_data, addr,"rsa get")
         elif(data["type"] == "connect"):
-            print('connect')
+            print(self.name,'connect')
             self.is_connect_node = True
             ip_port_combo = tuple(data.get("tup"))
             self.neighbors[ip_port_combo] = None
@@ -439,12 +443,14 @@ class NetNode():
                         end_hash = route[len(route)-1]["hash"]
                         if(that_hash == end_hash):
                             print("This shouldn't happen")
-                        if that_hash in self.store_hash_v2:
+                        if that_hash in self.store_hash_v2 and sub_type == "default":
                             print("USing v2 cache for path:")
                             for ip in self.store_hash_v2[that_hash]:
+                                print(self.name,data["type"],ip,sub_type)
+                                #HEre u are
                                 await self.return_path(data, ip)
 
-                        elif(self.store_hash.get(that_hash,None) != None):
+                        if(self.store_hash.get(that_hash,None) != None):
                             # print("That worked",tuple(self.store_hash.get(that_hash,None)))
                             self.store_hash_time[that_hash] = datetime.now(timezone.utc).isoformat()
 
@@ -452,9 +458,9 @@ class NetNode():
                             if(val == None):
                                 print("Error")
                             await self.return_path(data,val)
-                        else:
-                            print(f"{self.name} Error with cache")
-                            await self.return_path(data,debug_node_name="other loop")
+                        # else:
+                        #     print(f"{self.name} Error with cache")
+                        #     await self.return_path(data,debug_node_name="other loop")
                     else:
                         if(sub_type == "default"):
                             print(f"{self.name}: Back at main")
