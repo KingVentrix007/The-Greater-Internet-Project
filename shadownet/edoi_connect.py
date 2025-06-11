@@ -168,7 +168,7 @@ def connect_to_edoi():
         print(f"[+] Listening for messages on port {port}...")
         # Connect to EDOI node
         init_connect(ip,port,client_port=int(client_port))
-        time.sleep(2)
+        
         do_request(client_hash,secure_salt,int(client_port),target_hash,"127.0.0.1",port)     
         client_comm(target,target_hash,ip,port)
         while(True):

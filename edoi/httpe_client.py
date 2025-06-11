@@ -6,6 +6,10 @@ import httpe_cert           # Must have verify_cert(cert, host, pem_path, pubkey
 import json
 import httpe_fernet
 import base64
+import threading
+from cryptography.hazmat.primitives import hashes
+
+import time
 class HttpeResponse:
     """Parses HTTPE responses in the format: headers + END + body"""
 
@@ -76,7 +80,7 @@ class HttpeResponse:
 class HttpeClient:
     """Custom secure HTTP-like client using symmetric AES and RSA for initial handshake"""
 
-    def __init__(self, host="127.0.0.1", port=8080):
+    def __init__(self, host="127.0.0.1", port=8080,connect_to_edoi=False,edoi_port=None,edoi_ip=None,edoi_client_name = None,edoi_target=None):
         self.host = host
         self.port = port
         self._client_id = None
@@ -88,6 +92,113 @@ class HttpeClient:
         self.secure = False
         self._token = None
 
+        #EDOI stuff
+        self.edoi_port = edoi_port
+        self.edoi_ip = edoi_ip
+        self.name = edoi_client_name or uuid.uuid4()
+        self.use_edoi = connect_to_edoi
+        self.edoi_path = None
+        self.edoi_target = edoi_target
+        self.salt = "fixed_salt"
+        self.edoi_res = None
+        self.got_edoi_res = False
+        if(self.use_edoi == True):
+            threading.Thread(target=self.listen_for_message, daemon=True).start()
+            self._send_connect()
+            time.sleep(2)
+            self.get_edoi_server_path()
+            
+    def compute_hashed_identity(name:str, salt: str) -> str:
+        digest = hashes.Hash(hashes.SHA256())
+        digest.update((name + salt).encode())
+        return digest.finalize().hex()
+    def get_edoi_server_path(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+            client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            client_socket.connect((self.ip, self.port))
+            client_hash = self.compute_hashed_identity(self.name,self.salt)
+            target_hash = self.compute_hashed_identity(self.edoi_target,self.salt)
+            route_member = {"hash": client_hash, "salt": self.salt}
+            route = [route_member]
+            packet = {
+            "type": "find",
+            "route": route,
+            "hash": target_hash,
+            "salt": self.salt,
+            # "key": self.public_key.public_bytes(
+            #     encoding=serialization.Encoding.PEM,
+            #     format=serialization.PublicFormat.SubjectPublicKeyInfo
+            # ).decode(),
+            
+            "message_id": str(uuid.uuid4()),
+            "my_ip":('127.0.0.1',self.client_port)
+        }
+            client_socket.sendall(json.dumps(packet).encode())
+
+    def handle_edoi_conn(self,data):
+        edoi_packet_type = data.get("type",None)
+        sub_type = data.get("sub_type","default")
+        if(edoi_packet_type == "path"):
+            if(sub_type == "default"):
+                # print("Hello")
+                route = data.get("route",None)
+                self.edoi_path = route
+                # print("Found path")
+        elif(edoi_packet_type == "return"):
+            payload = data["payload"]
+            # print("Message: ",payload)
+            self.edoi_res = payload
+            self.got_edoi_res = True
+    def listen_for_message(self):
+
+        # Listens for incoming messages on the specified port
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+                server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                server_socket.bind(('0.0.0.0', self.port))
+                server_socket.listen()
+                print(f"[+] Listening forever on port {self.port}...")
+
+                while True:
+                    conn, addr = server_socket.accept()
+                    with conn:
+                        # print(f"[+] Connection from {addr}")
+
+                        data_chunks = []
+                        while True:
+                            chunk = conn.recv(1024)
+                            if not chunk:
+                                break  # Connection closed by client
+                            data_chunks.append(chunk)
+
+                        full_data = b''.join(data_chunks)
+                        try:
+                            decoded = full_data.decode('utf-8')
+                            # print(f"[>] Full raw data: {decoded}")
+
+                            json_data = json.loads(decoded)
+                            # print(f"[√] Received JSON: {json_data}")
+                            # in_ip,in_port = addr
+                            # neighbors[addr] = None
+                            # handle_conn(json_data)
+                            self.handle_edoi_conn(json_data)
+                            
+                            # print(f"[√] Received JSON: {json_data}")
+                        except json.JSONDecodeError as e:
+                            print(f"[!]JSON decode error: {e}")
+                        except Exception as e:
+                            print(f"[!]General error: {e}")
+                        finally:
+                            pass
+                            # print("[*] Connection closed.\n")
+    def _send_connect(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+            client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            client_socket.connect((self.edoi_ip, self.edoi_port))
+            print(f"[+] Connected to EDOI node at {self.edoi_ip}:{self.edoi_port}")
+
+            # Send a message to the EDOI node
+            message = json.dumps({"type": "connect","tup":(self.ip,self.port)}).encode('utf-8')
+            client_socket.sendall(message)
     def send_request(self, method, location, headers=None, body="", use_httpe=True):
         """Send an encrypted request to the server, establishing connection if needed"""
         try:
@@ -142,10 +253,16 @@ class HttpeClient:
             except Exception as e:
                 print(f"full_data error {e}")
             try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.connect((self.host, self.port))
-                    s.sendall(full_data.encode())
-                    response = self._receive_full_response(s)
+                if(self.use_edoi == False):
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                        s.connect((self.host, self.port))
+                        s.sendall(full_data.encode())
+                        response = self._receive_full_response(s)
+                else:
+                    self.edoi_send_to_target(full_data.encode())
+                    response = self._receive_full_response(None)
+
+                    print("Use EDOI")
             except Exception as e:
                 print(f"_send_request_enc send error {e}")
 
@@ -164,31 +281,62 @@ class HttpeClient:
         except Exception as e:
             print(f"Error in _send_request_enc: {e}")
             return None
+    def edoi_send_to_target(self,payload):
+        count = 1
+        packet = {
+            "type": "forward",
+            "route": self.edoi_path,
+            "count": count,
+            "payload": payload
+        }
+        # Send to next hop
+        # next_hop = route[count]
+        # print("Next hop",next_hop)
+        time.sleep(1)
+        message_id = packet.get("message_id",None)
+        packet["message_id"] = message_id or str(uuid.uuid4())
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+            client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            client_socket.connect((self.edoi_ip, self.edoi_port))
+            # print(f"[+] Sending to EDOI node at {server_ip}:{server_port}")
 
+            # Send a message to the EDOI node
+            message = json.dumps(packet).encode('utf-8')
+            client_socket.sendall(message)
     def _receive_full_response(self, s: socket.socket) -> str:
-        """Receives full data from socket"""
-        try:
-            chunks = []
-            while True:
-                chunk = s.recv(1024)
-                if not chunk:
-                    break
-                chunks.append(chunk)
-            return b''.join(chunks).decode()
-        except Exception as e:
-            raise ConnectionError(f"Error receiving data: {e}")
+        if(self.use_edoi == False):
+            """Receives full data from socket"""
+            try:
+                chunks = []
+                while True:
+                    chunk = s.recv(1024)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                return b''.join(chunks).decode()
+            except Exception as e:
+                raise ConnectionError(f"Error receiving data: {e}")
+        else:
+            while self.got_edoi_res == False:
+                pass
+            ret_data = self.edoi_res
+            return ret_data
 
     def _connection_send(self, request_data: str) -> HttpeResponse:
         """Sends a raw request and returns parsed response"""
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((self.host, self.port))
-                s.sendall(request_data.encode())
-                response = self._receive_full_response(s)
-            return HttpeResponse(response)
-        except Exception as e:
-            print(f"Connection send failed: {e}")
-            return None
+        if(self.use_edoi == True):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect((self.host, self.port))
+                    s.sendall(request_data.encode())
+                    response = self._receive_full_response(s)
+                return HttpeResponse(response)
+            except Exception as e:
+                print(f"Connection send failed: {e}")
+                return None
+        else:
+            self.edoi_send_to_target(request_data)
+            return self._receive_full_response(None)
 
     def _init_connection(self):
         """Initial secure handshake with server"""

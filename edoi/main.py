@@ -1,6 +1,6 @@
 from httpe_server import Httpe
 
-server = Httpe()
+server = Httpe(use_edoi_node=True,edoi_ip='127.0.0.1',edoi_port=5122,name="HTTPE")
 @server.path("/hello-world",method="GET")
 def test_get():
     return "cat fish"
