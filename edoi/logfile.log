@@ -207,3 +207,5 @@ ValueError: Invalid isoformat string: '2025-06-11T07:23:09.749449+00:00END'
 
 [I]2025-06-11T13:51:35Z: Request to /PTS by ('127.0.0.1', 58335). Header: {'client_id': 'f8bba84a-d4bc-4c52-97c1-cc2493ee7e49', 'packet_id': '30de6130-8d83-4070-a310-fbee987ad57c', 'is_com_setup': 'False', 'timestamp': '2025-06-11 11:51:33.853222+00:00', 'compressions': 'false'} Body: {"data": "12234"}
 
+[I]2025-06-11T13:53:51Z: Request to /PTS by ('127.0.0.1', 61104). Header: {'client_id': '9c4cc942-0c20-475d-b3f1-4f3780d4f246', 'packet_id': '62e54a1e-0b00-4eda-8683-8e010c4454db', 'is_com_setup': 'False', 'timestamp': '2025-06-11 11:53:49.377916+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
