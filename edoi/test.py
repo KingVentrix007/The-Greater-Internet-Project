@@ -4,7 +4,7 @@
 import httpe_client
 import json
 import time
-client = httpe_client.HttpeClient(port=5400,connect_to_edoi=True,edoi_ip='127.0.0.1',edoi_port=5199,edoi_target="HTTPE",edoi_client_name="TestC")
+client = httpe_client.HttpeClient(port=5400,connect_to_edoi=True,edoi_ip='127.0.0.1',edoi_port=20193,edoi_target="HTTPE",edoi_client_name="TestC")
 # cleint2 = httpe_client.HttpeClient()
 def send():
     global client

@@ -1,3 +1,4 @@
+from collections import defaultdict
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives import padding as sym_padding
 from cryptography.hazmat.primitives import hashes
@@ -16,7 +17,7 @@ import time
 from collections import deque
 import uuid
 from datetime import datetime, timezone, timedelta
-
+import asyncio
 class NetNode():
     def __init__(self, name: str,port,bootstrap_ips:list):
         self.name = name # The name of this node on the network
@@ -36,13 +37,15 @@ class NetNode():
         self.seen_messages = set() # Set of all seed messages
         self.found_route = False # Unused
         self.store_hash = {} # Stored hash to IP combos per search
+        self.store_hash_v2 = defaultdict(set) # Store hash to IP combos per search, used for multiple routes
         self.store_hash_time = {} # Time for store_hash, used to delete old
         self.handled_paths = set() # Set of all handled path messages
         self.send_lock = False # Lock to disable send to avoid threading error
         self.send_loop_count = 0 # Loop to check for send count, unused in node mode
         self.find_hashes_handled = set() # Set of all hashes already checked
+        self.found_hash_routes = set() # Set of all found hash routes, used to avoid duplicates
         self.found_end_route = {} # List of all end routes found
-
+        self.found_end_routes = {}
         # Used if node is bas
         self.found_paths = {}
         self.failed_paths = {}
@@ -72,14 +75,14 @@ class NetNode():
             except Exception as e:
                 print("[ERROR] Memory cleaner exception:", e)
             time.sleep(1)
-    def build_neighbors(self):
+    async def build_neighbors(self):
         self.neighbors_tmp = set()
         for ip,key in self.neighbors.items():
             self.neighbors_tmp.add(ip)
         for ip in self.neighbors_tmp:
             tup = ('127.0.0.1',self.port)
             packet = {"type":"neighbors","ip_key":tup}
-            ret = self.send_data(packet,addr=ip,init_con=True)
+            ret = await self.send_data(packet,addr=ip,init_con=True)
             if(ret == False):
                 time.sleep(1)
     
@@ -142,43 +145,40 @@ class NetNode():
             
     
         pass # Will send RSA public key
-    def send_data(self,data,addr=None,conn=None,debug_node_name=None,init_con=False):
-        
-        while(self.send_lock == True):
-            pass
-        if(self.is_connect_node == True):
+    async def send_data(self, data, addr=None, conn=None, debug_node_name=None, init_con=False):
+        while self.send_lock:
+            await asyncio.sleep(0.001)  # Yield control instead of busy-waiting
+
+        self.send_lock = True
+
+        if self.is_connect_node:
             # print(f"{self.name}: Send data to {addr}: Data: \n{data}")
             pass
-        # if(debug_node_name == None):
-            # print("WHY?")
-        debug_node_n  =debug_node_name
-        self.send_lock = True
-        message_id = data.get("message_id",None)
-        if(message_id is None):
-            message_id = str(uuid.uuid4())
-        data['message_id'] = message_id
-        host, port = addr  # Unpack the address tuple
+
+        message_id = data.get("message_id", str(uuid.uuid4()))
+        data["message_id"] = message_id
+        host, port = addr
+
         try:
             json_str = json.dumps(data)
-            encoded = json_str.encode('utf-8')
+            encoded = json_str.encode("utf-8")
 
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-                client_socket.connect((host, port))
-                client_socket.sendall(encoded)
-            time.sleep(0.05)
+            reader, writer = await asyncio.open_connection(host, port)
+            writer.write(encoded)
+            await writer.drain()
+            writer.close()
+            await writer.wait_closed()
+
+            await asyncio.sleep(0.05)
             self.send_loop_count = 0
             self.send_lock = False
-                # print(f"[√] Sent JSON to {host}:{port}")
+            # print(f"[√] Sent JSON to {host}:{port}")
         except Exception as e:
-            if(init_con == False):
-                self.send_lock = False
-                time.sleep(0.05)
-                self.send_loop_count += 1
-                # if(self.send_loop_count < 10):
-                    # self.send_data(data,addr=addr,debug_node_name=debug_node_n)
-                # print(e)
-                # if(debug_node_n != "cont find"):
-                print(f"[!]{self.name} Error sending JSON to {host}:{port}:{debug_node_n} - {e}")
+            self.send_lock = False
+            await asyncio.sleep(0.05)
+            self.send_loop_count += 1
+            if not init_con:
+                print(f"[!]{self.name} Error sending JSON to {host}:{port}:{debug_node_name} - {e}")
             else:
                 return False
     def temp(self):
@@ -186,7 +186,7 @@ class NetNode():
         route_member = {"node_hash":"the nodes named, hashed ","salt":"the salt used to hash the name"}
         ## Packet:
         packet_find = {"type":"find","route":route,"hash":"the hash to find","key":"the last nodes RSA key(this nodes rsa if it is sending it)"}
-    def continue_find(self,route,hash_to_find,debug_route=None,target=None,salt=None,my_ip=None):
+    async def continue_find(self,route,hash_to_find,debug_route=None,target=None,salt=None,my_ip=None):
         packet = {"type":"find","route":route,"hash":target,"salt":salt, "message_id": str(uuid.uuid4()),"my_ip":my_ip}
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
@@ -194,9 +194,9 @@ class NetNode():
         for ip, key in self.neighbors.items():
             
             # will later handle key encryption
-            self.send_data(packet,ip,debug_node_name="cont find")
+            await self.send_data(packet,ip,debug_node_name="cont find")
 
-    def return_path(self,path,addr=None,debug_node_name=None):
+    async def return_path(self,path,addr=None,debug_node_name=None):
         # message_id = path.get("message_id",None)
         # # if(message_id == None):print("retuern None")
         # salt = path.get("salt",None)
@@ -207,17 +207,18 @@ class NetNode():
         if(addr == None):
             for ip, key in self.neighbors.items():
                 # if(self.neighbors_hash.get(key,None) == route[count - 1]):
-                self.send_data(path,ip,debug_node_name=f"Scan send: {debug_node_name}")
+                await self.send_data(path,ip,debug_node_name=f"Scan send: {debug_node_name}")
         else:
             host, port = addr
             # print(host,port)
-            self.send_data(path,addr=addr,debug_node_name=debug_node_name)
-    def hash_str(self,name,salt):
+            await self.send_data(path,addr=addr,debug_node_name=debug_node_name)
+    async def hash_str(self,name,salt):
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
         return digest.finalize().hex()
-    def start_find(self, target_name: str, salt: str):
-        target_hash = self.hash_str(target_name, salt)  # FIXED
+    async def start_find(self, target_name: str, salt: str):
+        print("FIND")
+        target_hash = await self.hash_str(target_name, salt)  # FIXED
         my_hash = self.compute_hashed_identity(salt)
         route_member = {"hash": my_hash, "salt": salt}
         route = [route_member]
@@ -241,11 +242,11 @@ class NetNode():
         # print((self.ip,self.port))
         for ip, key in self.neighbors.items():
             # will later handle key encryption
-            self.send_data(packet,ip,debug_node_name="send packet")
+            await self.send_data(packet,ip,debug_node_name="send packet")
         # self.continue_find(route, target_hash)
         # print("Find target hash: ",target_hash)
         return target_hash
-    def return_to_sender(self, route, payload):
+    async def return_to_sender(self, route, payload):
         count = len(route) - 2
         packet = {
             "type": "return",
@@ -255,8 +256,8 @@ class NetNode():
         }
         # Send to previous hop
         for ip, _ in self.neighbors.items():
-            self.send_data(packet, ip,"return_to_sender")
-    def send_to_target(self, route, payload):
+            await self.send_data(packet, ip,"return_to_sender")
+    async def send_to_target(self, route, payload):
         count = 1
         packet = {
             "type": "forward",
@@ -271,15 +272,16 @@ class NetNode():
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
         for ip, _ in self.neighbors.items():
-            self.send_data(packet, ip,"send to target")
+            await self.send_data(packet, ip,"send to target")
 
-    def handle_conn(self,data,addr,conn):
-        # print(data)
+    async def handle_conn(self,data,addr,conn):
+        # print(self.name,"||",data)
         message_id = data.get("message_id")
-        if message_id != None and message_id in self.seen_messages:
-            if(data.get("type",None) == "path"):
-                print("discard path: ",data.get("message_id"))
-            return  # Drop duplicate
+        # if message_id != None and message_id in self.seen_messages:
+            # if(data.get("type",None) == "path"):
+            #     print("discard path: ",data.get("message_id"))
+            # else:
+            #     return  # Drop duplicate
         # if(not message_id):
         #     print("U missed one")
         # Otherwise:
@@ -288,7 +290,7 @@ class NetNode():
         if(data["type"] == "get_rsa"):
             key = self.public_key
             key_data = {"key",key}
-            self.send_data(key_data, addr,"rsa get")
+            await self.send_data(key_data, addr,"rsa get")
         elif(data["type"] == "connect"):
             print('connect')
             self.is_connect_node = True
@@ -341,17 +343,20 @@ class NetNode():
                         if(val != None):
                             self.store_hash_time[hash_to_search] = datetime.now(timezone.utc).isoformat()
 
-                            self.send_data(next_packet, val,"type return")
+                            await self.send_data(next_packet, val,"type return")
                         else:
                             for ip, _ in self.neighbors.items():
-                                self.send_data(next_packet, ip,"type return")
+                                await self.send_data(next_packet, ip,"type return")
                     else:
                         print(f"[⬅️] Final ACK received at {self.name}: {payload}")
+                else:
+                    if(target_hash == route[len(route)-1].get("hash")):
+                        print(route)
             except Exception as e:
                 print(f"[!] {self.name}Return error: {e}")
         elif data['type'] == "forward":
             try:
-                
+                # print(data)
                 route = data["route"]
                 count = int(data["count"])
                 payload = data["payload"]
@@ -369,10 +374,10 @@ class NetNode():
                         }
                         
                         for ip, _ in self.neighbors.items():
-                            self.send_data(next_packet, ip,"type forward")
+                            await self.send_data(next_packet, ip,"type forward")
                     else:
                         print(f"[🎯] {self.name} received payload: {payload}")
-                        self.return_to_sender(route, f"ACK from {self.name}")
+                        await self.return_to_sender(route, f"ACK from {self.name}")
             except Exception as e:
                 print(f"[!] {self.name}Forward error: {e}")
 
@@ -434,17 +439,22 @@ class NetNode():
                         end_hash = route[len(route)-1]["hash"]
                         if(that_hash == end_hash):
                             print("This shouldn't happen")
-                        if(self.store_hash.get(that_hash,None) != None):
+                        if that_hash in self.store_hash_v2:
+                            print("USing v2 cache for path:")
+                            for ip in self.store_hash_v2[that_hash]:
+                                await self.return_path(data, ip)
+
+                        elif(self.store_hash.get(that_hash,None) != None):
                             # print("That worked",tuple(self.store_hash.get(that_hash,None)))
                             self.store_hash_time[that_hash] = datetime.now(timezone.utc).isoformat()
 
                             val = tuple(self.store_hash.get(that_hash,None))
                             if(val == None):
                                 print("Error")
-                            self.return_path(data,val)
+                            await self.return_path(data,val)
                         else:
-                            print("Error with cache")
-                            # self.return_path(data,debug_node_name="other loop")
+                            print(f"{self.name} Error with cache")
+                            await self.return_path(data,debug_node_name="other loop")
                     else:
                         if(sub_type == "default"):
                             print(f"{self.name}: Back at main")
@@ -491,20 +501,32 @@ class NetNode():
                 
                 target_hash = data["hash"]
                 route = list(data['route'])
-                if(self.found_end_route.get(target_hash,None) == route[0].get("hash")):
+                hashable_route = tuple(frozenset(item.items()) for item in route)
+                route_hash = hash(tuple(frozenset(item.items()) for item in route))
+                route_id = (target_hash, route_hash)
+
+                if route_id in self.find_hashes_handled:
                     return
-                if(target_hash in self.find_hashes_handled):
-                    print("Handled find hash already, ignoring. Hash") 
-                    return
+                self.find_hashes_handled.add(route_id)
+                # if(self.found_end_route.get(target_hash,None) == route[0].get("hash")):
+                #     return
+                # if(target_hash in self.find_hashes_handled):
+                #     if(target_hash == route[len(route)-1].get("hash")):
+                #         print(route)
+                    # print("Handled find hash already, ignoring. Hash") 
+                    # return
                 self.find_hashes_handled.add(target_hash)
-                
+                self.found_hash_routes.add(hashable_route)
                 # debug_route = list(data['debug_route'])
                 # debug_route_f = debug_route[0]
                 # name_to_find = debug_route_f['name']
                 last_ip = data.get("my_ip",None)
                 self.store_hash[route[len(route)-1].get("hash")] = last_ip
+                # self.store_hash_v2[route_id] = last_ip
+                # print("last_ip",type(last_ip))
+                self.store_hash_v2[route[-1]["hash"]].add(tuple(last_ip))
                 self.store_hash_time[route[len(route)-1].get("hash")] = datetime.now(timezone.utc).isoformat()
-                # TODO Make timeout for store_hash
+                
 
                 # print(f"Find data: {data}")
                 first_node = route[0]
@@ -520,6 +542,8 @@ class NetNode():
                     message_id = data.get("message_id",None)
                     ret_data = {"type":"path","sub_type":"no_path","hash":target_hash,"salt": salt,"route":route,"count":len(route)-1}
                     that_hash = route[int(ret_data["count"])]["hash"]
+
+                    
                     # that_hash_name = debug_route[int(ret_data["count"])]["name"]
                     if(self.store_hash.get(that_hash,None) != None):
                         self.store_hash_time[that_hash] = datetime.now(timezone.utc).isoformat()
@@ -527,17 +551,20 @@ class NetNode():
                         val = tuple(self.store_hash.get(that_hash,None))
                         if(val == None):
                             print("Error")
-                        self.return_path(ret_data,val)
+                        await self.return_path(ret_data,val)
                     else:
                         print("No match")
                     # return
                     # print(f"Failed to find({self.name})")
-                    # self.return_path(ret_data)
+                    # await self.return_path(ret_data)
                     # print("Failed to find")
                 # if(my_hash == hash_to_find):
                     # print(f"name: {self.name}|{name_to_find}")
-                if(my_hash == hash_to_find):
-                    self.found_end_route[target_hash] = route[0].get("hash")
+                elif(my_hash == hash_to_find):
+                    print("MAtch found")
+                    # self.found_end_route[target_hash] = route[0].get("hash")
+                    self.found_end_routes.setdefault(target_hash, []).append(route)
+                    # self.found_end_routes.setdefault(target_hash, []).append(route)
                     route_member = {"hash":my_hash,"salt":salt}
                     route.append(route_member)
                     # debug_route_member = {"name":self.name,"len_route":len(route)}
@@ -557,6 +584,13 @@ class NetNode():
                     # print(out)
 
                     that_hash = route[int(ret_data["count"])]["hash"]
+                    if that_hash in self.store_hash_v2:
+                        print("Im here")
+                        self.store_hash_time[that_hash] = datetime.now(timezone.utc).isoformat()
+                        for ip in self.store_hash_v2[that_hash]:
+                            await self.return_path(ret_data, ip)
+                    else:
+                        print("No match")
                     # that_hash_name = debug_route[int(ret_data["count"])]["name"]
                     if(self.store_hash.get(that_hash,None) != None):
                         self.store_hash_time[that_hash] = datetime.now(timezone.utc).isoformat()
@@ -564,16 +598,19 @@ class NetNode():
                         # print("That worked",tuple(self.store_hash.get(that_hash,None)))
                         val = tuple(self.store_hash.get(that_hash,None))
                         if(val == None):
-                            print("Error")
-                        self.return_path(ret_data,val)
+                            print("Error: No value found for that hash")
+                            await self.return_path(ret_data,debug_node_name="other run")
+                        await self.return_path(ret_data,val)
                     else:
                         print("No match")
-                        # self.return_path(ret_data,debug_node_name="other run")
-                # self.return_path(ret_data)
+                        await self.return_path(ret_data,debug_node_name="other run")
+                # await self.return_path(ret_data)
                     # Will now send ret data BACK up the route
                 else:
                     route_member = {"hash":my_hash,"salt":salt}
                     route.append(route_member)
+                    route_hash = hash(tuple(frozenset(item.items()) for item in route))
+                    # route_id = (target_hash, route_hash)
                     # debug_route_member = {"name":self.name,"len_route":len(route)}
                     # debug_route = list(data['debug_route'])
                     # debug_route.append(debug_route_member)
@@ -584,101 +621,134 @@ class NetNode():
                     # for ip, _ in self.neighbors.items():
                     #     print(ip)
                     # time.sleep(10)
-                    self.continue_find(route,hash_to_find=hash_to_find,target=target_hash,salt=salt,my_ip=my_ip)
+                    # print(f"{self.name}: Continuing find from",my_ip,"to",route[0].get("hash"),"with salt",salt,"and target hash",target_hash)
+                    await self.continue_find(route,hash_to_find=hash_to_find,target=target_hash,salt=salt,my_ip=my_ip)
             except Exception as e:
                 print(f"{self.name} find error {e}|{data}")
 
-    def listen(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
-            server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            server_socket.bind(('0.0.0.0', self.port))
-            server_socket.listen()
-            print(f"[+] Listening forever on port {self.port}...")
 
-            while True:
-                conn, addr = server_socket.accept()
-                with conn:
-                    # print(f"[+] Connection from {addr}")
-
-                    data_chunks = []
-                    while True:
-                        chunk = conn.recv(1024)
-                        if not chunk:
-                            break  # Connection closed by client
-                        data_chunks.append(chunk)
-
-                    full_data = b''.join(data_chunks)
-                    try:
-                        decoded = full_data.decode('utf-8')
-                        # print(f"[>] Full raw data: {decoded}")
-
-                        json_data = json.loads(decoded)
-                        # print(f"[√] Received JSON: {json_data}")
-                        # in_ip,in_port = addr
-                        # self.neighbors[addr] = None
-                        self.handle_conn(json_data,addr,conn)
-
-                    except json.JSONDecodeError as e:
-                        print(f"[!]{self.name} JSON decode error: {e}")
-                    except Exception as e:
-                        print(f"[!]{self.name} General error: {e}")
-                    finally:
-                        pass
-                        # print("[*] Connection closed.\n")
-
-
-
-
-if __name__ == "__main__":
-    BASE_PORT = 5000
-    NUM_NODES = 200
-    NEIGHBOR_COUNT = 5  # or 50 as in your earlier snippet
-    def main():
-        nodes = []
-        ports = list(range(BASE_PORT, BASE_PORT + NUM_NODES))
-        addresses = [("127.0.0.1", port) for port in ports]
-
-        for i, port in enumerate(ports):
-            name = f"Node{i}"
-            bootstrap_candidates = [addr for j, addr in enumerate(addresses) if j != i]
-            bootstrap_ips = random.sample(bootstrap_candidates, NEIGHBOR_COUNT)
-            node = NetNode(name=name, port=port, bootstrap_ips=bootstrap_ips)
-            nodes.append(node)
-        for node in nodes:
-            for ip, _ in node.neighbors.items():
-                # Find the actual node object corresponding to this IP
-                for other_node in nodes:
-                    if ('127.0.0.1', other_node.port) == ip:
-                        if (('127.0.0.1', node.port) not in other_node.neighbors):
-                            other_node.neighbors[('127.0.0.1', node.port)] = None
-        # Start listeners
-        for node in nodes:
-            threading.Thread(target=node.listen, daemon=True).start()
-            # threading.Thread(target=node.memory_cleaner,daemon=True).start()
-        print("[+] All nodes launched and listening.")
-
-        time.sleep(2)
-
-        for node in nodes:
-            threading.Thread(target=node.build_network).start()
-
-        time.sleep(2)
-
-        # Check if they are connected via declared neighbor relationships
-        neighbor_map = {}
-        for node in nodes:
-            neighbor_names = []
-            for ip, _ in node.neighbors.items():
-                for n in nodes:
-                    if n.port == ip[1]:  # match by port
-                        neighbor_names.append(n.name)
-            neighbor_map[node.name] = neighbor_names
+    async def handle_client(self, reader, writer):
+        addr = writer.get_extra_info('peername')
+        data_chunks = []
 
         try:
             while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            print("[*] Shutting down.")
-    main()
+                chunk = await reader.read(1024)
+                if not chunk:
+                    break
+                data_chunks.append(chunk)
+
+            full_data = b''.join(data_chunks)
+            decoded = full_data.decode('utf-8')
+            json_data = json.loads(decoded)
+
+            await self.handle_conn(json_data, addr, writer)
+        
+        except json.JSONDecodeError as e:
+            print(f"[!]{self.name} JSON decode error: {e}")
+        except Exception as e:
+            print(f"[!]{self.name} General error: {e}")
+        finally:
+            writer.close()
+            await writer.wait_closed()
+    async def listen(self):
+        server = await asyncio.start_server(self.handle_client, '0.0.0.0', self.port)
+        print(f"[+] Listening forever on port {self.port}...")
+
+        async with server:
+            await server.serve_forever()
+
+
+BASE_PORT = 20000
+NUM_NODES = 200
+NEIGHBOR_COUNT = 5  # Or 50 if needed
+def find_all_paths(nodes,start_node, target_name, max_paths=500):
+    paths = []
+    visited = set()
+
+    def dfs(current_node, path, visited_set):
+        if current_node.name == target_name:
+            paths.append(path[:])
+            return
+        if len(paths) >= max_paths:
+            return
+        for (ip, _), _ in current_node.neighbors.items():
+            next_node = next((n for n in nodes if n.port == ip[1]), None)
+            if next_node and next_node.name not in visited_set:
+                visited_set.add(next_node.name)
+                path.append(next_node.name)
+                dfs(next_node, path, visited_set)
+                path.pop()
+                visited_set.remove(next_node.name)
+
+    dfs(start_node, [start_node.name], {start_node.name})
+    return paths
+async def main():
+    nodes = []
+    ports = list(range(BASE_PORT, BASE_PORT + NUM_NODES))
+    addresses = [("127.0.0.1", port) for port in ports]
+    assert len(ports) == len(set(ports)), "Duplicate ports detected!"
+
+    # Create nodes with bootstrap neighbors
+    for i, port in enumerate(ports):
+        name = f"Node{i}"
+        bootstrap_candidates = [addr for j, addr in enumerate(addresses) if j != i]
+        bootstrap_ips = random.sample(bootstrap_candidates, NEIGHBOR_COUNT)
+        node = NetNode(name=name, port=port, bootstrap_ips=bootstrap_ips)
+        nodes.append(node)
+
+    # Populate reverse neighbor connections
+    for node in nodes:
+        for ip, _ in node.neighbors.items():
+            for other_node in nodes:
+                if ('127.0.0.1', other_node.port) == ip:
+                    if ('127.0.0.1', node.port) not in other_node.neighbors:
+                        other_node.neighbors[('127.0.0.1', node.port)] = None
+
+    # Start listeners using asyncio.gather
+    listen_tasks = [asyncio.create_task(node.listen()) for node in nodes]
+    # await asyncio.gather(*listen_tasks)
+    print("[+] All nodes launched and listening.")
+
+    await asyncio.sleep(2)  # Give time for servers to bind
+    # search_node = random.choice(nodes)
+    # target_name = random.choice([n.name for n in nodes])
+    # await search_node.start_find(target_name, "SALT")
+    # print(f"\n[*] Tracing search paths from {search_node.name} to {target_name}...\n")
+    # paths = find_all_paths(nodes,search_node, target_name)
+    # if not paths:
+    #     print("[-] No paths found.")
+    # else:
+    #     for i, path in enumerate(paths):
+    #         print(f"[+] Path {i + 1}: {' -> '.join(path)}")
+    
+
+    # search_node.start_find("Node120","SALT")
+    # Build network (make build_network async or wrap with to_thread)
+    # await asyncio.gather(*(asyncio.to_thread(node.build_network) for node in nodes))
+
+    # await asyncio.sleep(2)
+
+    # Neighbor diagnostics
+    neighbor_map = {}
+    for node in nodes:
+        neighbor_names = []
+        for ip, _ in node.neighbors.items():
+            for n in nodes:
+                if n.port == ip[1]:
+                    neighbor_names.append(n.name)
+        neighbor_map[node.name] = neighbor_names
+    await asyncio.gather(*listen_tasks)
+    # Wait forever
+    try:
+        while True:
+            await asyncio.sleep(1)
+    except KeyboardInterrupt:
+        print("[*] Shutting down.")
+
+# Start the full async launcher
+if __name__ == "__main__":
+    asyncio.run(main())
+
 
         

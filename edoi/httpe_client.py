@@ -163,6 +163,10 @@ class HttpeClient:
             client_socket.sendall(json.dumps(packet).encode())
     def choose_path(self):
         if len(self.all_edoi_paths) <= 1:
+            while self.edoi_path == None:
+                pass
+            # if():
+                # print("EDOI_PATH IS NODE")
             return self.edoi_path  # or raise an exception / handle as needed
 
         # Find the path with the fewest nodes (i.e., shortest path)
@@ -173,12 +177,14 @@ class HttpeClient:
     def handle_edoi_conn(self,data):
         # print(data)
         edoi_packet_type = data.get("type",None)
+        print(edoi_packet_type, "EDOI packet type")
         sub_type = data.get("sub_type","default")
         if(edoi_packet_type == "path"):
             
             if(sub_type == "default"):
                 # print("Hello")
                 print("Go path")
+                print(data)
                 route = data.get("route",None)
                 if(self.edoi_path == None):
                     self.edoi_path = route
@@ -197,6 +203,19 @@ class HttpeClient:
             # print("Message: ",payload)
             self.edoi_res = payload
             self.got_edoi_res = True
+        elif(edoi_packet_type == "find"):
+            # print(data["route"], "EDOI route found. Sending path back to EDOI server.")
+            target_hash = data['hash']
+            route = data["route"]
+            end_node = route[-1]
+            end_node_hash = end_node['hash']
+            if(target_hash == end_node_hash):
+                print("I really dont know what to do now. EDOI target hash: ", target_hash)
+            salt = data['salt']
+            my_hash = self.compute_hashed_identity(self.name,salt)
+            if(my_hash == target_hash):
+                print("I dont know what to do now")
+            print(data['hash']," EDOI target hash. Sending back path: ")
     def listen_for_message(self):
 
         # Listens for incoming messages on the specified port
@@ -209,7 +228,7 @@ class HttpeClient:
                 while True:
                     conn, addr = server_socket.accept()
                     with conn:
-                        # print(f"[+] Connection from {addr}")
+                        print(f"[+] Connection from {addr}")
 
                         data_chunks = []
                         while True:
