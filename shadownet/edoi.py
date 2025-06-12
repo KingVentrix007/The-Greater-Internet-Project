@@ -145,10 +145,10 @@ class NetNode():
     
         pass # Will send RSA public key
     async def send_data(self, data, addr=None, conn=None, debug_node_name=None, init_con=False):
-        while self.send_lock:
-            await asyncio.sleep(0.001)  # Yield control instead of busy-waiting
+        # while self.send_lock:
+        #     await asyncio.sleep(0.001)  # Yield control instead of busy-waiting
 
-        self.send_lock = True
+        # self.send_lock = True
 
         if self.is_connect_node:
             # print(f"{self.name}: Send data to {addr}: Data: \n{data}")
@@ -390,6 +390,7 @@ class NetNode():
             if(message_id in self.handled_paths):
                 print(f"ignored")
                 return
+            print(self.name,(self.ip,self.port),"Got path")
             self.handled_paths.add(message_id)
             try:
                 # debug_route = data["debug_route"]
@@ -452,9 +453,9 @@ class NetNode():
                             if(val == None):
                                 print("Error")
                             await self.return_path(data,val)
-                        # else:
-                        #     print(f"{self.name} Error with cache")
-                        #     await self.return_path(data,debug_node_name="other loop")
+                        else:
+                            print(f"{self.name} Error with cache")
+                            await self.return_path(data,debug_node_name="other loop")
                     else:
                         if(sub_type == "default"):
                             print(f"{self.name}: Back at main")
@@ -501,20 +502,26 @@ class NetNode():
                 
                 target_hash = data["hash"]
                 route = list(data['route'])
-                hashable_route = tuple(frozenset(item.items()) for item in route)
                 route_hash = hash(tuple(frozenset(item.items()) for item in route))
+                route_hashes = list(item.get("hash") for item in route)
+                # print(">>",route_hashes)
                 route_id = (target_hash, route_hash)
-
+                
                 # if route_id in self.find_hashes_handled:
                 #     return
                 
-                if(self.found_end_route.get(target_hash,None) == route[0].get("hash")):
-                    return
-                if(target_hash in self.find_hashes_handled):
-                    if(target_hash == route[len(route)-1].get("hash")):
-                        print(route)
-                    # print("Handled find hash already, ignoring. Hash") 
-                    return
+                # if(self.found_end_route.get(route_id,None) == route[0].get("hash")):
+                try:
+                    if(route in self.found_end_route.get(route_id,None)):
+                        # return
+                        return
+                except Exception as e:
+                    pass
+                # if(target_hash in self.find_hashes_handled):
+                #     if(target_hash == route[len(route)-1].get("hash")):
+                #         print(route)
+                #     # print("Handled find hash already, ignoring. Hash") 
+                #     return
                 self.find_hashes_handled.add(target_hash)
                 # self.find_hashes_handled.add(target_hash)
                 # self.found_hash_routes.add(hashable_route)
@@ -563,7 +570,7 @@ class NetNode():
                 elif(my_hash == hash_to_find):
                     print("MAtch found")
                     # self.found_end_route[target_hash] = route[0].get("hash")
-                    self.found_end_routes.setdefault(target_hash, []).append(route)
+                    self.found_end_routes.setdefault(route_id, []).append(route)
                     # self.found_end_routes.setdefault(target_hash, []).append(route)
                     route_member = {"hash":my_hash,"salt":salt}
                     route.append(route_member)
@@ -599,7 +606,7 @@ class NetNode():
                         await self.return_path(ret_data,debug_node_name="other run")
                 # await self.return_path(ret_data)
                     # Will now send ret data BACK up the route
-                else:
+                elif my_hash not in route_hashes:
                     route_member = {"hash":my_hash,"salt":salt}
                     route.append(route_member)
                     route_hash = hash(tuple(frozenset(item.items()) for item in route))
