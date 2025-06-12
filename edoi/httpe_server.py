@@ -1,4 +1,5 @@
 from cryptography.hazmat.primitives import hashes
+import time
 import os
 import socket
 import threading
@@ -254,6 +255,7 @@ class Httpe:
             message = json.dumps({"type": "connect","tup":(self.host,self.port)}).encode('utf-8')
             client_socket.sendall(message)
     def _handle_client(self, conn, addr):
+        # start_time_timer = time.start()
         try:
             try:
                 data = b""
@@ -378,6 +380,7 @@ class Httpe:
                     self.send_packet(conn,addr,data=res_data.serialize().encode(),route=route)
                     return
                 elif(initial_packet_type == "REQ_ENC"):
+                    start_enc_time_timer = time.time()
                     new_lines,user_id_from_token =  self._handle_enc_request(lines)
                     if(new_lines == None or user_id_from_token == None):
                         #! Remove {e} in prod
@@ -390,7 +393,11 @@ class Httpe:
                     new_lines = new_lines.splitlines()
                     is_encrypted_packet = True
                     headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(new_lines)
+                    end_enc_time_timer = time.time()
+                    print(f"Time to handle encrypted packet {end_enc_time_timer - start_enc_time_timer} seconds.")
+
             # ##print("headers>>",headers)
+            packet_validation_time_start = time.time()
             packet_id = headers.get("packet_id",None)
             
             header_user_id = headers.get("client_id",None)
@@ -425,7 +432,8 @@ class Httpe:
                 # conn.sendall(err_res.serialize().encode())
                 self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
                 return
-            
+            packet_validation_time_end = time.time()
+            print(f"Time to validate packet {packet_validation_time_end - packet_validation_time_start} seconds.")
             handler = self.routes.get((location, method))
             ##print(">>",location, method)
             try:
@@ -447,10 +455,13 @@ class Httpe:
                         result = Response(str(result))  # fallback
                     response = result.serialize()
                 else:
+                    handler_start_time = time.time()
                     result = self._parse_handler(handler,sig,json.loads(body),self.user_keys[header_user_id])
                     if not isinstance(result, Response):
                         result = Response(str(result))  # fallback
                     response = result.serialize()
+                    handler_end_time = time.time()
+                    print(f"Time for handler to handle request {handler_end_time - handler_start_time} seconds.")
             else:
                 # ##print("Cant find route for type:",initial_packet_type)
                 result = "Route Not Found"
@@ -513,23 +524,26 @@ class Httpe:
             res = Response(json.dumps(body),status_code=status)
             return res
     
-    async def send_packet(self,conn,addr,data,route=None):
-        if(self.is_edoi_node == False):
-            conn.sendall(data)
-        else:
-            if(route == None or len(route) < 2):
+    def send_packet(self,conn,addr,data,route=None):
+        try:
+            if(self.is_edoi_node == False):
+                conn.sendall(data)
+            else:
+                if(route == None or len(route) < 2):
+                    return
+                count = len(route) - 2
+                packet = {
+                    "type": "return",
+                    "route": route,
+                    "count": count,
+                    "payload": data.decode("utf-8")
+                }
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+                    client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    client_socket.connect((self.edoi_ip, self.edoi_port))
+                    message = json.dumps(packet).encode('utf-8')
+                    client_socket.sendall(message)
                 return
-            count = len(route) - 2
-            packet = {
-                "type": "return",
-                "route": route,
-                "count": count,
-                "payload": data.decode("utf-8")
-            }
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-                client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                client_socket.connect((self.edoi_ip, self.edoi_port))
-                message = json.dumps(packet).encode('utf-8')
-                client_socket.sendall(message)
-            return
+        except Exception as e:
+            print(f"{self.name} error in send packet: ")
     # def edoi_net_rec()
