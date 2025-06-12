@@ -546,3 +546,41 @@ AttributeError: 'NoneType' object has no attribute 'splitlines'
 
 [I]2025-06-11T18:42:34Z: Request to /PTS by ('127.0.0.1', 64977). Header: {'client_id': 'bc1264a6-50c9-4730-b370-b12fb20993d9', 'packet_id': '790b6102-16ef-450b-8952-83112ff4a65b', 'is_com_setup': 'False', 'timestamp': '2025-06-11 16:42:33.076940+00:00', 'compressions': 'false'} Body: {"data": "12234"}
 
+[I]2025-06-12T05:34:35Z: Request to /PTS by ('127.0.0.1', 51640). Header: {'client_id': 'da1e7018-0037-4b16-beaf-86425387463d', 'packet_id': 'b24dd0b9-34a9-4818-bcc5-185b4dd56de5', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:34:33.641973+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:34:36Z: Failed to verify user None from ('127.0.0.1', 51667). invalid packet
+[I]2025-06-12T05:34:40Z: Request to /PTS by ('127.0.0.1', 51784). Header: {'client_id': 'da1e7018-0037-4b16-beaf-86425387463d', 'packet_id': 'b32cc011-3a20-4322-879c-8128955e89f6', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:34:38.502239+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:34:41Z: Failed to verify user None from ('127.0.0.1', 51811). invalid packet
+[I]2025-06-12T05:34:45Z: Request to /PTS by ('127.0.0.1', 51929). Header: {'client_id': 'da1e7018-0037-4b16-beaf-86425387463d', 'packet_id': '452760c2-bc7d-403a-9280-8c70fa8f540d', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:34:43.368184+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:34:46Z: Failed to verify user None from ('127.0.0.1', 51956). invalid packet
+[I]2025-06-12T05:34:50Z: Request to /PTS by ('127.0.0.1', 52073). Header: {'client_id': 'da1e7018-0037-4b16-beaf-86425387463d', 'packet_id': '8019d9b2-aec6-414e-8e67-c17fe2cb9184', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:34:48.177698+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:34:51Z: Failed to verify user None from ('127.0.0.1', 52100). invalid packet
+[I]2025-06-12T05:34:55Z: Request to /PTS by ('127.0.0.1', 52217). Header: {'client_id': 'da1e7018-0037-4b16-beaf-86425387463d', 'packet_id': 'b2035c4a-82af-4a07-a8e3-0362d28c34d8', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:34:53.084497+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:34:56Z: Failed to verify user None from ('127.0.0.1', 52244). invalid packet
+[I]2025-06-12T05:35:00Z: Request to /PTS by ('127.0.0.1', 52361). Header: {'client_id': 'da1e7018-0037-4b16-beaf-86425387463d', 'packet_id': '60131249-4b30-4cf3-b152-a0a5f69b778f', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:34:58.131739+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:35:01Z: Failed to verify user None from ('127.0.0.1', 52388). invalid packet
+[I]2025-06-12T05:35:05Z: Request to /PTS by ('127.0.0.1', 52507). Header: {'client_id': 'da1e7018-0037-4b16-beaf-86425387463d', 'packet_id': '659d3a2a-efd7-4e3b-a3e8-615d45784561', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:35:03.054004+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:36:50Z: Request to /PTS by ('127.0.0.1', 54726). Header: {'client_id': 'dceadd3c-99ca-4335-bc98-86902aa922f3', 'packet_id': '765d1a25-af37-4262-aab0-f5eedd2b241b', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:36:48.627300+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:36:52Z: Request to /PTS by ('127.0.0.1', 54794). Header: {'client_id': 'dceadd3c-99ca-4335-bc98-86902aa922f3', 'packet_id': '4c55f41e-0c11-432c-a71a-f37d450a0925', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:36:50.551839+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:36:54Z: Request to /PTS by ('127.0.0.1', 54864). Header: {'client_id': 'dceadd3c-99ca-4335-bc98-86902aa922f3', 'packet_id': 'ec0761cf-0f0d-4b91-8bc4-341d61f2b9d8', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:36:52.518951+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:36:56Z: Request to /PTS by ('127.0.0.1', 54932). Header: {'client_id': 'dceadd3c-99ca-4335-bc98-86902aa922f3', 'packet_id': '0c918273-d956-41ae-a0f0-feea6d9c87e5', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:36:54.475338+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:36:58Z: Request to /PTS by ('127.0.0.1', 55001). Header: {'client_id': 'dceadd3c-99ca-4335-bc98-86902aa922f3', 'packet_id': 'af697b2e-e65a-42cc-a332-f24aaa686a3d', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:36:56.370199+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:37:00Z: Request to /PTS by ('127.0.0.1', 55069). Header: {'client_id': 'dceadd3c-99ca-4335-bc98-86902aa922f3', 'packet_id': '189cdfa6-c1f9-4752-a077-f187124be72a', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:36:58.357863+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:37:02Z: Request to /PTS by ('127.0.0.1', 55139). Header: {'client_id': 'dceadd3c-99ca-4335-bc98-86902aa922f3', 'packet_id': 'c7684001-95c7-4450-b1bd-0c852f09e5ed', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:37:00.336708+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:37:04Z: Request to /PTS by ('127.0.0.1', 55207). Header: {'client_id': 'dceadd3c-99ca-4335-bc98-86902aa922f3', 'packet_id': 'cfcf5228-f306-4a7f-a55b-965e654f90a2', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:37:02.264278+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T05:37:06Z: Request to /PTS by ('127.0.0.1', 55276). Header: {'client_id': 'dceadd3c-99ca-4335-bc98-86902aa922f3', 'packet_id': '28c23fe3-30d9-44d5-b248-50c2073c6fdf', 'is_com_setup': 'False', 'timestamp': '2025-06-12 03:37:04.203181+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+

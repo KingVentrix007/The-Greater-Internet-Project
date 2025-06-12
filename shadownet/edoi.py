@@ -145,10 +145,10 @@ class NetNode():
     
         pass # Will send RSA public key
     async def send_data(self, data, addr=None, conn=None, debug_node_name=None, init_con=False):
-        # while self.send_lock:
-        #     await asyncio.sleep(0.001)  # Yield control instead of busy-waiting
+        while self.send_lock:
+            await asyncio.sleep(0.001)  # Yield control instead of busy-waiting
 
-        # self.send_lock = True
+        self.send_lock = True
 
         if self.is_connect_node:
             # print(f"{self.name}: Send data to {addr}: Data: \n{data}")
@@ -353,8 +353,8 @@ class NetNode():
                     else:
                         print(f"[⬅️] Final ACK received at {self.name}: {payload}")
                 else:
-                    if(target_hash == route[len(route)-1].get("hash")):
-                        print(route)
+                    # 
+                    pass
             except Exception as e:
                 print(f"[!] {self.name}Return error: {e}")
         elif data['type'] == "forward":
@@ -390,7 +390,7 @@ class NetNode():
             if(message_id in self.handled_paths):
                 print(f"ignored")
                 return
-            print(self.name,(self.ip,self.port),"Got path")
+            # print(self.name,(self.ip,self.port),"Got path")
             self.handled_paths.add(message_id)
             try:
                 # debug_route = data["debug_route"]
@@ -517,11 +517,11 @@ class NetNode():
                         return
                 except Exception as e:
                     pass
-                # if(target_hash in self.find_hashes_handled):
-                #     if(target_hash == route[len(route)-1].get("hash")):
-                #         print(route)
+                if(target_hash in self.find_hashes_handled):
+                    if(target_hash == route[len(route)-1].get("hash")):
+                        print(route)
                 #     # print("Handled find hash already, ignoring. Hash") 
-                #     return
+                    return
                 self.find_hashes_handled.add(target_hash)
                 # self.find_hashes_handled.add(target_hash)
                 # self.found_hash_routes.add(hashable_route)
