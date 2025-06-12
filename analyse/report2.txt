@@ -1,39 +1,15 @@
-Node193: Got forward packet at time: 1749722681.735606
-Node193: Send forward packet at time 1749722681.7829335
-Node143: Got forward packet at time: 1749722681.7375975
-Node143: Send forward packet at time 1749722681.7839367
-Node44: Got forward packet at time: 1749722681.7415972
-Node44: Send forward packet at time 1749722681.7839367
-Node73: Got forward packet at time: 1749722681.7405972
-Node73: Send forward packet at time 1749722681.7839367
-Node128: Got forward packet at time: 1749722681.7366016
-Node128: Send forward packet at time 1749722681.7849333
-Node43: Got forward packet at time: 1749722681.7396119
-Node43: Send forward packet at time 1749722681.7849333
-Node159: Got forward packet at time: 1749722681.7385974
-Node159: Send forward packet at time 1749722681.7859335
-Node121: Got forward packet at time: 1749722681.7415972
-Node121: Send forward packet at time 1749722681.815954
-Node189: Got forward packet at time: 1749722681.7425978
-Node189: Send forward packet at time 1749722682.4020035
+Send packet: 1749726114.2957053
+Get response: 1749726115.914852
+Total time: 1.6191465854644775
 
-------------
+Forward time: 1.50984191894531
+back time: 0.10730767250061
 
-Node189: Got return packet at time: 1749722682.358896
-Node189: Send return packet at time 1749722682.4641697
-Node44: Got return packet at time: 1749722682.4051578
-Node44: Send return packet at time 1749722682.4651296
-Node143: Got return packet at time: 1749722682.409158
-Node143: Send return packet at time 1749722682.4651296
-Node193: Got return packet at time: 1749722682.410158
-Node193: Send return packet at time 1749722682.4661293
-Node159: Got return packet at time: 1749722682.4081295
-Node159: Send return packet at time 1749722682.4661293
-Node128: Got return packet at time: 1749722682.409158
-Node128: Send return packet at time 1749722682.4671285
-Node43: Got return packet at time: 1749722682.407133
-Node43: Send return packet at time 1749722682.4671285
-Node121: Got return packet at time: 1749722682.4041383
-Node121: Send return packet at time 1749722682.4671285
-Node73: Got return packet at time: 1749722682.4061604
-Node73: Send return packet at time 1749722682.4681299
+Server:
+Got packet 1749726115.8055472
+to
+called handler 1749726115.8065448
+to
+sent response: 1749726115.8075442
+
+Total time 0.0019969940185546875

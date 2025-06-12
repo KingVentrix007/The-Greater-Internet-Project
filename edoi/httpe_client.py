@@ -177,31 +177,32 @@ class HttpeClient:
     def handle_edoi_conn(self,data):
         # print(data)
         edoi_packet_type = data.get("type",None)
-        print(edoi_packet_type, "EDOI packet type")
+        # print(edoi_packet_type, "EDOI packet type")
         sub_type = data.get("sub_type","default")
         if(edoi_packet_type == "path"):
             
             if(sub_type == "default"):
                 # print("Hello")
-                print("Go path")
-                print(data)
+                # print("Go path")
+                # print(data)
                 route = data.get("route",None)
                 if(self.edoi_path == None):
                     self.edoi_path = route
                     self.all_edoi_paths.append(route)
-                    print("Found path")
+                    # print("Found path")
                 else:
                     print("Go new path")
                     self.all_edoi_paths.append(route)
             elif(sub_type == "no_path"):
                 self.no_path_res_count += 1
-                print("no path")
+                # print("no path")
                 if(self.no_path_res_count > 5 and self.edoi_path == None):
                     print("No path found for target. Please try again later. EDOI target: ",self.edoi_target)
         elif(edoi_packet_type == "return"):
+            print(f"Got packet at {time.time()}")
             payload = data["payload"]
             # print("Message: ",payload)
-            print(f"Got message at {time.time()}")
+            # print(f"Got message at {time.time()}")
             self.edoi_res = payload
             self.got_edoi_res = True
         elif(edoi_packet_type == "find"):
@@ -229,7 +230,7 @@ class HttpeClient:
                 while True:
                     conn, addr = server_socket.accept()
                     with conn:
-                        print(f"[+] Connection from {addr}")
+                        # print(f"[+] Connection from {addr}")
                         start_time = time.time()
                         data_chunks = []
                         while True:
@@ -261,7 +262,7 @@ class HttpeClient:
                             print(f"[!]General error: {e}")
                         finally:
                             end_time = time.time()
-                            print(f"Time to handle connection: {end_time - start_time} seconds")
+                            # print(f"Time to handle connection: {end_time - start_time} seconds")
                             pass
                             # print("[*] Connection closed.\n")
     def _send_connect(self):
@@ -287,7 +288,7 @@ class HttpeClient:
 
     def _send_request_enc(self, method, location, headers=None, body=""):
         # print(type(body),"|",type(""))
-        
+        print(f"Send request at {time.time()}")
         if(type(body) != type("")):
             raise TypeError(f"Body must be of type str, current type is {type(body)}")
         """Send an encrypted packet after key exchange"""
@@ -321,7 +322,7 @@ class HttpeClient:
                 start_ecrypt_timer = time.time()
                 enc_request = self._fernet_class.encrypt(plain_request.encode("utf-8"))
                 end_enrypt_timer = time.time()
-                print(f"Encryption took {end_enrypt_timer - start_ecrypt_timer} seconds")
+                # print(f"Encryption took {end_enrypt_timer - start_ecrypt_timer} seconds")
             except Exception as e:
                 print(f"enc_request error {e}")
                 return
@@ -413,11 +414,12 @@ class HttpeClient:
             time_waiting_res_start = time.time()
             while self.got_edoi_res == False:
                 pass
-            print(f"Got res at: {time.time()}")
+            
+            # print(f"Got res at: {time.time()}")
             ret_data = self.edoi_res
             self.got_edoi_res = False
             time_waiting_res_end = time.time()
-            print(f"Spent {time_waiting_res_end-time_waiting_res_start} seconds waiting")
+            # print(f"Spent {time_waiting_res_end-time_waiting_res_start} seconds waiting")
             return ret_data
 
     def _connection_send(self, request_data: str) -> HttpeResponse:

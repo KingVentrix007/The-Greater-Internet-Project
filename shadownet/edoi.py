@@ -372,16 +372,16 @@ class NetNode():
                             self.store_hash_time[hash_to_search] = datetime.now(timezone.utc).isoformat()
 
                             await self.send_data(next_packet, val,debug_node_name="return",conn=got_return_packet_time)
-                            print(f"{self.name}: Got return packet at time: {got_return_packet_time}")
-                            print(f"{self.name}: Send return packet at time {time.time()}")
+                            # print(f"{self.name}: Got return packet at time: {got_return_packet_time}")
+                            # print(f"{self.name}: Send return packet at time {time.time()}")
                             
                         else:
-                            print(f"{self.name}: No stored hash found for {hash_to_search}. Bulk sending")
-                            print(f"{self.name}:Bulk send: Got return packet at time: {got_return_packet_time}")
+                            # print(f"{self.name}: No stored hash found for {hash_to_search}. Bulk sending")
+                            # print(f"{self.name}:Bulk send: Got return packet at time: {got_return_packet_time}")
                             
                             for ip, _ in self.neighbors.items():
                                 await self.send_data(next_packet, ip,"type return")
-                            print(f"{self.name}:Bulk send: Send return packet at time {time.time()}")
+                            # print(f"{self.name}:Bulk send: Send return packet at time {time.time()}")
                     else:
                         print(f"[⬅️] Final ACK received at {self.name}: {payload}")
                 else:

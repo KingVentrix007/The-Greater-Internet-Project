@@ -256,6 +256,7 @@ class Httpe:
             message = json.dumps({"type": "connect","tup":(self.host,self.port)}).encode('utf-8')
             client_socket.sendall(message)
     def _handle_client(self, conn, addr):
+        print(f"Got request at {time.time()}")
         # start_time_timer = time.start()
         try:
             try:
@@ -444,6 +445,7 @@ class Httpe:
 
                 ##print(f"Failed to lof file {e}")
             if handler:
+                print(f"Doing handler at {time.time()}")
                 sig = inspect.signature(handler)
                 if(len(sig.parameters) == 0):
 
@@ -527,6 +529,7 @@ class Httpe:
     
     def send_packet(self,conn,addr,data,route=None):
         try:
+            print(f"Sending packet at {time.time()}")
             if(self.is_edoi_node == False):
                 conn.sendall(data)
             else:

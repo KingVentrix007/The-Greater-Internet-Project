@@ -10,8 +10,9 @@ client = httpe_client.HttpeClient(port=5400,connect_to_edoi=True,edoi_ip='127.0.
 def send():
     global client
     data = {"data":"12234"}
-    start_time = time.time()
+    
     print("SENDING POST request to /PTS")
+    start_time = time.time()
     res = client.send_request("POST","/PTS",body=json.dumps(data))
     end_time = time.time()
     print("Time taken for POST request:", end_time - start_time, "seconds")

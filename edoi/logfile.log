@@ -879,3 +879,9 @@ AttributeError: 'NoneType' object has no attribute 'splitlines'
 
 [I]2025-06-12T12:04:42Z: Request to /PTS by ('127.0.0.1', 51850). Header: {'client_id': '0dbd0b9e-c5e4-4ddd-ac0f-098c2b0fcb0c', 'packet_id': '62536fed-f52a-4ad4-8c5c-032ca92d93db', 'is_com_setup': 'False', 'timestamp': '2025-06-12 10:04:40.721668+00:00', 'compressions': 'false'} Body: {"data": "12234"}
 
+[I]2025-06-12T12:52:43Z: Request to /PTS by ('127.0.0.1', 55826). Header: {'client_id': '040db76d-51dd-4eff-ade7-1a33af27d97c', 'packet_id': '96538405-a1a4-4f87-a42f-86f8fca8bbcd', 'is_com_setup': 'False', 'timestamp': '2025-06-12 10:52:42.252496+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T12:53:33Z: Request to /PTS by ('127.0.0.1', 58061). Header: {'client_id': '261ce4f1-7080-4a8e-8340-c2112f9b5b27', 'packet_id': 'd7dde757-072f-4104-9130-ea1fe3b7971f', 'is_com_setup': 'False', 'timestamp': '2025-06-12 10:53:32.268181+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T12:53:57Z: Request to /PTS by ('127.0.0.1', 60282). Header: {'client_id': '3d7fb952-e83e-437a-9c11-89f4dfeea242', 'packet_id': '99b52ff5-5ff8-4ff2-a7af-544209061ff6', 'is_com_setup': 'False', 'timestamp': '2025-06-12 10:53:55.850086+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
