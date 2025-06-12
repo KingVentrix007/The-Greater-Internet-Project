@@ -97,3 +97,18 @@ Feel free to open an issue or submit a pull request!
 **“Privacy is not a privilege. It’s a right.”**
 
 ---
+
+## 🗂️ Project Layout
+
+A quick guide to the core components of the Greater Internet Project:
+
+* **Shadownet (EDOI-NET):**
+  The decentralized backbone of the Shadow Web.
+  Run `edoi.py` to spin up a network of EDOI-NET nodes (default: 200 nodes).
+
+* **EDOI:**
+  Contains the core HTTPE server and client implementations.
+  After starting the Shadownet nodes, run `main.py` and `test.py` to see a working demonstration.
+
+* **demo\_code:**
+  A collection of example scripts showcasing various features and use cases.
