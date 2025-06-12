@@ -792,3 +792,18 @@ RuntimeError: no running event loop
 [I]2025-06-12T09:59:47Z: Request to /PTS by ('127.0.0.1', 60860). Header: {'client_id': '4a5aef97-6061-4c7e-af69-ef0c51418519', 'packet_id': '1e4037ab-7769-40b0-bc0c-94fe65d80f29', 'is_com_setup': 'False', 'timestamp': '2025-06-12 07:59:45.378174+00:00', 'compressions': 'false'} Body: {"data": "12234"}
 
 [I]2025-06-12T09:59:48Z: Failed to verify user None from ('127.0.0.1', 60881). invalid packet
+[I]2025-06-12T10:03:56Z: Request to /PTS by ('127.0.0.1', 63333). Header: {'client_id': 'edd1a8f8-2366-424a-bc73-4296bb1f916a', 'packet_id': '984d3cc0-1724-4017-abf6-9e1498222295', 'is_com_setup': 'False', 'timestamp': '2025-06-12 08:03:54.614303+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T10:03:56Z: Failed to verify user None from ('127.0.0.1', 63374). invalid packet
+[I]2025-06-12T10:03:58Z: Request to /PTS by ('127.0.0.1', 63472). Header: {'client_id': 'edd1a8f8-2366-424a-bc73-4296bb1f916a', 'packet_id': 'ed0208c2-20fc-4bd1-aef1-7fa657819bb2', 'is_com_setup': 'False', 'timestamp': '2025-06-12 08:03:56.843614+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T10:03:58Z: Failed to verify user None from ('127.0.0.1', 63481). invalid packet
+[I]2025-06-12T10:04:00Z: Request to /PTS by ('127.0.0.1', 63558). Header: {'client_id': 'edd1a8f8-2366-424a-bc73-4296bb1f916a', 'packet_id': '5ed8d7b0-2cd1-4803-ae5d-19d6729e526f', 'is_com_setup': 'False', 'timestamp': '2025-06-12 08:03:59.139647+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T10:04:01Z: Failed to verify user None from ('127.0.0.1', 63596). invalid packet
+[I]2025-06-12T10:04:03Z: Request to /PTS by ('127.0.0.1', 63683). Header: {'client_id': 'edd1a8f8-2366-424a-bc73-4296bb1f916a', 'packet_id': 'be6e6bc5-7726-42e5-ad26-ab11abc3bcc3', 'is_com_setup': 'False', 'timestamp': '2025-06-12 08:04:01.131144+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T10:04:03Z: Failed to verify user None from ('127.0.0.1', 63704). invalid packet
+[I]2025-06-12T10:04:05Z: Request to /PTS by ('127.0.0.1', 63792). Header: {'client_id': 'edd1a8f8-2366-424a-bc73-4296bb1f916a', 'packet_id': 'd645475e-8ae7-4be3-96d4-80d04ef2abbd', 'is_com_setup': 'False', 'timestamp': '2025-06-12 08:04:03.393291+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T10:04:05Z: Failed to verify user None from ('127.0.0.1', 63812). invalid packet
