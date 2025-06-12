@@ -201,12 +201,12 @@ class HttpeClient:
                 if(self.no_path_res_count > 5 and self.edoi_path == None):
                     print("No path found for target. Please try again later. EDOI target: ",self.edoi_target)
         elif(edoi_packet_type == "return"):
-            print(f"Got packet at {time.time()}")
+            # print(f"Got packet at {time.time()}")
             payload = data["payload"]
             path_used = data["route"]
-            print("Ret path used: ",path_used)
-            print("Forward path used: ",self.edoi_path)
-            print("Message: ",payload)
+            # print("Ret path used: ",path_used)
+            # print("Forward path used: ",self.edoi_path)
+            # print("Message: ",payload)
             # print(f"Got message at {time.time()}")
             self.edoi_res = payload
             self.got_edoi_res = True
@@ -406,7 +406,7 @@ class HttpeClient:
             # Send a message to the EDOI node
             message = json.dumps(packet).encode('utf-8')
             client_socket.sendall(message)
-        print("Packet has been sent at", time.time())
+        # print("Packet has been sent at", time.time())
     def _receive_full_response(self, s: socket.socket) -> str:
         if(self.use_edoi == False):
             """Receives full data from socket"""
