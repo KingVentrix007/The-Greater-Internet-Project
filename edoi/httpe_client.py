@@ -200,7 +200,7 @@ class HttpeClient:
                     print("No path found for target. Please try again later. EDOI target: ",self.edoi_target)
         elif(edoi_packet_type == "return"):
             payload = data["payload"]
-            # print("Message: ",payload)
+            print("Message: ",payload)
             self.edoi_res = payload
             self.got_edoi_res = True
         elif(edoi_packet_type == "find"):
@@ -229,7 +229,7 @@ class HttpeClient:
                     conn, addr = server_socket.accept()
                     with conn:
                         print(f"[+] Connection from {addr}")
-
+                        start_time = time.time()
                         data_chunks = []
                         while True:
                             chunk = conn.recv(1024)
@@ -259,6 +259,8 @@ class HttpeClient:
                         except Exception as e:
                             print(f"[!]General error: {e}")
                         finally:
+                            end_time = time.time()
+                            print(f"Time to handle connection: {end_time - start_time} seconds")
                             pass
                             # print("[*] Connection closed.\n")
     def _send_connect(self):

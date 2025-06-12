@@ -11,6 +11,7 @@ def send():
     global client
     data = {"data":"12234"}
     start_time = time.time()
+    print("SENDING POST request to /PTS")
     res = client.send_request("POST","/PTS",body=json.dumps(data))
     end_time = time.time()
     print("Time taken for POST request:", end_time - start_time, "seconds")
@@ -18,5 +19,4 @@ def send():
     print(res.status)
     print(res.json())
 
-for i in range(5):
-    send()
+send()

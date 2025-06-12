@@ -147,9 +147,19 @@ class NetNode():
     async def send_data(self, data, addr=None, conn=None, debug_node_name=None, init_con=False):
         while self.send_lock:
             await asyncio.sleep(0.001)  # Yield control instead of busy-waiting
-
+        
         self.send_lock = True
+        # print(debug_node_name)
+        if(debug_node_name == "return"):
+            # print("THIS IS A RETURN PACKET")
+            print(f"{self.name}: Got return packet at time {conn}")
+            print(f"{self.name}: Send return packet at time {time.time()}")
+            
+        elif(debug_node_name == "forward"):
+            # print("THIS IS A FORWARD PACKET")
+            print(f"{self.name}: Got forward packet at time {conn}")
 
+            print(f"{self.name}: Sent forward packets at {time.time()}")
         if self.is_connect_node:
             # print(f"{self.name}: Send data to {addr}: Data: \n{data}")
             pass
@@ -206,7 +216,7 @@ class NetNode():
         route = path.get("route",None)
         # self.ask_for_hash(salt)'
         if(addr == None):
-            print(f"{self.name} ALT SEND")
+            # print(f"{self.name} ALT SEND")
             for ip, key in self.neighbors.items():
                 # if(self.neighbors_hash.get(key,None) == route[count - 1]):
                 asyncio.create_task(self.send_data(path,ip,debug_node_name=f"Scan send: {debug_node_name}"))
@@ -339,7 +349,7 @@ class NetNode():
                             "count": count - 1,
                             "payload": payload
                         }
-                        hash_to_search = route[count-1]["hash"]
+                        hash_to_search = route[count]["hash"]
                         try:
                             val = tuple(self.store_hash.get(hash_to_search,None))
                         except Exception as e:
@@ -348,9 +358,9 @@ class NetNode():
                         if(val != None):
                             self.store_hash_time[hash_to_search] = datetime.now(timezone.utc).isoformat()
 
-                            asyncio.create_task(self.send_data(next_packet, val,"type return"))
-                            print(f"{self.name}: Got return packet at time: {got_return_packet_time}")
-                            print(f"{self.name}: Send return packet at time {time.time()}")
+                            asyncio.create_task(self.send_data(next_packet, val,debug_node_name="return",conn=got_return_packet_time))
+                            # print(f"{self.name}: Got return packet at time: {got_return_packet_time}")
+                            
                         else:
                             print(f"{self.name}: No stored hash found for {hash_to_search}. Bulk sending")
                             print(f"{self.name}:Bulk send: Got return packet at time: {got_return_packet_time}")
@@ -386,9 +396,8 @@ class NetNode():
                         }
                         
                         for ip, _ in self.neighbors.items():
-                            asyncio.create_task(self.send_data(next_packet, ip,"type forward"))
-                        print(f"{self.name}: Got forward packets at {got_forward_packet_start}")
-                        print(f"{self.name}: Sent forward packets at {time.time()}")
+                            asyncio.create_task(self.send_data(next_packet, ip,debug_node_name="forward",conn=got_forward_packet_start))
+                        
                     else:
                         print(f"[🎯] {self.name} received payload: {payload}")
                         await self.return_to_sender(route, f"ACK from {self.name}")
@@ -399,7 +408,7 @@ class NetNode():
             
             message_id = data["message_id"]
             if(message_id in self.handled_paths):
-                print(f"ignored")
+                # print(f"ignored")
                 return
             # print(self.name,(self.ip,self.port),"Got path")
             self.handled_paths.add(message_id)
@@ -465,7 +474,7 @@ class NetNode():
                                 print("Error")
                             await self.return_path(data,val)
                         else:
-                            print(f"{self.name} Error with cache")
+                            # print(f"{self.name} Error with cache")
                             await self.return_path(data,debug_node_name="other loop")
                     else:
                         if(sub_type == "default"):

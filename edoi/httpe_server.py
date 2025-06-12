@@ -15,6 +15,7 @@ import signal
 import sys
 import logging
 import threading
+#TODO, make send_packet await in return and forward
 class Httpe:
     def __init__(self,server_host="127.0.0.1",Port=8080,running_version="1.0",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None):
         self.routes = {}
