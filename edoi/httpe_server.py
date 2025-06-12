@@ -513,7 +513,7 @@ class Httpe:
             res = Response(json.dumps(body),status_code=status)
             return res
     
-    def send_packet(self,conn,addr,data,route=None):
+    async def send_packet(self,conn,addr,data,route=None):
         if(self.is_edoi_node == False):
             conn.sendall(data)
         else:

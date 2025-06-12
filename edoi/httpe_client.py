@@ -9,7 +9,7 @@ import httpe_fernet
 import base64
 import threading
 from cryptography.hazmat.primitives import hashes
-
+import asyncio
 import time
 class HttpeResponse:
     """Parses HTTPE responses in the format: headers + END + body"""
@@ -127,24 +127,34 @@ class HttpeClient:
             # if self.persistent:
             # print("[~] Client is in persistent mode. Awaiting termination...")
             self._shutdown_event.wait()  # Keep the thread alive
+    async def _engage_client(self):
         if(self.use_edoi == True):
-            threading.Thread(target=self.listen_for_message, daemon=True).start()
-            self._send_connect()
-            time.sleep(2)
-            self.get_edoi_server_path()
-            time.sleep(2)
-            self._init_connection()
-            
-    def compute_hashed_identity(self,name:str, salt: str) -> str:
+            # threading.Thread(target=self.listen, daemon=True).start()
+            asyncio.create_task(self.listen())
+            await self._send_connect()
+            await asyncio.sleep(1)
+            await self.get_edoi_server_path()
+            await asyncio.sleep(1)
+            await self._init_connection()
+        try:
+            while True:
+                await asyncio.sleep(1)
+        except KeyboardInterrupt:
+            print("[*] Shutting down.")        
+    def engage_client(self):
+        asyncio.run(self._engage_client())
+        # except KeyboardInterrupt:
+        #     print("[*] Shutting down.")    
+    async def compute_hashed_identity(self,name:str, salt: str) -> str:
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
         return digest.finalize().hex()
-    def get_edoi_server_path(self):
+    async def get_edoi_server_path(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             client_socket.connect((self.edoi_ip, self.edoi_port))
-            client_hash = self.compute_hashed_identity(self.name,self.salt)
-            target_hash = self.compute_hashed_identity(self.edoi_target,self.salt)
+            client_hash = await self.compute_hashed_identity(self.name,self.salt)
+            target_hash = await self.compute_hashed_identity(self.edoi_target,self.salt)
             route_member = {"hash": client_hash, "salt": self.salt}
             route = [route_member]
             packet = {
@@ -161,7 +171,7 @@ class HttpeClient:
             "my_ip":('127.0.0.1',self.port)
         }
             client_socket.sendall(json.dumps(packet).encode())
-    def choose_path(self):
+    async def choose_path(self):
         if len(self.all_edoi_paths) <= 1:
             while self.edoi_path == None:
                 pass
@@ -174,7 +184,7 @@ class HttpeClient:
         print("Choosing shortest path with {} nodes.".format(len(shortest_path)) + "\nPath: " + str(shortest_path) + "\n")
         return shortest_path
             
-    def handle_edoi_conn(self,data):
+    async def handle_edoi_conn(self,data):
         # print(data)
         edoi_packet_type = data.get("type",None)
         print(edoi_packet_type, "EDOI packet type")
@@ -212,56 +222,42 @@ class HttpeClient:
             if(target_hash == end_node_hash):
                 print("I really dont know what to do now. EDOI target hash: ", target_hash)
             salt = data['salt']
-            my_hash = self.compute_hashed_identity(self.name,salt)
+            my_hash = await self.compute_hashed_identity(self.name,salt)
             if(my_hash == target_hash):
                 print("I dont know what to do now")
             print(data['hash']," EDOI target hash. Sending back path: ")
-    def listen_for_message(self):
+    async def listen(self):
+        server = await asyncio.start_server(self.handle_client, '0.0.0.0', self.port)
+        print(f"[+] Listening forever on port {self.port}...")
 
-        # Listens for incoming messages on the specified port
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
-                server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                server_socket.bind(('0.0.0.0', self.port))
-                server_socket.listen()
-                print(f"[+] Listening forever on port {self.port}...")
+        async with server:
+            await server.serve_forever()
+    async def handle_client(self, reader, writer):
+        addr = writer.get_extra_info('peername')
+        data_chunks = []
 
-                while True:
-                    conn, addr = server_socket.accept()
-                    with conn:
-                        print(f"[+] Connection from {addr}")
+        try:
+            while True:
+                chunk = await reader.read(1024)
+                if not chunk:
+                    break
+                data_chunks.append(chunk)
 
-                        data_chunks = []
-                        while True:
-                            chunk = conn.recv(1024)
-                            
-                            if not chunk:
-                                # print("Got here")
-                                break  # Connection closed by client
-                            # print("Chunk: ",chunk)
-                            data_chunks.append(chunk)
+            full_data = b''.join(data_chunks)
+            decoded = full_data.decode('utf-8')
+            json_data = json.loads(decoded)
 
-                        full_data = b''.join(data_chunks)
-                        try:
-                            decoded = full_data.decode('utf-8')
-                            # print(f"[>] Full raw data: {decoded}")
+            await self.handle_edoi_conn(json_data, addr, writer)
+        
+        except json.JSONDecodeError as e:
+            print(f"[!]{self.name} JSON decode error: {e}")
+        except Exception as e:
+            print(f"[!]{self.name} General error: {e}")
+        finally:
+            writer.close()
+            await writer.wait_closed()
 
-                            json_data = json.loads(decoded)
-                            # print(f"[√] Received JSON: {json_data}")
-                            # in_ip,in_port = addr
-                            # neighbors[addr] = None
-                            # threading.Thread(target=self.handle_edoi_conn,args=(json_data,), daemon=True).start()
-                            self.handle_edoi_conn(json_data)
-                                
-                            
-                            # print(f"[√] Received JSON: {json_data}")
-                        except json.JSONDecodeError as e:
-                            print(f"[!]JSON decode error: {e}")
-                        except Exception as e:
-                            print(f"[!]General error: {e}")
-                        finally:
-                            pass
-                            # print("[*] Connection closed.\n")
-    def _send_connect(self):
+    async def _send_connect(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             client_socket.connect((self.edoi_ip, self.edoi_port))
@@ -270,19 +266,19 @@ class HttpeClient:
             # Send a message to the EDOI node
             message = json.dumps({"type": "connect","tup":(self.host,self.port)}).encode('utf-8')
             client_socket.sendall(message)
-    def send_request(self, method, location, headers=None, body="", use_httpe=True):
+    async def send_request(self, method, location, headers=None, body="", use_httpe=True):
         """Send an encrypted request to the server, establishing connection if needed"""
         try:
             if not self.secure and use_httpe:
 
                 print("Is connecting")
                 
-            return self._send_request_enc(method, location, headers, body)
+            return await self._send_request_enc(method, location, headers, body)
         except Exception as e:
             print(f"Error in send_request: {e}")
             return None
 
-    def _send_request_enc(self, method, location, headers=None, body=""):
+    async def _send_request_enc(self, method, location, headers=None, body=""):
         # print(type(body),"|",type(""))
         if(type(body) != type("")):
             raise TypeError(f"Body must be of type str, current type is {type(body)}")
@@ -361,7 +357,7 @@ class HttpeClient:
         except Exception as e:
             print(f"Error in _send_request_enc: {e}")
             return None
-    def edoi_send_to_target(self,payload):
+    async def edoi_send_to_target(self,payload):
         count = 1
         packet = {
             "type": "forward",
@@ -383,7 +379,7 @@ class HttpeClient:
             # Send a message to the EDOI node
             message = json.dumps(packet).encode('utf-8')
             client_socket.sendall(message)
-    def _receive_full_response(self, s: socket.socket) -> str:
+    async def _receive_full_response(self, s: socket.socket) -> str:
         if(self.use_edoi == False):
             """Receives full data from socket"""
             try:
@@ -403,7 +399,7 @@ class HttpeClient:
             self.got_edoi_res = False
             return ret_data
 
-    def _connection_send(self, request_data: str) -> HttpeResponse:
+    async def _connection_send(self, request_data: str) -> HttpeResponse:
         """Sends a raw request and returns parsed response"""
         if(self.use_edoi == False):
             try:
@@ -421,7 +417,7 @@ class HttpeClient:
             response = self._receive_full_response(None)
             return HttpeResponse(response)
 
-    def _init_connection(self):
+    async def _init_connection(self):
         """Initial secure handshake with server"""
         try:
             self._client_id = uuid.uuid4()
@@ -492,12 +488,12 @@ class HttpeClient:
 
         except Exception as e:
             print(f"Handshake failed: {e}")
-    def terminate(self):
+    async def terminate(self):
         print("Terminating connection to server...")
         self.running = False
         if self.persistent:
             self._shutdown_event.set()
-    def _keep_alive(self):
+    async def _keep_alive(self):
         print("[*] Persistent mode active. Client will stay alive until terminate() is called.")
         while self.running == True:
             time.sleep(1)  # Keep thread alive, avoid busy loop
