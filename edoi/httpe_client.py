@@ -384,6 +384,7 @@ class HttpeClient:
             print(f"Error in _send_request_enc: {e}")
             return None
     def edoi_send_to_target(self,payload):
+        print("Starting sending packet preparation at", time.time())
         count = 1
         packet = {
             "type": "forward",
@@ -394,7 +395,7 @@ class HttpeClient:
         # Send to next hop
         # next_hop = route[count]
         # print("Next hop",next_hop)
-        time.sleep(1)
+        # time.sleep(1)
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
@@ -405,6 +406,7 @@ class HttpeClient:
             # Send a message to the EDOI node
             message = json.dumps(packet).encode('utf-8')
             client_socket.sendall(message)
+        print("Packet has been sent at", time.time())
     def _receive_full_response(self, s: socket.socket) -> str:
         if(self.use_edoi == False):
             """Receives full data from socket"""

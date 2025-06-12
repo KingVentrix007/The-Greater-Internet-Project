@@ -901,3 +901,7 @@ AttributeError: 'NoneType' object has no attribute 'splitlines'
 
 [I]2025-06-12T17:16:38Z: Request to /PTS by ('127.0.0.1', 53584). Header: {'client_id': '219da5c8-fb80-4978-933d-54591458dd65', 'packet_id': 'b886aa8e-2115-49f8-84fa-9c77e2512020', 'is_com_setup': 'False', 'timestamp': '2025-06-12 15:16:36.826004+00:00', 'compressions': 'false'} Body: {"data": "12234"}
 
+[I]2025-06-12T17:23:25Z: Request to /PTS by ('127.0.0.1', 55840). Header: {'client_id': '6b80d4f6-897e-4a2b-b0c1-43d30df8d59b', 'packet_id': 'f88d9dd1-7dfe-4162-aacc-1748a96b6331', 'is_com_setup': 'False', 'timestamp': '2025-06-12 15:23:24.002897+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
+[I]2025-06-12T17:26:07Z: Request to /PTS by ('127.0.0.1', 60456). Header: {'client_id': 'fd358a45-1512-4e64-8030-57e10b797510', 'packet_id': '2e63d61c-cf06-4a17-9e88-b0687f25ccd8', 'is_com_setup': 'False', 'timestamp': '2025-06-12 15:26:06.891091+00:00', 'compressions': 'false'} Body: {"data": "12234"}
+
