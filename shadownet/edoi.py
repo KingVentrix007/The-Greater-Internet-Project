@@ -87,7 +87,7 @@ class NetNode():
                 time.sleep(1)
     
     def compute_hashed_identity(self, salt: str) -> str:
-        return self.name
+        # return self.name
         digest = hashes.Hash(hashes.SHA256())
         digest.update((self.name + salt).encode())
         return digest.finalize().hex()

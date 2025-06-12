@@ -136,7 +136,7 @@ class HttpeClient:
             self._init_connection()
             
     def compute_hashed_identity(self,name:str, salt: str) -> str:
-        return name
+        # return name
 
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
