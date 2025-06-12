@@ -22,9 +22,7 @@ Node176: Got forward packet at time: 1749722138.9298158
 Node176: Send forward packet at time 1749722139.0010805
 Node189: Got forward packet at time: 1749722138.9308147
 Node189: Send forward packet at time 1749722139.4153538
-
-
-
+--
 Node189: Got return packet at time: 1749722139.3722372
 Node189: Send return packet at time 1749722139.4783552
 Node176: Got return packet at time: 1749722139.4183521
@@ -50,8 +48,17 @@ Node146: Send return packet at time 1749722139.4833572
 Node85: Got return packet at time: 1749722139.4203556
 Node85: Send return packet at time 1749722139.484355
 
--------------
+Server -> Node189 -> Node176 -> Node171 -> Node193 -> Node152 -> Node92 -> Node25 -> Node83 -> Node107 -> Node84 -> Node146 ->Node85 ->Client
 
+-------------paths--------
+Forward:
+Client -> Node193 -> Node92 -> Node83 -> Node171 -> Node152 -> Node107 -> Node25 -> Node84 -> Node146 -> Node85 -> Node176 -> Node189 -> Server
+
+Return:
+Server -> Node189 -> Node176 -> Node171 -> Node193 -> Node152 -> Node92 -> Node25 -> Node83 -> Node107 -> Node84 -> Node146 -> Node85 -> Client
+
+
+---analytics---
 Client waiting time(for response): 0.587780237197876
 Client handle connection time: 0.04698300361633301(from open to close)
 Send to server took: 0.44824981689453125
