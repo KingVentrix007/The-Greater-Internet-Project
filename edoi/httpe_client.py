@@ -409,10 +409,13 @@ class HttpeClient:
             except Exception as e:
                 raise ConnectionError(f"Error receiving data: {e}")
         else:
+            time_waiting_res_start = time.time()
             while self.got_edoi_res == False:
                 pass
             ret_data = self.edoi_res
             self.got_edoi_res = False
+            time_waiting_res_end = time.time()
+            print(f"Spent {time_waiting_res_end-time_waiting_res_start} seconds waiting")
             return ret_data
 
     def _connection_send(self, request_data: str) -> HttpeResponse:

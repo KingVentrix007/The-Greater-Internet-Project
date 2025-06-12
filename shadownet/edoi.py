@@ -54,26 +54,27 @@ class NetNode():
         threading.Thread(target=self.memory_cleaner,daemon=True).start()
         # self.build_neighbors() #! USe this in dev
     def memory_cleaner(self):
-        while True:
-            try:
-                rem_hash_val = []
-                for hash_val, time_str in list(self.store_hash_time.items()):
-                    try:
-                        # print(time_str,type(time_str))
-                        timestamp = datetime.fromisoformat(time_str)
-                    except ValueError:
-                        print(f"[WARN] Invalid ISO time string: {time_str}")
-                        continue
-                    now = datetime.now(timezone.utc)
-                    if now - timestamp > timedelta(seconds=3):
-                        # print("Clearing path:", hash_val)
-                        rem_hash_val.append(hash_val)
-                for i in rem_hash_val:
-                    self.store_hash.pop(i, None)
-                    self.store_hash_time.pop(i, None)
-            except Exception as e:
-                print("[ERROR] Memory cleaner exception:", e)
-            time.sleep(1)
+        # while True:
+        #     try:
+        #         rem_hash_val = []
+        #         for hash_val, time_str in list(self.store_hash_time.items()):
+        #             try:
+        #                 # print(time_str,type(time_str))
+        #                 timestamp = datetime.fromisoformat(time_str)
+        #             except ValueError:
+        #                 print(f"[WARN] Invalid ISO time string: {time_str}")
+        #                 continue
+        #             now = datetime.now(timezone.utc)
+        #             if now - timestamp > timedelta(seconds=3):
+        #                 # print("Clearing path:", hash_val)
+        #                 rem_hash_val.append(hash_val)
+        #         for i in rem_hash_val:
+        #             self.store_hash.pop(i, None)
+        #             self.store_hash_time.pop(i, None)
+        #     except Exception as e:
+        #         print("[ERROR] Memory cleaner exception:", e)
+        #     time.sleep(1)
+        pass
     async def build_neighbors(self):
         self.neighbors_tmp = set()
         for ip,key in self.neighbors.items():
@@ -81,7 +82,7 @@ class NetNode():
         for ip in self.neighbors_tmp:
             tup = ('127.0.0.1',self.port)
             packet = {"type":"neighbors","ip_key":tup}
-            ret = asyncio.create_task(self.send_data(packet,addr=ip,init_con=True))
+            ret = await self.send_data(packet,addr=ip,init_con=True)
             if(ret == False):
                 time.sleep(1)
     
@@ -150,16 +151,16 @@ class NetNode():
         
         self.send_lock = True
         # print(debug_node_name)
-        if(debug_node_name == "return"):
-            # print("THIS IS A RETURN PACKET")
-            print(f"{self.name}: Got return packet at time {conn}")
-            print(f"{self.name}: Send return packet at time {time.time()}")
+        # if(debug_node_name == "return"):
+        #     # print("THIS IS A RETURN PACKET")
+        #     print(f"{self.name}: Got return packet at time {conn}")
+        #     print(f"{self.name}: Send return packet at time {time.time()}")
             
-        elif(debug_node_name == "forward"):
-            # print("THIS IS A FORWARD PACKET")
-            print(f"{self.name}: Got forward packet at time {conn}")
+        # elif(debug_node_name == "forward"):
+        #     # print("THIS IS A FORWARD PACKET")
+        #     print(f"{self.name}: Got forward packet at time {conn}")
 
-            print(f"{self.name}: Sent forward packets at {time.time()}")
+        #     print(f"{self.name}: Sent forward packets at {time.time()}")
         if self.is_connect_node:
             # print(f"{self.name}: Send data to {addr}: Data: \n{data}")
             pass
@@ -205,7 +206,7 @@ class NetNode():
         for ip, key in self.neighbors.items():
             
             # will later handle key encryption
-            asyncio.create_task(self.send_data(packet,ip,debug_node_name="cont find"))
+            await self.send_data(packet,ip,debug_node_name="cont find")
 
     async def return_path(self,path,addr=None,debug_node_name=None):
         # message_id = path.get("message_id",None)
@@ -219,12 +220,12 @@ class NetNode():
             # print(f"{self.name} ALT SEND")
             for ip, key in self.neighbors.items():
                 # if(self.neighbors_hash.get(key,None) == route[count - 1]):
-                asyncio.create_task(self.send_data(path,ip,debug_node_name=f"Scan send: {debug_node_name}"))
+                await self.send_data(path,ip,debug_node_name=f"Scan send: {debug_node_name}")
         else:
             host, port = addr
             
             # print(host,port)
-            asyncio.create_task(self.send_data(path,addr=addr,debug_node_name=debug_node_name))
+            await self.send_data(path,addr=addr,debug_node_name=debug_node_name)
     async def hash_str(self,name,salt):
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
@@ -255,7 +256,7 @@ class NetNode():
         # print((self.ip,self.port))
         for ip, key in self.neighbors.items():
             # will later handle key encryption
-            asyncio.create_task(self.send_data(packet,ip,debug_node_name="send packet"))
+            await self.send_data(packet,ip,debug_node_name="send packet")
         # self.continue_find(route, target_hash)
         # print("Find target hash: ",target_hash)
         return target_hash
@@ -265,11 +266,12 @@ class NetNode():
             "type": "return",
             "route": route,
             "count": count,
+            "ip_combo":tuple(self.ip, self.port),
             "payload": payload
         }
         # Send to previous hop
         for ip, _ in self.neighbors.items():
-            asyncio.create_task(self.send_data(packet, ip,"return_to_sender"))
+            await self.send_data(packet, ip,"return_to_sender")
     async def send_to_target(self, route, payload):
         count = 1
         packet = {
@@ -285,7 +287,7 @@ class NetNode():
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
         for ip, _ in self.neighbors.items():
-            asyncio.create_task(self.send_data(packet, ip,"send to target"))
+            await self.send_data(packet, ip,"send to target")
 
     async def handle_conn(self,data,addr,conn):
         # print(self.name,"||",data)
@@ -303,7 +305,7 @@ class NetNode():
         if(data["type"] == "get_rsa"):
             key = self.public_key
             key_data = {"key",key}
-            asyncio.create_task(self.send_data(key_data, addr,"rsa get"))
+            await self.send_data(key_data, addr,"rsa get")
         elif(data["type"] == "connect"):
             print(self.name,'connect')
             self.is_connect_node = True
@@ -342,11 +344,22 @@ class NetNode():
                 my_hash = self.compute_hashed_identity(route[count]["salt"])
 
                 if my_hash == route[count]["hash"]:
+                    past_hash = route[count + 1]["hash"]
+                    if past_hash == my_hash:
+                        print("THis is wrong")
+                        return  # Ignore if the hash matches the previous one
+                    else:
+                        ip_combo = data.get("ip_combo",None)
+                        if(ip_combo != None):
+                            self.store_hash[past_hash]  = ip_combo
                     if count > 0:
+                        combo = (self.ip,self.port)
+                        # print("combo: ",combo)
                         next_packet = {
                             "type": "return",
                             "route": route,
                             "count": count - 1,
+                            "ip_combo":combo,
                             "payload": payload
                         }
                         hash_to_search = route[count]["hash"]
@@ -358,15 +371,16 @@ class NetNode():
                         if(val != None):
                             self.store_hash_time[hash_to_search] = datetime.now(timezone.utc).isoformat()
 
-                            asyncio.create_task(self.send_data(next_packet, val,debug_node_name="return",conn=got_return_packet_time))
-                            # print(f"{self.name}: Got return packet at time: {got_return_packet_time}")
+                            await self.send_data(next_packet, val,debug_node_name="return",conn=got_return_packet_time)
+                            print(f"{self.name}: Got return packet at time: {got_return_packet_time}")
+                            print(f"{self.name}: Send return packet at time {time.time()}")
                             
                         else:
                             print(f"{self.name}: No stored hash found for {hash_to_search}. Bulk sending")
                             print(f"{self.name}:Bulk send: Got return packet at time: {got_return_packet_time}")
                             
                             for ip, _ in self.neighbors.items():
-                                asyncio.create_task(self.send_data(next_packet, ip,"type return"))
+                                await self.send_data(next_packet, ip,"type return")
                             print(f"{self.name}:Bulk send: Send return packet at time {time.time()}")
                     else:
                         print(f"[⬅️] Final ACK received at {self.name}: {payload}")
@@ -394,9 +408,18 @@ class NetNode():
                             "payload": payload
                         
                         }
-                        
-                        for ip, _ in self.neighbors.items():
-                            asyncio.create_task(self.send_data(next_packet, ip,debug_node_name="forward",conn=got_forward_packet_start))
+                        if(self.store_hash.get(route[count+1].get("hash"),None) != None):
+                            self.store_hash_time[route[count+1]["hash"]] = datetime.now(timezone.utc).isoformat()
+                            next_ip = tuple(self.store_hash.get(route[count+1]["hash"]))
+                            await self.send_data(next_packet, next_ip,debug_node_name="forward",conn=got_forward_packet_start)
+                            print(f"{self.name}: Got forward packet at time: {got_forward_packet_start}")
+                            print(f"{self.name}: Send forward packet at time {time.time()}")
+                        else:
+                            print("[❗] No stored hash found for next hop, bulk sending forward packet.")
+                            for ip, _ in self.neighbors.items():
+                                await self.send_data(next_packet, ip,debug_node_name="forward",conn=got_forward_packet_start)
+                            print(f"{self.name}: Got forward packet at time: {got_forward_packet_start}")
+                            print(f"{self.name}: Send forward packet at time {time.time()}")
                         
                     else:
                         print(f"[🎯] {self.name} received payload: {payload}")
