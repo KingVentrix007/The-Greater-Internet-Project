@@ -200,7 +200,8 @@ class HttpeClient:
                     print("No path found for target. Please try again later. EDOI target: ",self.edoi_target)
         elif(edoi_packet_type == "return"):
             payload = data["payload"]
-            print("Message: ",payload)
+            # print("Message: ",payload)
+            print(f"Got message at {time.time()}")
             self.edoi_res = payload
             self.got_edoi_res = True
         elif(edoi_packet_type == "find"):
@@ -412,6 +413,7 @@ class HttpeClient:
             time_waiting_res_start = time.time()
             while self.got_edoi_res == False:
                 pass
+            print(f"Got res at: {time.time()}")
             ret_data = self.edoi_res
             self.got_edoi_res = False
             time_waiting_res_end = time.time()

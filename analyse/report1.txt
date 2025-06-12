@@ -1,0 +1,72 @@
+Node193: Got forward packet at time: 1749722138.9215724
+Node193: Send forward packet at time 1749722138.967104
+Node92: Got forward packet at time: 1749722138.9235694
+Node92: Send forward packet at time 1749722138.9680815
+Node83: Got forward packet at time: 1749722138.9278154
+Node83: Send forward packet at time 1749722138.9680815
+Node171: Got forward packet at time: 1749722138.9268153
+Node171: Send forward packet at time 1749722138.9690788
+Node152: Got forward packet at time: 1749722138.9225724
+Node152: Send forward packet at time 1749722138.9690788
+Node107: Got forward packet at time: 1749722138.9258173
+Node107: Send forward packet at time 1749722138.970082
+Node25: Got forward packet at time: 1749722138.9248164
+Node25: Send forward packet at time 1749722138.970082
+Node84: Got forward packet at time: 1749722138.9278154
+Node84: Send forward packet at time 1749722138.9711022
+Node146: Got forward packet at time: 1749722138.9308147
+Node146: Send forward packet at time 1749722139.0000806
+Node85: Got forward packet at time: 1749722138.9288156
+Node85: Send forward packet at time 1749722139.0000806
+Node176: Got forward packet at time: 1749722138.9298158
+Node176: Send forward packet at time 1749722139.0010805
+Node189: Got forward packet at time: 1749722138.9308147
+Node189: Send forward packet at time 1749722139.4153538
+
+
+
+Node189: Got return packet at time: 1749722139.3722372
+Node189: Send return packet at time 1749722139.4783552
+Node176: Got return packet at time: 1749722139.4183521
+Node176: Send return packet at time 1749722139.4793572
+Node171: Got return packet at time: 1749722139.4223547
+Node171: Send return packet at time 1749722139.4793572
+Node193: Got return packet at time: 1749722139.4263542
+Node193: Send return packet at time 1749722139.4803534
+Node152: Got return packet at time: 1749722139.425354
+Node152: Send return packet at time 1749722139.4803534
+Node92: Got return packet at time: 1749722139.425354
+Node92: Send return packet at time 1749722139.4813578
+Node25: Got return packet at time: 1749722139.4243548
+Node25: Send return packet at time 1749722139.4813578
+Node83: Got return packet at time: 1749722139.421355
+Node83: Send return packet at time 1749722139.4823873
+Node107: Got return packet at time: 1749722139.4233546
+Node107: Send return packet at time 1749722139.4823873
+Node84: Got return packet at time: 1749722139.4203556
+Node84: Send return packet at time 1749722139.4833572
+Node146: Got return packet at time: 1749722139.4173539
+Node146: Send return packet at time 1749722139.4833572
+Node85: Got return packet at time: 1749722139.4203556
+Node85: Send return packet at time 1749722139.484355
+
+-------------
+
+Client waiting time(for response): 0.587780237197876
+Client handle connection time: 0.04698300361633301(from open to close)
+Send to server took: 0.44824981689453125
+Server send back time: 0.00599980354309082
+Round trip: 0.45424962043762207
+
+
+Client report total time:
+ 1.6021485328674316
+Total time: 1.089012861251831
+
+Missing time: 0.5131356716156006
+
+----
+Client got message at: 1749722682.4961443
+Client handled response at: 1749722682.5121791
+
+Time lost: 0.016034841537475586
