@@ -71,9 +71,9 @@ def load_public_key(filepath: str):
     )
 
 def create_pem_files():
-    print(__name__)
-    if __name__ != "__main__":
-        raise RuntimeError("This function should be called manually by the user")
+    # print(__name__)
+    # if __name__ != "__main__":
+    #     raise RuntimeError("This function should be called manually by the user")
     private_key = rsa.generate_private_key(
     public_exponent=65537,
     key_size=4096,
