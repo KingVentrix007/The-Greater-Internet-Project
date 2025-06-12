@@ -5,19 +5,24 @@ import socket
 import threading
 import inspect
 import json
-from httpe_class import Response
+from httpe_core.httpe_class import Response
 from datetime import datetime, timezone, timedelta
-import httpe_secure as sec
+import httpe_core.httpe_secure as sec
 import uuid
 import base64
-import httpe_fernet
+import httpe_core.httpe_fernet as httpe_fernet
 import signal
 import sys
 import logging
 import threading
-#TODO, make send_packet await in return and forward
+
 class Httpe:
     def __init__(self,server_host="127.0.0.1",Port=8080,running_version="1.0",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None):
+        if(os.path.exists("cert.crte") == False):
+            raise FileNotFoundError("Certificate file not found: cert.crte. Please generate a certificate using the certgen.py script before starting the server.")
+        if(os.path.exists("private_key.edoi") == False or os.path.exists("public_key.edoi") == False):
+            raise FileNotFoundError(".edoi keys files not found. Please generate them using the certgen.py script")
+
         self.routes = {}
         self.host = server_host
         self.port = Port

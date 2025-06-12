@@ -1,4 +1,4 @@
-import httpe_error
+import httpe_core.httpe_error
 class Response:
     def __init__(self, body="", status="200 OK",status_code=200, headers=None):
         self.body = body

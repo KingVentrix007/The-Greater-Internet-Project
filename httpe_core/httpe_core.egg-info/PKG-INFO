@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: httpe_core
+Version: 0.1.0
+Summary: Core cryptographic and certificate logic for HTTPE
+Author-email: Tristan Kuhn <tristanjkuhn007@gmail.com>
+License: MIT
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: cryptography>=45.0.4

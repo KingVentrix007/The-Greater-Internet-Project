@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "httpe_client"
+version = "0.1.0"
+description = "HTTPE Client - The official client for Httpe server and EDOI-NET"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+  { name = "Tristan Kuhn", email = "tristanjkuhn007@gmail.com" }
+]
+requires-python = ">=3.8"
+dependencies = [
+  "cryptography>=45.0.4",
+  "httpe_core>=0.1.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]

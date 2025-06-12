@@ -1,0 +1,10 @@
+Metadata-Version: 2.1
+Name: httpe_server
+Version: 0.1.0
+Summary: HTTPE Server - A secure and simple server for sending date over EDOI-NET and the web
+Author-email: Tristan Kuhn <tristanjkuhn007@gmail.com>
+License: MIT
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: cryptography>=45.0.4
+Requires-Dist: httpe_core>=0.1.0
