@@ -87,6 +87,7 @@ class NetNode():
                 time.sleep(1)
     
     def compute_hashed_identity(self, salt: str) -> str:
+        return self.name
         digest = hashes.Hash(hashes.SHA256())
         digest.update((self.name + salt).encode())
         return digest.finalize().hex()
@@ -397,29 +398,35 @@ class NetNode():
                 count = int(data["count"])
                 payload = data["payload"]
                 my_hash = self.compute_hashed_identity(route[count]["salt"])
-
+                
                 if self.compute_hashed_identity(route[count]["salt"]) == route[count]["hash"]:
+                    print(f"{self.name}:Forward packet received at {time.time()}")
+                    # try:
+                    #     self.store_hash[route[count-1]["hash"]] = data['ip_combo']
+                    # except:
+                    #     pass
                     # print("forwarding packets")
                     if count + 1 < len(route):
                         next_packet = {
                             "type": "forward",
                             "route": route,
                             "count": count + 1,
-                            "payload": payload
+                            "payload": payload,
+                            "ip_combo": (self.ip, self.port)
                         
                         }
                         if(self.store_hash.get(route[count+1].get("hash"),None) != None):
                             self.store_hash_time[route[count+1]["hash"]] = datetime.now(timezone.utc).isoformat()
                             next_ip = tuple(self.store_hash.get(route[count+1]["hash"]))
                             await self.send_data(next_packet, next_ip,debug_node_name="forward",conn=got_forward_packet_start)
-                            print(f"{self.name}: Got forward packet at time: {got_forward_packet_start}")
-                            print(f"{self.name}: Send forward packet at time {time.time()}")
+                            # print(f"{self.name}: Got forward packet at time: {got_forward_packet_start}")
+                            # print(f"{self.name}: Send forward packet at time {time.time()}")
                         else:
-                            print("[❗] No stored hash found for next hop, bulk sending forward packet.")
+                            print("[!] No stored hash found for next hop, bulk sending forward packet.")
                             for ip, _ in self.neighbors.items():
                                 await self.send_data(next_packet, ip,debug_node_name="forward",conn=got_forward_packet_start)
-                            print(f"{self.name}: Got forward packet at time: {got_forward_packet_start}")
-                            print(f"{self.name}: Send forward packet at time {time.time()}")
+                            # print(f"{self.name}: Got forward packet at time: {got_forward_packet_start}")
+                            # print(f"{self.name}: Send forward packet at time {time.time()}")
                         
                     else:
                         print(f"[🎯] {self.name} received payload: {payload}")

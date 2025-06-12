@@ -243,6 +243,7 @@ class Httpe:
     def _log_internal_error(self, error: Exception):
         logging.error(f"Internal server error: {error}", exc_info=True)
     def compute_hashed_identity(self,name:str, salt: str) -> str:
+        return name
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
         return digest.finalize().hex()

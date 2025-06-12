@@ -136,6 +136,8 @@ class HttpeClient:
             self._init_connection()
             
     def compute_hashed_identity(self,name:str, salt: str) -> str:
+        return name
+
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
         return digest.finalize().hex()
@@ -201,7 +203,10 @@ class HttpeClient:
         elif(edoi_packet_type == "return"):
             print(f"Got packet at {time.time()}")
             payload = data["payload"]
-            # print("Message: ",payload)
+            path_used = data["route"]
+            print("Ret path used: ",path_used)
+            print("Forward path used: ",self.edoi_path)
+            print("Message: ",payload)
             # print(f"Got message at {time.time()}")
             self.edoi_res = payload
             self.got_edoi_res = True
@@ -288,7 +293,7 @@ class HttpeClient:
 
     def _send_request_enc(self, method, location, headers=None, body=""):
         # print(type(body),"|",type(""))
-        print(f"Send request at {time.time()}")
+        print(f"Client Prepare request at {time.time()}")
         if(type(body) != type("")):
             raise TypeError(f"Body must be of type str, current type is {type(body)}")
         """Send an encrypted packet after key exchange"""
@@ -347,10 +352,13 @@ class HttpeClient:
                         response = self._receive_full_response(s)
                 else:
                     send_time_start = time.time()
+                    print(f"Client send request at {time.time()}")
+
                     self.edoi_send_to_target(full_data)
+                    
                     response = self._receive_full_response(None)
                     send_time_end = time.time()
-                    print("Time taken to send request(and receive) via EDOI:", send_time_end - send_time_start, "seconds")
+                    # print("Time taken to send request(and receive) via EDOI:", send_time_end - send_time_start, "seconds")
 
                     # print("Use EDOI")
             except Exception as e:

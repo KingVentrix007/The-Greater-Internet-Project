@@ -70,6 +70,7 @@ class EDOIServer():
             
             print("[√] Message sent successfully.")
     def compute_hashed_identity(self,name:str, salt: str) -> str:
+        return name
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
         return digest.finalize().hex()
