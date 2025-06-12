@@ -400,7 +400,7 @@ class NetNode():
                 my_hash = self.compute_hashed_identity(route[count]["salt"])
                 
                 if self.compute_hashed_identity(route[count]["salt"]) == route[count]["hash"]:
-                    print(f"{self.name}:Forward packet received at {time.time()}")
+                    # print(f"{self.name}:Forward packet received at {time.time()}")
                     # try:
                     #     self.store_hash[route[count-1]["hash"]] = data['ip_combo']
                     # except:
@@ -422,7 +422,7 @@ class NetNode():
                             # print(f"{self.name}: Got forward packet at time: {got_forward_packet_start}")
                             # print(f"{self.name}: Send forward packet at time {time.time()}")
                         else:
-                            print("[!] No stored hash found for next hop, bulk sending forward packet.")
+                            # print("[!] No stored hash found for next hop, bulk sending forward packet.")
                             for ip, _ in self.neighbors.items():
                                 await self.send_data(next_packet, ip,debug_node_name="forward",conn=got_forward_packet_start)
                             # print(f"{self.name}: Got forward packet at time: {got_forward_packet_start}")
