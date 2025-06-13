@@ -201,6 +201,9 @@ class HttpeClient:
                 if(self.no_path_res_count > 5 and self.edoi_path == None):
                     print("No path found for target. Please try again later. EDOI target: ",self.edoi_target)
         elif(edoi_packet_type == "return"):
+            print(f"Client:Return:{time.time()}")
+            self.log(f"Client:Return:{time.time()}")
+
             # print(f"Got packet at {time.time()}")
             payload = data["payload"]
             path_used = data["route"]
@@ -398,6 +401,9 @@ class HttpeClient:
         # time.sleep(1)
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
+        print(f"Client:Forward:{time.time()}")
+        self.log(f"Client:Forward:{time.time()}")
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             client_socket.connect((self.edoi_ip, self.edoi_port)) #! Look here

@@ -341,6 +341,7 @@ class Httpe:
 
                                 print(f"[!] Error sending data: {e}")
                 elif(edoi_packet_type == "forward"):
+                    
                     count = edoi_json_data.get("count",None)
                     route = edoi_json_data.get("route",None)
                     end_point = route[count]
@@ -349,6 +350,9 @@ class Httpe:
                     end_hash = end_point.get("hash",None)
                     my_hash = self.compute_hashed_identity(self.name,salt)
                     if(my_hash == end_hash):
+                        print(f"Server:Forward:{time.time()}")
+                        self.log(f"Server:Forward:{time.time()}")
+
                         pass
                     else:
                         return
@@ -565,8 +569,12 @@ class Httpe:
                     "type": "return",
                     "route": route,
                     "count": count,
-                    "payload": data.decode("utf-8")
+                    "payload": data.decode("utf-8"),
+                    "ip_combo":(self.host,self.port)
                 }
+                print(f"Server:Return:{time.time()}")
+                self.log(f"Server:Return:{time.time()}")
+
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
                     client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     client_socket.connect((self.edoi_ip, self.edoi_port))

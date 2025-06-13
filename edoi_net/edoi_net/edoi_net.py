@@ -18,6 +18,18 @@ from collections import deque
 import uuid
 from datetime import datetime, timezone, timedelta
 import asyncio
+
+#DEBUG CODE
+log_queue = asyncio.Queue()
+
+async def log_writer(file_path="edoi_log.txr"):
+    with open(file_path,"a",buffering=1) as f:
+        while True:
+            log_msg = log_queue.get()
+            f.write(log_msg+"\n")
+            log_queue.task_done()
+
+#END DEBUG CODE
 class NetNode():
     def __init__(self, name: str,port,bootstrap_ips:list):
         self.name = name # The name of this node on the network
@@ -53,6 +65,8 @@ class NetNode():
         self.is_connect_node = False
         threading.Thread(target=self.memory_cleaner,daemon=True).start()
         # self.build_neighbors() #! USe this in dev
+    async def log(self,message):
+        await log_queue.put(message)
     def memory_cleaner(self):
         # while True:
         #     try:
@@ -336,6 +350,8 @@ class NetNode():
         elif(data["type"] == "hash_res"):
             self.log_hashes(addr,data)
         elif data['type'] == "return":
+            
+            
             try:
                 # print("reterning")
                 got_return_packet_time = time.time()
@@ -345,6 +361,9 @@ class NetNode():
                 my_hash = self.compute_hashed_identity(route[count]["salt"])
 
                 if my_hash == route[count]["hash"]:
+                    # print(f"{self.name}: Packet was for me")
+                    print(f"{self.name}:Return:{time.time()}")
+                    self.log(f"{self.name}:Return:{time.time()}")
                     past_hash = route[count + 1]["hash"]
                     if past_hash == my_hash:
                         print("THis is wrong")
@@ -400,7 +419,9 @@ class NetNode():
                 my_hash = self.compute_hashed_identity(route[count]["salt"])
                 
                 if self.compute_hashed_identity(route[count]["salt"]) == route[count]["hash"]:
-                    # print(f"{self.name}:Forward packet received at {time.time()}")
+                    print(f"{self.name}:Forward:{time.time()}")
+                    self.log(f"{self.name}:Forward:{time.time()}")
+
                     # try:
                     #     self.store_hash[route[count-1]["hash"]] = data['ip_combo']
                     # except:
@@ -422,7 +443,7 @@ class NetNode():
                             # print(f"{self.name}: Got forward packet at time: {got_forward_packet_start}")
                             # print(f"{self.name}: Send forward packet at time {time.time()}")
                         else:
-                            # print("[!] No stored hash found for next hop, bulk sending forward packet.")
+                            print("[!] No stored hash found for next hop, bulk sending forward packet.")
                             for ip, _ in self.neighbors.items():
                                 await self.send_data(next_packet, ip,debug_node_name="forward",conn=got_forward_packet_start)
                             # print(f"{self.name}: Got forward packet at time: {got_forward_packet_start}")
@@ -740,7 +761,7 @@ async def _test_network():
     ports = list(range(BASE_PORT, BASE_PORT + NUM_NODES))
     addresses = [("127.0.0.1", port) for port in ports]
     assert len(ports) == len(set(ports)), "Duplicate ports detected!"
-
+    asyncio.create_task(log_writer("edoi_log.txt"))
     # Create nodes with bootstrap neighbors
     for i, port in enumerate(ports):
         name = f"Node{i}"
@@ -801,4 +822,6 @@ async def _test_network():
 def setup_test_network():
     asyncio.run(_test_network())
 
-        
+# print(__name__)
+if(__name__ == "__main__"):
+    setup_test_network()

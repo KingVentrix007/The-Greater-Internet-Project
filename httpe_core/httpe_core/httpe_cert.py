@@ -70,7 +70,7 @@ def load_public_key(filepath: str):
         backend=default_backend()
     )
 
-def create_pem_files():
+def create_pem_files(public_output,private_output):
     # print(__name__)
     # if __name__ != "__main__":
     #     raise RuntimeError("This function should be called manually by the user")
@@ -89,9 +89,9 @@ def create_pem_files():
     encoding=serialization.Encoding.PEM,
     format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
-    with open("private_key.pem", "wb") as f:
+    with open(f"{private_output}/private_key.pem", "wb") as f:
         f.write(private_pem)
-    with open("public.pem", "wb") as f:
+    with open(f"{public_output}/public.pem", "wb") as f:
         f.write(public_pem)
 
 def verify_cert(cert_data,hostname,public_key_path,pub_rsa_key):

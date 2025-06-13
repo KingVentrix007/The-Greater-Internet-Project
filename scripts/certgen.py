@@ -1,10 +1,21 @@
 import httpe_core.httpe_cert as httpe_cert
 import httpe_core.httpe_keys as httpe_keys
-
+import argparse
 import os
-def main():
 
-    httpe_cert.create_pem_files()
+def parse_args():
+    parser = argparse.ArgumentParser(description="Certificate and key generation script")
+    parser.add_argument("--host",type=str,default="localhost",help="Certificate hostname (default: localhost)")
+    parser.add_argument("--client-dir",type=str,default=os.getcwd(),help="Dictionary to put client files. (default: current dictionary)")
+    parser.add_argument("--server-dir",type=str,default=os.getcwd(),help="Dictionary to put server files. (default: current dictionary)")
+    parser.add_argument("--cert-dir",type=str,default=os.getcwd(),help="Dictionary to put certificate file. (default: current dictionary)")
+    parser.add_argument("--cert-days",type=int,default=100,help="Number of days certificate is valid for. (default: 100)")
+    return parser.parse_args()
+def main():
+    args = parse_args()
+    print(args)
+    # return
+    httpe_cert.create_pem_files(args.client_dir,args.server_dir)
     if(os.path.exists("private_key.pem") == True):
         print("Successfully created private_key.pem")
         print("This file is used to sign the certificate")
