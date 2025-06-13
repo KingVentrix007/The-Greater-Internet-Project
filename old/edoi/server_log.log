@@ -1,4 +1,0 @@
-[I]2025-06-05T09:42:33.659315+00:00: Request to /PTS by ('127.0.0.1', 49867).Header:{'client_id': '83dd3885-ad67-4609-aa76-1cdd2c8647f7', 'packet_id': '0b0a13aa-2560-469d-96b8-f2370f87a82e', 'is_com_setup': 'False', 'timestamp': '2025-06-05T09:42:33.658315+00:00', 'compressions': 'false'} Body: {"data": "12234"}
-
-[I]2025-06-05T09:42:33.728833+00:00: Request to /PTS by ('127.0.0.1', 49870).Header:{'client_id': 'c905f1f0-5c0c-4476-8bb4-e7bf045e3e5c', 'packet_id': 'e0775c7c-450f-43a7-b521-5ed18e93c071', 'is_com_setup': 'False', 'timestamp': '2025-06-05T09:42:33.727842+00:00', 'compressions': 'false'} Body: {"data": "456"}
-
