@@ -15,7 +15,7 @@ def main():
         print("This file is used to verify certificate by the client")
     else:
         print("Failed to create public.pem")
-    httpe_keys.save_keys_rsa_keys()
+    pub_key,prev_key = httpe_keys.save_keys_rsa_keys()
     if(os.path.exists("private_key.edoi") == True):
         print("Successfully created private_key.edoi. Put this in the root dir of your httpe_server")
     else:
@@ -26,7 +26,7 @@ def main():
         print("Failed to create public_key.edoi")
     
     
-    httpe_cert.create_corticate(save=True)
+    httpe_cert.create_corticate(hostname="127.0.0.1",save=True,cert_pub_key=pub_key)
     if(os.path.exists("cert.ctre") == True):
         print("Successfully created cert.ctre. Put this in the root dir of your httpe server")
         print("This is your servers self signed certificate")

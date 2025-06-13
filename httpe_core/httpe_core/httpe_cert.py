@@ -101,6 +101,7 @@ def verify_cert(cert_data,hostname,public_key_path,pub_rsa_key):
     cert_hash = cert_data['hash']
     cert_signature = cert_data["signature"]
     if(hostname != certificate['hostname']):
+        print("HostNameMissMatch")
         return False
     try:
         internal_hash = hashlib.sha256(json.dumps(certificate).encode("utf-8")).digest()
@@ -110,7 +111,9 @@ def verify_cert(cert_data,hostname,public_key_path,pub_rsa_key):
         ),
         hashes.SHA256())
     except Exception as e:
+        print("Error")
         return False
     if(pub_rsa_key != certificate['public_key']):
+        print("Pub key missmatch")
         return False
     return True

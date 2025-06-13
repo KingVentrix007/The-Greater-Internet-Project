@@ -133,7 +133,7 @@ class HttpeClient:
             time.sleep(2)
             self.get_edoi_server_path()
             time.sleep(2)
-            self._init_connection()
+        self._init_connection()
             
     def compute_hashed_identity(self,name:str, salt: str) -> str:
         # return name
@@ -417,6 +417,7 @@ class HttpeClient:
                     if not chunk:
                         break
                     chunks.append(chunk)
+                print("Chunks: ",chunks)
                 return b''.join(chunks).decode()
             except Exception as e:
                 raise ConnectionError(f"Error receiving data: {e}")

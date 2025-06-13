@@ -17,10 +17,27 @@ import logging
 import threading
 
 class Httpe:
-    def __init__(self,server_host="127.0.0.1",Port=8080,running_version="1.0",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None):
-        if(os.path.exists("cert.crte") == False):
+    def __init__(self,server_host="127.0.0.1",Port=8080,running_version="1.0",crte_file_path="cert.crte",key_dir_path=".",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None):
+        """
+        Initialize the class.
+
+        Args:
+        server_host(str): IP address to bind the server to. Defaults to "127.0.0.1"
+        port(int): Port of the server. Defaults to 8080
+        running_version(str): HTTPE version of the server. Defaults to current version
+        name(str): Server name when running in EDOI-NET mode.
+        crte_file_path(str): File path to certificate. Defaults to cert.crte
+        key_dir_path(str): Dir path where the .edoi private and public keys are stored. Defaults to "."
+        use_edoi_node(bool): Wether or not to run in EDOI-NET mode. Defaults to False
+        edoi_ip(str/None): IP of the EDOI-NET node to connect to
+        edoi_port(int/None): Port of the EDOI-NET node to connect to
+
+        """
+        self.cert_path = crte_file_path
+        self.key_dir_path = key_dir_path
+        if(os.path.exists(self.cert_path) == False):
             raise FileNotFoundError("Certificate file not found: cert.crte. Please generate a certificate using the certgen.py script before starting the server.")
-        if(os.path.exists("private_key.edoi") == False or os.path.exists("public_key.edoi") == False):
+        if(os.path.exists(f"{self.key_dir_path}/private_key.edoi") == False or os.path.exists(f"{self.key_dir_path}/public_key.edoi") == False):
             raise FileNotFoundError(".edoi keys files not found. Please generate them using the certgen.py script")
 
         self.routes = {}
@@ -39,8 +56,8 @@ class Httpe:
         self._load_keys()
         self.load_cert()
         self.version = running_version
-        self._log_file = None
-        self._log_file = open("server_log.log","a")
+        # self._log_file = None
+        # self._log_file = open("server_log.log","a")
         logging.basicConfig(filename='logfile.log', level=logging.INFO, format='[I]%(asctime)s: %(message)s', datefmt='%Y-%m-%dT%H:%M:%SZ')
         # Used if EDOI node
         self.is_edoi_node = use_edoi_node
@@ -62,7 +79,7 @@ class Httpe:
         if(len(self.valid_token_ids) > 0 or len(self.valid_token_ids_per_user) > 0):
             print("[!] Failed to purge token IDs")
         print("Saving logs")
-        self._log_file.close()
+        # self._log_file.close()
         
         self._running = False
     def _load_keys(self):
@@ -111,7 +128,7 @@ class Httpe:
             print(f"{method} {route} ) -> {func.__name__}")
     def serve(self, host="127.0.0.1", port=8080):
         
-        ##print(f"HTTPE server running on {host}:{port}...")
+        print(f"HTTPE server running on {host}:{port}...")
         signal.signal(signal.SIGINT, self._shutdown)  # Handle Ctrl+C
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((host, port))
@@ -283,6 +300,7 @@ class Httpe:
                 self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=None)
                 return
             # ##print(type(data))
+            route=None
             if(self.is_edoi_node == True):
                 edoi_decoded = data.decode('utf-8')
                 try:
@@ -392,9 +410,9 @@ class Httpe:
                     new_lines,user_id_from_token =  self._handle_enc_request(lines)
                     if(new_lines == None or user_id_from_token == None):
                         #! Remove {e} in prod
-                        self._log_internal_error(e)
+                        # self._log_internal_error(e)
 
-                        err_res =  Response.error(message=f"Error With Client handling code: {e}",status_code=500)
+                        err_res =  Response.error(message=f"Error With Client handling code: user_id_from_token: {user_id_from_token}, new_lines: {new_lines}",status_code=500)
                         # conn.sendall(err_res.serialize().encode())
                         self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
                         return
@@ -537,6 +555,7 @@ class Httpe:
         try:
             print(f"Sending packet at {time.time()}")
             if(self.is_edoi_node == False):
+                print("Sending using conn")
                 conn.sendall(data)
             else:
                 if(route == None or len(route) < 2):

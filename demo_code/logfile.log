@@ -1,0 +1,150 @@
+[I]2025-06-13T06:41:08Z: Internal server error: local variable 'route' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 399, in _handle_client
+    self.send_packet(conn,addr,data=rsa_rez.serialize().encode(),route=route)
+UnboundLocalError: local variable 'route' referenced before assignment
+[I]2025-06-13T06:41:08Z: Internal server error: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 206, in _handle_enc_request
+    plain_token = self.master_aes_class.decrypt(enc_token)
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_core\httpe_core\httpe_fernet.py", line 41, in decrypt
+    modes.GCM(iv, tag),
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\site-packages\cryptography\hazmat\primitives\ciphers\modes.py", line 231, in __init__
+    raise ValueError(
+ValueError: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+[I]2025-06-13T06:41:08Z: Internal server error: local variable 'e' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 412, in _handle_client
+    self._log_internal_error(e)
+UnboundLocalError: local variable 'e' referenced before assignment
+[I]2025-06-13T06:42:01Z: Internal server error: local variable 'route' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 399, in _handle_client
+    self.send_packet(conn,addr,data=rsa_rez.serialize().encode(),route=route)
+UnboundLocalError: local variable 'route' referenced before assignment
+[I]2025-06-13T06:42:01Z: Internal server error: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 206, in _handle_enc_request
+    plain_token = self.master_aes_class.decrypt(enc_token)
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_core\httpe_core\httpe_fernet.py", line 41, in decrypt
+    modes.GCM(iv, tag),
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\site-packages\cryptography\hazmat\primitives\ciphers\modes.py", line 231, in __init__
+    raise ValueError(
+ValueError: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+[I]2025-06-13T06:42:01Z: Internal server error: local variable 'e' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 412, in _handle_client
+    self._log_internal_error(e)
+UnboundLocalError: local variable 'e' referenced before assignment
+[I]2025-06-13T06:43:03Z: Internal server error: local variable 'route' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 399, in _handle_client
+    self.send_packet(conn,addr,data=rsa_rez.serialize().encode(),route=route)
+UnboundLocalError: local variable 'route' referenced before assignment
+[I]2025-06-13T06:43:03Z: Internal server error: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 206, in _handle_enc_request
+    plain_token = self.master_aes_class.decrypt(enc_token)
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_core\httpe_core\httpe_fernet.py", line 41, in decrypt
+    modes.GCM(iv, tag),
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\site-packages\cryptography\hazmat\primitives\ciphers\modes.py", line 231, in __init__
+    raise ValueError(
+ValueError: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+[I]2025-06-13T06:43:03Z: Internal server error: local variable 'e' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 412, in _handle_client
+    self._log_internal_error(e)
+UnboundLocalError: local variable 'e' referenced before assignment
+[I]2025-06-13T06:44:02Z: Internal server error: local variable 'route' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 399, in _handle_client
+    self.send_packet(conn,addr,data=rsa_rez.serialize().encode(),route=route)
+UnboundLocalError: local variable 'route' referenced before assignment
+[I]2025-06-13T06:44:02Z: Internal server error: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 206, in _handle_enc_request
+    plain_token = self.master_aes_class.decrypt(enc_token)
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_core\httpe_core\httpe_fernet.py", line 41, in decrypt
+    modes.GCM(iv, tag),
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\site-packages\cryptography\hazmat\primitives\ciphers\modes.py", line 231, in __init__
+    raise ValueError(
+ValueError: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+[I]2025-06-13T06:44:02Z: Internal server error: local variable 'e' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 412, in _handle_client
+    self._log_internal_error(e)
+UnboundLocalError: local variable 'e' referenced before assignment
+[I]2025-06-13T06:44:31Z: Internal server error: local variable 'route' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 399, in _handle_client
+    self.send_packet(conn,addr,data=rsa_rez.serialize().encode(),route=route)
+UnboundLocalError: local variable 'route' referenced before assignment
+[I]2025-06-13T06:44:31Z: Internal server error: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 206, in _handle_enc_request
+    plain_token = self.master_aes_class.decrypt(enc_token)
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_core\httpe_core\httpe_fernet.py", line 41, in decrypt
+    modes.GCM(iv, tag),
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\site-packages\cryptography\hazmat\primitives\ciphers\modes.py", line 231, in __init__
+    raise ValueError(
+ValueError: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+[I]2025-06-13T06:44:31Z: Internal server error: local variable 'e' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 412, in _handle_client
+    # self._log_internal_error(e)
+UnboundLocalError: local variable 'e' referenced before assignment
+[I]2025-06-13T06:44:38Z: Internal server error: local variable 'route' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 399, in _handle_client
+    self.send_packet(conn,addr,data=rsa_rez.serialize().encode(),route=route)
+UnboundLocalError: local variable 'route' referenced before assignment
+[I]2025-06-13T06:44:38Z: Internal server error: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 206, in _handle_enc_request
+    plain_token = self.master_aes_class.decrypt(enc_token)
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_core\httpe_core\httpe_fernet.py", line 41, in decrypt
+    modes.GCM(iv, tag),
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\site-packages\cryptography\hazmat\primitives\ciphers\modes.py", line 231, in __init__
+    raise ValueError(
+ValueError: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+[I]2025-06-13T06:44:38Z: Internal server error: local variable 'route' referenced before assignment
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 416, in _handle_client
+    self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
+UnboundLocalError: local variable 'route' referenced before assignment
+[I]2025-06-13T06:45:20Z: Internal server error: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 206, in _handle_enc_request
+    plain_token = self.master_aes_class.decrypt(enc_token)
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_core\httpe_core\httpe_fernet.py", line 41, in decrypt
+    modes.GCM(iv, tag),
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\site-packages\cryptography\hazmat\primitives\ciphers\modes.py", line 231, in __init__
+    raise ValueError(
+ValueError: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+[I]2025-06-13T06:46:19Z: Internal server error: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 206, in _handle_enc_request
+    plain_token = self.master_aes_class.decrypt(enc_token)
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_core\httpe_core\httpe_fernet.py", line 41, in decrypt
+    modes.GCM(iv, tag),
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\site-packages\cryptography\hazmat\primitives\ciphers\modes.py", line 231, in __init__
+    raise ValueError(
+ValueError: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+[I]2025-06-13T06:49:42Z: Internal server error: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 206, in _handle_enc_request
+    plain_token = self.master_aes_class.decrypt(enc_token)
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_core\httpe_core\httpe_fernet.py", line 41, in decrypt
+    modes.GCM(iv, tag),
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\site-packages\cryptography\hazmat\primitives\ciphers\modes.py", line 231, in __init__
+    raise ValueError(
+ValueError: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+[I]2025-06-13T06:51:51Z: Internal server error: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).
+Traceback (most recent call last):
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_server\httpe_server\httpe_server.py", line 206, in _handle_enc_request
+    plain_token = self.master_aes_class.decrypt(enc_token)
+  File "C:\Users\Awesome Kuhn Family\Documents\Tristan\httpe\httpe_core\httpe_core\httpe_fernet.py", line 41, in decrypt
+    modes.GCM(iv, tag),
+  File "C:\Users\Awesome Kuhn Family\AppData\Local\Programs\Python\Python38\lib\site-packages\cryptography\hazmat\primitives\ciphers\modes.py", line 231, in __init__
+    raise ValueError(
+ValueError: initialization_vector must be between 8 and 128 bytes (64 and 1024 bits).

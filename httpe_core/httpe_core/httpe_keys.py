@@ -34,6 +34,7 @@ def save_keys_rsa_keys():
         json.dump(private_key_save, f)
     with open("public_key.edoi", "w") as f:
         json.dump(public_key_save,f)
+    return public_key_str,private_key_str
 # def load_rsa_keys():
 
 
