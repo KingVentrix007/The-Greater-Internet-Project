@@ -18,17 +18,7 @@ from collections import deque
 import uuid
 from datetime import datetime, timezone, timedelta
 import asyncio
-
-#DEBUG CODE
-log_queue = asyncio.Queue()
-
-async def log_writer(file_path="edoi_log.txr"):
-    with open(file_path,"a",buffering=1) as f:
-        while True:
-            log_msg = log_queue.get()
-            f.write(log_msg+"\n")
-            log_queue.task_done()
-
+from httpe_core import httpe_logging
 #END DEBUG CODE
 class NetNode():
     def __init__(self, name: str,port,bootstrap_ips:list):
@@ -65,8 +55,8 @@ class NetNode():
         self.is_connect_node = False
         threading.Thread(target=self.memory_cleaner,daemon=True).start()
         # self.build_neighbors() #! USe this in dev
-    async def log(self,message):
-        await log_queue.put(message)
+    # async def log(self,message):
+    #     await log_queue.put(message)
     def memory_cleaner(self):
         # while True:
         #     try:
@@ -363,7 +353,7 @@ class NetNode():
                 if my_hash == route[count]["hash"]:
                     # print(f"{self.name}: Packet was for me")
                     print(f"{self.name}:Return:{time.time()}")
-                    self.log(f"{self.name}:Return:{time.time()}")
+                    # await httpe_logging.log(f"{self.name}:Return:{time.time()}")
                     past_hash = route[count + 1]["hash"]
                     if past_hash == my_hash:
                         print("THis is wrong")
@@ -420,7 +410,7 @@ class NetNode():
                 
                 if self.compute_hashed_identity(route[count]["salt"]) == route[count]["hash"]:
                     print(f"{self.name}:Forward:{time.time()}")
-                    self.log(f"{self.name}:Forward:{time.time()}")
+                    # await httpe_logging.log(f"{self.name}:Forward:{time.time()}")
 
                     # try:
                     #     self.store_hash[route[count-1]["hash"]] = data['ip_combo']
@@ -761,7 +751,8 @@ async def _test_network():
     ports = list(range(BASE_PORT, BASE_PORT + NUM_NODES))
     addresses = [("127.0.0.1", port) for port in ports]
     assert len(ports) == len(set(ports)), "Duplicate ports detected!"
-    asyncio.create_task(log_writer("edoi_log.txt"))
+    # httpe_logging.init_logger()
+    # asyncio.create_task(httpe_logging.log_writer("edoi_log.txt"))
     # Create nodes with bootstrap neighbors
     for i, port in enumerate(ports):
         name = f"Node{i}"

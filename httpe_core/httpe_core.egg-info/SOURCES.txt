@@ -5,6 +5,7 @@ httpe_core/httpe_class.py
 httpe_core/httpe_error.py
 httpe_core/httpe_fernet.py
 httpe_core/httpe_keys.py
+httpe_core/httpe_logging.py
 httpe_core/httpe_secure.py
 httpe_core.egg-info/PKG-INFO
 httpe_core.egg-info/SOURCES.txt

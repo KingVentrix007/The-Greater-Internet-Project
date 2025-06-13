@@ -6,7 +6,7 @@ from .httpe_error import *
 from .httpe_fernet import *
 from .httpe_keys import *
 from .httpe_secure import *
-
+from .httpe_logging import *
 # Optionally, declare what you want to export
 __all__ = [
     "httpe_cert",

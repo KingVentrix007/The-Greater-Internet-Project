@@ -6,6 +6,7 @@ import httpe_core.httpe_secure as sec  # Must have fernet_encrypt, fernet_decryp
 import httpe_core.httpe_cert as httpe_cert           # Must have verify_cert(cert, host, pem_path, pubkey)
 import json
 import httpe_core.httpe_fernet as httpe_fernet
+import httpe_core.httpe_logging as httpe_logging
 import base64
 import threading
 from cryptography.hazmat.primitives import hashes
@@ -202,7 +203,7 @@ class HttpeClient:
                     print("No path found for target. Please try again later. EDOI target: ",self.edoi_target)
         elif(edoi_packet_type == "return"):
             print(f"Client:Return:{time.time()}")
-            self.log(f"Client:Return:{time.time()}")
+            # httpe_logging.sync_log(f"Client:Return:{time.time()}")
 
             # print(f"Got packet at {time.time()}")
             payload = data["payload"]
@@ -402,7 +403,7 @@ class HttpeClient:
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
         print(f"Client:Forward:{time.time()}")
-        self.log(f"Client:Forward:{time.time()}")
+        # httpe_logging.sync_log(f"Client:Forward:{time.time()}")
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

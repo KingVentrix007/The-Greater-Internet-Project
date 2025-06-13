@@ -11,6 +11,7 @@ import httpe_core.httpe_secure as sec
 import uuid
 import base64
 import httpe_core.httpe_fernet as httpe_fernet
+import httpe_core.httpe_logging as httpe_logging
 import signal
 import sys
 import logging
@@ -351,7 +352,7 @@ class Httpe:
                     my_hash = self.compute_hashed_identity(self.name,salt)
                     if(my_hash == end_hash):
                         print(f"Server:Forward:{time.time()}")
-                        self.log(f"Server:Forward:{time.time()}")
+                        # httpe_logging.sync_log(f"Server:Forward:{time.time()}")
 
                         pass
                     else:
@@ -573,7 +574,7 @@ class Httpe:
                     "ip_combo":(self.host,self.port)
                 }
                 print(f"Server:Return:{time.time()}")
-                self.log(f"Server:Return:{time.time()}")
+                # httpe_logging.sync_log(f"Server:Return:{time.time()}")
 
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
                     client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
