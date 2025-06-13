@@ -1,0 +1,8 @@
+pyproject.toml
+edoi_net/__init__.py
+edoi_net/edoi_net.py
+httpe_client.egg-info/PKG-INFO
+httpe_client.egg-info/SOURCES.txt
+httpe_client.egg-info/dependency_links.txt
+httpe_client.egg-info/requires.txt
+httpe_client.egg-info/top_level.txt

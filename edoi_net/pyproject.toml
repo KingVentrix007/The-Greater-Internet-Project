@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "httpe_client"
+name = "EDOI-NET"
 version = "0.1.0"
 description = "EDOI-NET - The EDOI-NET Node system and routing logic"
 readme = "README.md"
