@@ -1,9 +1,10 @@
 import numpy as np
 from datetime import datetime
 import statistics
-from collections import defaultdict
 
 def detect_bottlenecks(gaps):
+    if not gaps:
+        return [], 0, 0, 0, 0
     gaps = np.array(gaps)
     Q1 = np.percentile(gaps, 25)
     Q3 = np.percentile(gaps, 75)
@@ -14,106 +15,122 @@ def detect_bottlenecks(gaps):
 
 def auto_split_sections(lines):
     sections = []
-    current_section = []
-
+    current = []
     prev_type = None
     for line in lines:
         parts = line.strip().split(":")
         if len(parts) != 3:
             continue
-
-        packet_type = parts[1].strip()
-
-        if prev_type is not None and packet_type != prev_type:
-            # Type changed – split section
-            if current_section:
-                sections.append(current_section)
-                current_section = []
-
-        current_section.append(line.strip())
-        prev_type = packet_type
-
-    if current_section:
-        sections.append(current_section)
-
+        pkt_type = parts[1].strip()
+        if prev_type is not None and pkt_type != prev_type:
+            sections.append(current)
+            current = []
+        current.append(line.strip())
+        prev_type = pkt_type
+    if current:
+        sections.append(current)
     return sections
 
-def process_section(lines):
-    hops, types, times = [], [], []
-    for line in lines:
-        parts = line.split(":")
+def process_section(section):
+    hops, times = [], []
+    for line in section:
+        parts = line.strip().split(":")
         if len(parts) != 3:
             continue
-        node, ptype, timestamp = parts
+        node, _, timestamp = parts
         hops.append(node.strip())
-        types.append(ptype.strip())
         times.append(float(timestamp.strip()))
-    return hops, types, times
+    return hops, times
+
+def analyze_path(hops, times):
+    gaps = [times[i+1] - times[i] for i in range(len(times)-1)]
+    bottlenecks, threshold, q1, q3, iqr = detect_bottlenecks(gaps)
+    hop_info = []
+    for i in range(len(gaps)):
+        hop_info.append({
+            "from": hops[i],
+            "to": hops[i+1],
+            "gap": gaps[i],
+            "is_bottleneck": gaps[i] > threshold
+        })
+    return {
+        "hops": hops,
+        "gaps": gaps,
+        "total_delay": sum(gaps),
+        "average_gap": statistics.mean(gaps) if gaps else 0,
+        "threshold": threshold,
+        "q1": q1,
+        "q3": q3,
+        "iqr": iqr,
+        "hop_info": hop_info
+    }
 
 def main():
     with open("time.txt", "r") as file:
         raw_lines = file.readlines()
 
     sections = auto_split_sections(raw_lines)
-    path_data = defaultdict(list)
-    total_network_time = 0
+    paired_paths = []
+    total_rtt = 0
 
-    for section in sections:
-        hops, types, times = process_section(section)
-        if not times or len(times) < 2:
-            continue
+    i = 0
+    while i < len(sections) - 1:
+        f_section = sections[i]
+        r_section = sections[i + 1]
+        if "Forward" in f_section[0] and "Return" in r_section[0]:
+            f_hops, f_times = process_section(f_section)
+            r_hops, r_times = process_section(r_section)
 
-        path_type = types[0] if all(t == types[0] for t in types) else "Mixed"
-        gaps = [times[i+1] - times[i] for i in range(len(times)-1)]
+            forward_data = analyze_path(f_hops, f_times)
+            return_data = analyze_path(r_hops, r_times)
 
-        total_delay = sum(gaps)
-        avg_gap = statistics.mean(gaps)
-        bottlenecks, threshold, q1, q3, iqr = detect_bottlenecks(gaps)
+            processing_delay = r_times[0] - f_times[-1]  # NEW: Server Processing Time
+            rtt = forward_data["total_delay"] + return_data["total_delay"]
+            total_rtt += rtt
 
-        hop_info = []
-        for i in range(len(gaps)):
-            hop_info.append({
-                "from": hops[i],
-                "to": hops[i+1],
-                "gap": gaps[i],
-                "is_bottleneck": gaps[i] > threshold
+            paired_paths.append({
+                "forward": forward_data,
+                "return": return_data,
+                "rtt": rtt,
+                "processing_delay": processing_delay
             })
-
-        path_data[path_type].append({
-            "hops": hops,
-            "gaps": gaps,
-            "total_delay": total_delay,
-            "average_gap": avg_gap,
-            "hop_info": hop_info,
-            "threshold": threshold,
-            "q1": q1,
-            "q3": q3,
-            "iqr": iqr
-        })
-
-        total_network_time += total_delay
+            i += 2
+        else:
+            i += 1
 
     cur_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     with open(f"report_{cur_time}.log", "w") as report_file:
-        report_file.write(f"EDOI-NET TIME REPORT\nGenerated: {cur_time}\nTotal Network Time: {total_network_time:.6f}s\n\n")
+        report_file.write(f"EDOI-NET TIME REPORT (RTT PAIRED)\nGenerated: {cur_time}\n")
+        report_file.write(f"Total Round-Trip Time Across All Pairs: {total_rtt:.6f}s\n\n")
 
-        for ptype, paths in path_data.items():
-            report_file.write(f" Path Type: {ptype}\n{'='*40}\n")
-            for idx, path in enumerate(paths):
-                hop_desc = " -> ".join(path["hops"])
-                report_file.write(f"Path #{idx + 1}: {hop_desc}\n")
-                report_file.write(f"Total Delay: {path['total_delay']:.6f}s\n")
-                report_file.write(f"Average Hop Delay: {path['average_gap']:.6f}s\n")
-                report_file.write(f"Delay Threshold (IQR-based): {path['threshold']:.6f}s\n")
-                report_file.write(f"IQR Stats: Q1={path['q1']:.6f}, Q3={path['q3']:.6f}, IQR={path['iqr']:.6f}\n")
+        for idx, pair in enumerate(paired_paths):
+            report_file.write(f"PAIR #{idx + 1}\n{'='*50}\n")
 
-                for hop in path["hop_info"]:
-                    mark = "[!]" if hop["is_bottleneck"] else "[ ]"
-                    report_file.write(f"  {mark} {hop['from']} -> {hop['to']} : {hop['gap']:.6f}s\n")
-                report_file.write("---\n")
-            report_file.write("\n")
+            # --- Forward path ---
+            f = pair["forward"]
+            report_file.write("FORWARD PATH\n")
+            report_file.write(" -> ".join(f["hops"]) + "\n")
+            report_file.write(f"Total Delay: {f['total_delay']:.6f}s | Average: {f['average_gap']:.6f}s\n")
+            report_file.write(f"IQR: Q1={f['q1']:.6f}, Q3={f['q3']:.6f}, IQR={f['iqr']:.6f}, Threshold={f['threshold']:.6f}s\n")
+            for hop in f["hop_info"]:
+                mark = "[!]" if hop["is_bottleneck"] else "[ ]"
+                report_file.write(f"  {mark} {hop['from']} -> {hop['to']} : {hop['gap']:.6f}s\n")
 
-    print(f"[✓] Report saved to: report_{cur_time}.log")
+            # --- Return path ---
+            r = pair["return"]
+            report_file.write("\nRETURN PATH\n")
+            report_file.write(" -> ".join(r["hops"]) + "\n")
+            report_file.write(f"Total Delay: {r['total_delay']:.6f}s | Average: {r['average_gap']:.6f}s\n")
+            report_file.write(f"IQR: Q1={r['q1']:.6f}, Q3={r['q3']:.6f}, IQR={r['iqr']:.6f}, Threshold={r['threshold']:.6f}s\n")
+            for hop in r["hop_info"]:
+                mark = "[!]" if hop["is_bottleneck"] else "[ ]"
+                report_file.write(f"  {mark} {hop['from']} -> {hop['to']} : {hop['gap']:.6f}s\n")
 
-if __name__ == "__main__":
-    main()
+            # --- Round-trip + Processing Delay ---
+            report_file.write(f"\nSERVER PROCESSING TIME: {pair['processing_delay']:.6f}s\n")
+            report_file.write(f"ROUND-TRIP TIME: {pair['rtt']:.6f}s\n")
+            report_file.write(f"{'-'*50}\n\n")
+
+    print(f"[✓] Report saved as: report_{cur_time}.log")
+
+main()
