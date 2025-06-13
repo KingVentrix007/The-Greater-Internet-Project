@@ -353,6 +353,9 @@ class NetNode():
                 if my_hash == route[count]["hash"]:
                     # print(f"{self.name}: Packet was for me")
                     print(f"{self.name}:Return:{time.time()}")
+                    file = open("../../run_output.log","a")
+                    file.write(f"{self.name}:Return:{time.time()}\n")
+                    file.close()
                     # await httpe_logging.log(f"{self.name}:Return:{time.time()}")
                     past_hash = route[count + 1]["hash"]
                     if past_hash == my_hash:
@@ -410,6 +413,9 @@ class NetNode():
                 
                 if self.compute_hashed_identity(route[count]["salt"]) == route[count]["hash"]:
                     print(f"{self.name}:Forward:{time.time()}")
+                    file = open("../../run_output.log","a")
+                    file.write(f"{self.name}:Forward:{time.time()}\n")
+                    file.close()
                     # await httpe_logging.log(f"{self.name}:Forward:{time.time()}")
 
                     # try:

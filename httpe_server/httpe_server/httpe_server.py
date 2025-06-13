@@ -352,6 +352,9 @@ class Httpe:
                     my_hash = self.compute_hashed_identity(self.name,salt)
                     if(my_hash == end_hash):
                         print(f"Server:Forward:{time.time()}")
+                        file = open("../run_output.log","a")
+                        file.write(f"Server:Forward:{time.time()}\n")
+                        file.close()
                         # httpe_logging.sync_log(f"Server:Forward:{time.time()}")
 
                         pass
@@ -574,6 +577,9 @@ class Httpe:
                     "ip_combo":(self.host,self.port)
                 }
                 print(f"Server:Return:{time.time()}")
+                file = open("../run_output.log","a")
+                file.write(f"Server:Return:{time.time()}\n")
+                file.close()
                 # httpe_logging.sync_log(f"Server:Return:{time.time()}")
 
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:

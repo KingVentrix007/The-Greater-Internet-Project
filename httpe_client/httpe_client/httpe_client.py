@@ -204,7 +204,9 @@ class HttpeClient:
         elif(edoi_packet_type == "return"):
             print(f"Client:Return:{time.time()}")
             # httpe_logging.sync_log(f"Client:Return:{time.time()}")
-
+            file = open("../run_output.log","a")
+            file.write(f"Client:Return:{time.time()}\n")
+            file.close()
             # print(f"Got packet at {time.time()}")
             payload = data["payload"]
             path_used = data["route"]
@@ -403,6 +405,7 @@ class HttpeClient:
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
         print(f"Client:Forward:{time.time()}")
+        for_t = time.time()
         # httpe_logging.sync_log(f"Client:Forward:{time.time()}")
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
@@ -413,6 +416,9 @@ class HttpeClient:
             # Send a message to the EDOI node
             message = json.dumps(packet).encode('utf-8')
             client_socket.sendall(message)
+        file = open("../run_output.log","a")
+        file.write(f"Client:Forward:{for_t}\n")
+        file.close()
         # print("Packet has been sent at", time.time())
     def _receive_full_response(self, s: socket.socket) -> str:
         if(self.use_edoi == False):
