@@ -709,6 +709,8 @@ class NetNode():
             await server.serve_forever()
 
 
+
+# The following code is testing code
 BASE_PORT = 20000
 NUM_NODES = 200
 NEIGHBOR_COUNT = 5  # Or 50 if needed
@@ -733,7 +735,7 @@ def find_all_paths(nodes,start_node, target_name, max_paths=500):
 
     dfs(start_node, [start_node.name], {start_node.name})
     return paths
-async def main():
+async def _test_network():
     nodes = []
     ports = list(range(BASE_PORT, BASE_PORT + NUM_NODES))
     addresses = [("127.0.0.1", port) for port in ports]
@@ -796,9 +798,7 @@ async def main():
     except KeyboardInterrupt:
         print("[*] Shutting down.")
 
-# Start the full async launcher
-if __name__ == "__main__":
-    asyncio.run(main())
-
+def setup_test_network():
+    asyncio.run(_test_network())
 
         

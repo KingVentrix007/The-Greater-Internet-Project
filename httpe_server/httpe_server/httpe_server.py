@@ -326,7 +326,7 @@ class Httpe:
                             print("Matched")
                             route_member = {"hash":name_hash,"salt":salt}
                             route.append(route_member)
-                            ret_data = {"type":"path","route":route,"count":len(route)-2,"hash":target_hash,"salt":salt}
+                            ret_data = {"type":"path","route":route,"count":len(route)-2,"hash":target_hash,"salt":salt,"node_ip":(self.host,self.port)}
                             ret_data["message_id"] = str(uuid.uuid4())
                             try:
                                 json_str = json.dumps(ret_data)
