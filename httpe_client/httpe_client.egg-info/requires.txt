@@ -1,0 +1,2 @@
+cryptography>=45.0.4
+httpe_core>=0.1.0

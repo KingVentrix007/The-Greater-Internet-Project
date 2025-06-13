@@ -5,7 +5,7 @@ from datetime import datetime, timezone,timedelta
 import httpe_core.httpe_secure as sec  # Must have fernet_encrypt, fernet_decrypt, rsa_encrypt_key, encrypt_user_id
 import httpe_core.httpe_cert as httpe_cert           # Must have verify_cert(cert, host, pem_path, pubkey)
 import json
-import httpe_core.httpe_core.httpe_fernet as httpe_fernet
+import httpe_core.httpe_fernet as httpe_fernet
 import base64
 import threading
 from cryptography.hazmat.primitives import hashes
