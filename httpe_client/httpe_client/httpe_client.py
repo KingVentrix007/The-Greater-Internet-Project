@@ -180,7 +180,7 @@ class HttpeClient:
         elif(edoi_packet_type == "return"):
             # print("return")
             file = open("../run_output.log","a")
-            file.write(f"Client:Forward:{time.time()}\n")
+            file.write(f"Client:Return:{time.time()}\n")
             file.close()
             payload = data.get("payload",None)
             self.edoi_res = payload
