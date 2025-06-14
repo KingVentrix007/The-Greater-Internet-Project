@@ -309,9 +309,9 @@ class NetNode():
                             val = None
                         if(val != None):
                             self.store_hash_time[hash_to_search] = datetime.now(timezone.utc).isoformat()
-                            print(f"{self.name}:Calling send_data for return at {time.time()}")
+                            # print(f"{self.name}:Calling send_data for return at {time.time()}")
                             await self.send_data(next_packet, val,debug_node_name="return",conn=got_return_packet_time)
-                            print(f"{self.name}:Call send data ended at {time.time()}")
+                            # print(f"{self.name}:Call send data ended at {time.time()}")
                         else:
                             print(f"{self.name}:Bulking return")
                             for ip, _ in self.neighbors.items():
@@ -533,7 +533,7 @@ class NetNode():
 
 # The following code is testing code
 BASE_PORT = 20000
-NUM_NODES = 200
+NUM_NODES = 20
 NEIGHBOR_COUNT = 5  # Or 50 if needed
 def find_all_paths(nodes,start_node, target_name, max_paths=500):
     paths = []

@@ -201,7 +201,7 @@ class HttpeClient:
                 if(self.no_path_res_count > 5 and self.edoi_path == None):
                     print("No path found for target. Please try again later. EDOI target: ",self.edoi_target)
         elif(edoi_packet_type == "return"):
-            print(f"Client:Return:{time.time()}")
+            # print(f"Client:Return:{time.time()}")
             # httpe_logging.sync_log(f"Client:Return:{time.time()}")
             file = open("../run_output.log","a")
             file.write(f"Client:Return:{time.time()}\n")
@@ -229,7 +229,7 @@ class HttpeClient:
                 print("I dont know what to do now")
             print(data['hash']," EDOI target hash. Sending back path: ")
         edoi_conn_timer_end = time.time()
-        print("Client:Time to handle edoi packet: ",edoi_conn_timer_end-edoi_conn_timer_start)
+        # print("Client:Time to handle edoi packet: ",edoi_conn_timer_end-edoi_conn_timer_start)
     def listen_for_message(self):
 
         # Listens for incoming messages on the specified port

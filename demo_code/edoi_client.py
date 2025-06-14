@@ -4,7 +4,7 @@
 import httpe_client
 import json
 import time
-client = httpe_client.HttpeClient(port=5400,connect_to_edoi=True,edoi_ip='127.0.0.1',edoi_port=20193,edoi_target="HTTPE",edoi_client_name="TestC")
+client = httpe_client.HttpeClient(port=5400,connect_to_edoi=True,edoi_ip='127.0.0.1',edoi_port=20001,edoi_target="HTTPE",edoi_client_name="TestC")
 # cleint2 = httpe_client.HttpeClient()
 
 def send():
@@ -19,5 +19,10 @@ def send():
     # res = client.send_request("GET","/hello-world")
     print(res.status)
     print(res.json())
+    return end_time-start_time
 
-send()
+avg = 0
+for i in range(100):
+   avg+=send()
+
+print(avg/100) 
