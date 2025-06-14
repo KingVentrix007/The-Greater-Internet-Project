@@ -1,43 +1,30 @@
-from collections import defaultdict
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import padding as sym_padding
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import os
-import base64
+import warnings
 import threading
 import random
 import uuid
-from typing import List, Optional, Set
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives import serialization, hashes
 import socket
 import json
 import time
-from collections import deque
 import uuid
-from datetime import datetime, timezone, timedelta
 import asyncio
-from httpe_core import httpe_logging
-#END DEBUG CODE
+from datetime import datetime, timezone,timedelta
+from cryptography.hazmat.primitives import hashes
 class NetNode():
-    def __init__(self, name: str,port,bootstrap_ips:list):
+    def __init__(self, name: str,port,bootstrap_ips:list,debug_mode=True):
         self.name = name # The name of this node on the network
         self.id = uuid.uuid4().hex # Unique ID of node
-        # self._generate_keys()
         self.neighbors = {} # List of all neighboring nodes (ip,port) combos, Previously stored RSA keys
         self.neighbors_hash = {} # List of all neighboring nodes hash. 
-
+        self.debug_mode = debug_mode # Flag to indicate debug_mode
         # Initiate all neighbors with IP
         for ip in bootstrap_ips:
-            self.neighbors[ip] = None 
+            self.neighbors[ip] = None # Stores None: Formally would store RSA Key
         for ip in bootstrap_ips:
-            self.neighbors_hash[ip] = None
+            self.neighbors_hash[ip] = None # Stores None: Formally would store RSA Key
         self.port = port # Port this server will listen on
         self.ip = '127.0.0.1' # IP server will listen on
         self.max_neighbors = 5 # Max number of neighbors
         self.seen_messages = set() # Set of all seed messages
-        self.found_route = False # Unused
         self.store_hash = {} # Stored hash to IP combos per search
         self.store_hash_time = {} # Time for store_hash, used to delete old
         self.handled_paths = set() # Set of all handled path messages
@@ -46,75 +33,81 @@ class NetNode():
         self.find_hashes_handled = set() # Set of all hashes already checked
         self.found_hash_routes = set() # Set of all found hash routes, used to avoid duplicates
         self.found_end_route = {} # List of all end routes found
-        self.found_end_routes = {}
         # Used if node is bas
         self.found_paths = {}
         self.failed_paths = {}
 
         #Flag to allow other outside nodes to connect
         self.is_connect_node = False
-        threading.Thread(target=self.memory_cleaner,daemon=True).start()
+        threading.Thread(target=self.memory_cleaner,daemon=True).start() # Run memory cleaner
         # self.build_neighbors() #! USe this in dev
-    # async def log(self,message):
-    #     await log_queue.put(message)
     def memory_cleaner(self):
-        # while True:
-        #     try:
-        #         rem_hash_val = []
-        #         for hash_val, time_str in list(self.store_hash_time.items()):
-        #             try:
-        #                 # print(time_str,type(time_str))
-        #                 timestamp = datetime.fromisoformat(time_str)
-        #             except ValueError:
-        #                 print(f"[WARN] Invalid ISO time string: {time_str}")
-        #                 continue
-        #             now = datetime.now(timezone.utc)
-        #             if now - timestamp > timedelta(seconds=3):
-        #                 # print("Clearing path:", hash_val)
-        #                 rem_hash_val.append(hash_val)
-        #         for i in rem_hash_val:
-        #             self.store_hash.pop(i, None)
-        #             self.store_hash_time.pop(i, None)
-        #     except Exception as e:
-        #         print("[ERROR] Memory cleaner exception:", e)
-        #     time.sleep(1)
-        pass
+        """
+        Cleans up memory. Removes unused stored paths and hashes
+        """
+        while True:
+            try:
+                # Loop through all stored hashes and there time
+                rem_hash_val = []
+                for hash_val, time_str in list(self.store_hash_time.items()):
+                    try:
+                        timestamp = datetime.fromisoformat(time_str)
+                    except ValueError:
+                        print(f"[WARN] Invalid ISO time string: {time_str}")
+                        continue
+                    now = datetime.now(timezone.utc)
+                    if now - timestamp > timedelta(hours=3): # Check if hash is old
+                        rem_hash_val.append(hash_val)
+                for i in rem_hash_val: # loop though hashes to delete
+                    self.store_hash.pop(i, None) # Remove hash
+                    self.store_hash_time.pop(i, None) # Remove hash time
+            except Exception as e:
+                print("[ERROR] Memory cleaner exception:", e)
+            time.sleep(1) # Delay for non-blocking code
     async def build_neighbors(self):
-        self.neighbors_tmp = set()
-        for ip,key in self.neighbors.items():
-            self.neighbors_tmp.add(ip)
-        for ip in self.neighbors_tmp:
-            tup = ('127.0.0.1',self.port)
-            packet = {"type":"neighbors","ip_key":tup}
-            ret = await self.send_data(packet,addr=ip,init_con=True)
-            if(ret == False):
-                time.sleep(1)
+        """
+        build_neighbors
+        Connect to neighboring nodes to build connections
+        Untested in prod. Doesn't run well on LAN
+        """
+        self.neighbors_tmp = set() # Create temporary set to store neighbors
+        for ip,key in self.neighbors.items(): # Loop through current neighbors
+            self.neighbors_tmp.add(ip) # store IP,PORT in temporary set
+        for ip in self.neighbors_tmp: # Loop through temporary set
+            tup = (self.ip,self.port) # Create tuple of IP,PORT
+            packet = {"type":"neighbors","ip_key":tup}# Create packet
+            ret = await self.send_data(packet,addr=ip,init_con=True)# Send packet
+            if(ret == False): # Check for ret error
+                asyncio.sleep(1) # Wait
     
     def compute_hashed_identity(self, salt: str) -> str:
-        # return self.name
+        """
+        Create SHA256 hash of self.name using salt
+        """
         digest = hashes.Hash(hashes.SHA256())
         digest.update((self.name + salt).encode())
         return digest.finalize().hex()
     def ask_for_hash(self,salt):
-        packet = {"type":"hash_req","salt":salt}
-        json_str = json.dumps(packet)
-        encoded = json_str.encode('utf-8')
-        for ip, key in self.neighbors.items(): 
-            host, port = ip
+        warnings.warn("ask_for_hash is no longer used.",category=DeprecationWarning,stacklevel=2)
+        packet = {"type":"hash_req","salt":salt} # Create packet
+        json_str = json.dumps(packet)# Convert packet to json
+        encoded = json_str.encode('utf-8') 
+        # Loop through IP,PORT tuple and send
+        for ip, _ in self.neighbors.items(): 
+            host, port = ip # Convert from tuple to separate values
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
                 client_socket.connect((host, port))
                 client_socket.sendall(encoded)
-            time.sleep(0.05)
+            time.sleep(0.05)# Delay to prevent blocking
     def log_hashes(self,ip,packet):
+        warnings.warn("log_hashes is no longer used.",category=DeprecationWarning,stacklevel=2)
         n_hash = packet["hash"]
         n_salt = packet["salt"]
         key = (n_salt, ip)
         self.neighbors_hash[key] = n_hash
     def post_packet(self,packet,target_name,salt):
+        warnings.warn("log_hashes is no longer used.",category=DeprecationWarning,stacklevel=2)
         target_hash = self.start_find(target_name,salt)
-        # print("Tarhet hash post",target_hash)
-        max_check_time = 10 # seconds
-        start_time = time.time()
         path = self.found_paths.get(target_hash,None)
         
         while path == None:
@@ -123,147 +116,78 @@ class NetNode():
                 print("Failed to find path after multiple attempts.")
                 return False
             time.sleep(0.05)
-            current_time = time.time()
-            # if(current_time-start_time > max_check_time):
-            #     print("Timeout waiting for path to be found.")
-            #     return False
             path = self.found_paths.get(target_hash,None)
-            # print(path)
-            # print("polling",start_time-current_time)
         self.failed_paths[target_hash] = 0
         self.send_to_target(path,packet)
-    def build_network(self):
-        if(len(self.neighbors) < self.max_neighbors):
-            # Will handle finding more neighbors
-            pass
-        for ip, key in self.neighbors.items():
-            if key is None:
-                # Simulate requesting a public key from the neighbor
-                # print(f"Requesting public key from {ip}...")
-                
-                # This part will request a key from that server
-                fake_key = None
-                
-                # Store the received key
-                self.neighbors[ip] = fake_key
-                # print(f"Received and stored key from {ip}: {fake_key}")
-            
-    
-        pass # Will send RSA public key
     async def send_data(self, data, addr=None, conn=None, debug_node_name=None, init_con=False):
-        while self.send_lock:
-            await asyncio.sleep(0.001)  # Yield control instead of busy-waiting
-        
-        self.send_lock = True
-        # print(debug_node_name)
-        # if(debug_node_name == "return"):
-        #     # print("THIS IS A RETURN PACKET")
-        #     print(f"{self.name}: Got return packet at time {conn}")
-        #     print(f"{self.name}: Send return packet at time {time.time()}")
-            
-        # elif(debug_node_name == "forward"):
-        #     # print("THIS IS A FORWARD PACKET")
-        #     print(f"{self.name}: Got forward packet at time {conn}")
+        """
+        Send data
 
-        #     print(f"{self.name}: Sent forward packets at {time.time()}")
-        if self.is_connect_node:
-            # print(f"{self.name}: Send data to {addr}: Data: \n{data}")
-            pass
-
-        message_id = data.get("message_id", str(uuid.uuid4()))
-        data["message_id"] = message_id
-        host, port = addr
-        # if(port == 5400):
-            # print(f"[!] {self.name} Sending data to {host}:{port} - {data}")
-
+        Args:
+        data(str): Data to send
+        addr((ip,port)): Address to send data to.
+        conn(None): Unused debug value
+        debug_node_name(str/None): Name to help identify witch protocol caused exception
+        init_conn(bool): Used in build neighbors to suppress connection errors
+        """
+        message_id = data.get("message_id", str(uuid.uuid4())) # Try extract message ID or create new one
+        data["message_id"] = message_id # Ensure packet has message IP
+        if(addr == None): # Ensure addr is valid
+            raise ValueError("addr cannot be none")
+        host, port = addr # Extract values from tuple (ip,port)
         try:
-            json_str = json.dumps(data)
+            # Convert to json
+            json_str = json.dumps(data) 
             encoded = json_str.encode("utf-8")
 
-            reader, writer = await asyncio.open_connection(host, port)
-            writer.write(encoded)
-            await writer.drain()
-            writer.close()
-            await writer.wait_closed()
 
-            await asyncio.sleep(0.05)
-            self.send_loop_count = 0
-            self.send_lock = False
-            # print(f"[√] Sent JSON to {host}:{port}")
-        except Exception as e:
-            self.send_lock = False
-            await asyncio.sleep(0.05)
-            self.send_loop_count += 1
-            if not init_con:
-                print(f"[!]{self.name} Error sending JSON to {host}:{port}:{debug_node_name} - {e}")
-            else:
-                return False
-    def temp(self):
-        route = []
-        route_member = {"node_hash":"the nodes named, hashed ","salt":"the salt used to hash the name"}
-        ## Packet:
-        packet_find = {"type":"find","route":route,"hash":"the hash to find","key":"the last nodes RSA key(this nodes rsa if it is sending it)"}
-    async def continue_find(self,route,hash_to_find,debug_route=None,target=None,salt=None,my_ip=None):
-        packet = {"type":"find","route":route,"hash":target,"salt":salt, "message_id": str(uuid.uuid4()),"my_ip":my_ip}
+            reader, writer = await asyncio.open_connection(host, port) # asyncio reader and writer
+            writer.write(encoded) # Send data
+            await writer.drain()
+            writer.close() # Close writer
+            await writer.wait_closed() # non-blocking ensure writer is closed
+        except Exception as e: # General catch all Exception
+            print(f"[ERROR]: {self.name}: send_data error {e}")
+   
+    async def continue_find(self,route,hash_to_find,debug_route=None,target=None,salt=None,ip_combo=None):
+        """
+        Continue find request #TODO Continue making comments and code clean-up
+        """
+        packet = {"type":"find","route":route,"hash":target,"salt":salt, "message_id": str(uuid.uuid4()),"ip_combo":ip_combo}
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
         
         for ip, key in self.neighbors.items():
             
-            # will later handle key encryption
             await self.send_data(packet,ip,debug_node_name="cont find")
 
     async def return_path(self,path,addr=None,debug_node_name=None):
-        # message_id = path.get("message_id",None)
-        # # if(message_id == None):print("retuern None")
-        # salt = path.get("salt",None)
-        # path["message_id"] = message_id or str(uuid.uuid4())
-        count = path.get("count",None)
-        route = path.get("route",None)
-        # self.ask_for_hash(salt)'
         if(addr == None):
-            # print(f"{self.name} ALT SEND")
-            for ip, key in self.neighbors.items():
-                # if(self.neighbors_hash.get(key,None) == route[count - 1]):
+            for ip, _ in self.neighbors.items():
                 await self.send_data(path,ip,debug_node_name=f"Scan send: {debug_node_name}")
         else:
-            host, port = addr
-            
-            # print(host,port)
             await self.send_data(path,addr=addr,debug_node_name=debug_node_name)
     async def hash_str(self,name,salt):
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
         return digest.finalize().hex()
     async def start_find(self, target_name: str, salt: str):
-        print("FIND")
         target_hash = await self.hash_str(target_name, salt)  # FIXED
         my_hash = self.compute_hashed_identity(salt)
         route_member = {"hash": my_hash, "salt": salt}
         route = [route_member]
-        # debug_route_member = {"name":self.name,"len_route":len(route)}
         route = [route_member]
-        # debug_route = [debug_route_member]
 
         packet = {
             "type": "find",
             "route": route,
             "hash": target_hash,
             "salt": salt,
-            # "key": self.public_key.public_bytes(
-            #     encoding=serialization.Encoding.PEM,
-            #     format=serialization.PublicFormat.SubjectPublicKeyInfo
-            # ).decode(),
-            
             "message_id": str(uuid.uuid4()),
-            "my_ip":(self.ip,self.port)
+            "ip_combo":(self.ip,self.port)
         }
-        # print((self.ip,self.port))
         for ip, key in self.neighbors.items():
-            # will later handle key encryption
             await self.send_data(packet,ip,debug_node_name="send packet")
-        # self.continue_find(route, target_hash)
-        # print("Find target hash: ",target_hash)
         return target_hash
     async def return_to_sender(self, route, payload):
         count = len(route) - 2
@@ -285,9 +209,6 @@ class NetNode():
             "count": count,
             "payload": payload
         }
-        # Send to next hop
-        # next_hop = route[count]
-        # print("Next hop",next_hop)
         time.sleep(1)
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
@@ -295,16 +216,7 @@ class NetNode():
             await self.send_data(packet, ip,"send to target")
 
     async def handle_conn(self,data,addr,conn):
-        # print(self.name,"||",data)
         message_id = data.get("message_id")
-        # if message_id != None and message_id in self.seen_messages:
-            # if(data.get("type",None) == "path"):
-            #     print("discard path: ",data.get("message_id"))
-            # else:
-            #     return  # Drop duplicate
-        # if(not message_id):
-        #     print("U missed one")
-        # Otherwise:
         if message_id:
             self.seen_messages.add(message_id)
         if(data["type"] == "get_rsa"):
@@ -312,12 +224,9 @@ class NetNode():
             key_data = {"key",key}
             await self.send_data(key_data, addr,"rsa get")
         elif(data["type"] == "connect"):
-            print(self.name,'connect')
             self.is_connect_node = True
             ip_port_combo = tuple(data.get("tup"))
             self.neighbors[ip_port_combo] = None
-            for ip,key in self.neighbors.items():
-                print(ip,key)
         elif data['type'] == "neighbors":
             ip_port = tuple(data.get("tup"))
             self.neighbors[ip_port] = None
@@ -334,7 +243,6 @@ class NetNode():
                     client_socket.connect((host, port))
                     client_socket.sendall(encoded)
                 time.sleep(0.05)
-                    # print(f"[√] Sent JSON to {host}:{port}")
             except Exception as e:
                 pass
         elif(data["type"] == "hash_res"):
@@ -343,7 +251,6 @@ class NetNode():
             
             
             try:
-                # print("reterning")
                 got_return_packet_time = time.time()
                 route = data["route"]
                 count = int(data["count"])
@@ -351,15 +258,13 @@ class NetNode():
                 my_hash = self.compute_hashed_identity(route[count]["salt"])
 
                 if my_hash == route[count]["hash"]:
-                    # print(f"{self.name}: Packet was for me")
                     print(f"{self.name}:Return:{time.time()}")
                     file = open("../../run_output.log","a")
                     file.write(f"{self.name}:Return:{time.time()}\n")
                     file.close()
-                    # await httpe_logging.log(f"{self.name}:Return:{time.time()}")
                     past_hash = route[count + 1]["hash"]
                     if past_hash == my_hash:
-                        print("THis is wrong")
+                        print("[ERROR]. Previous node matches current node")
                         return  # Ignore if the hash matches the previous one
                     else:
                         ip_combo = data.get("ip_combo",None)
@@ -367,7 +272,6 @@ class NetNode():
                             self.store_hash[past_hash]  = ip_combo
                     if count > 0:
                         combo = (self.ip,self.port)
-                        # print("combo: ",combo)
                         next_packet = {
                             "type": "return",
                             "route": route,
@@ -385,16 +289,11 @@ class NetNode():
                             self.store_hash_time[hash_to_search] = datetime.now(timezone.utc).isoformat()
 
                             await self.send_data(next_packet, val,debug_node_name="return",conn=got_return_packet_time)
-                            # print(f"{self.name}: Got return packet at time: {got_return_packet_time}")
-                            # print(f"{self.name}: Send return packet at time {time.time()}")
                             
                         else:
-                            # print(f"{self.name}: No stored hash found for {hash_to_search}. Bulk sending")
-                            # print(f"{self.name}:Bulk send: Got return packet at time: {got_return_packet_time}")
                             
                             for ip, _ in self.neighbors.items():
                                 await self.send_data(next_packet, ip,"type return")
-                            # print(f"{self.name}:Bulk send: Send return packet at time {time.time()}")
                     else:
                         print(f"[⬅️] Final ACK received at {self.name}: {payload}")
                 else:
@@ -416,13 +315,6 @@ class NetNode():
                     file = open("../../run_output.log","a")
                     file.write(f"{self.name}:Forward:{time.time()}\n")
                     file.close()
-                    # await httpe_logging.log(f"{self.name}:Forward:{time.time()}")
-
-                    # try:
-                    #     self.store_hash[route[count-1]["hash"]] = data['ip_combo']
-                    # except:
-                    #     pass
-                    # print("forwarding packets")
                     if count + 1 < len(route):
                         next_packet = {
                             "type": "forward",
@@ -436,15 +328,13 @@ class NetNode():
                             self.store_hash_time[route[count+1]["hash"]] = datetime.now(timezone.utc).isoformat()
                             next_ip = tuple(self.store_hash.get(route[count+1]["hash"]))
                             await self.send_data(next_packet, next_ip,debug_node_name="forward",conn=got_forward_packet_start)
-                            # print(f"{self.name}: Got forward packet at time: {got_forward_packet_start}")
-                            # print(f"{self.name}: Send forward packet at time {time.time()}")
                         else:
                             print("[!] No stored hash found for next hop, bulk sending forward packet.")
+                            bulk_start_time = time.time()
                             for ip, _ in self.neighbors.items():
                                 await self.send_data(next_packet, ip,debug_node_name="forward",conn=got_forward_packet_start)
-                            # print(f"{self.name}: Got forward packet at time: {got_forward_packet_start}")
-                            # print(f"{self.name}: Send forward packet at time {time.time()}")
-                        
+                            bulk_end_time = time.time()
+                            print(f"Sending bulk message delay {bulk_end_time-bulk_start_time}")
                     else:
                         print(f"[🎯] {self.name} received payload: {payload}")
                         await self.return_to_sender(route, f"ACK from {self.name}")
@@ -457,55 +347,21 @@ class NetNode():
             if(message_id in self.handled_paths):
                 # print(f"ignored")
                 return
-            # print(self.name,(self.ip,self.port),"Got path")
             self.handled_paths.add(message_id)
-            try:
-                # debug_route = data["debug_route"]
-                sub_type = data.get("sub_type", "default")
-                
+            try:                
                 count = int(data["count"])
-                name_route = []
-                # for mem in debug_route:
-                #     name_route.append(mem.get("name"))
-                # out = ' → '.join(name_route)
-                # print(out)
-                # print("------")
-                # print(f"Current postion: {count}")
-                # print(f"This node: {self.name}:Needed Node: {debug_route[count].get("name")}\nPATH received: {out}")
-                
-                # print("---------")
-                # print(f"current node {debug_route[count]}")
-                # print("")
                 route = data['route']
-                
-                
-
                 my_member = route[count]
                 try:
                     my_hash = self.compute_hashed_identity(my_member["salt"])
                 except Exception as e:
                     print(f"Hashing error {e}")
-                # my_member_deb = debug_route[count]
-                # print(f"Name:{self.name}:{my_member_deb["name"]}")
-                # if(self.name == my_member_deb['name']):
-                #     print("Match")
-                #     if my_hash == my_member["hash"]:
-                #         print("Hash work")
-                #     else:
-                #         print("Hash not work")
                 if my_hash == my_member["hash"]:
-                    # print(f"{self.name}: Stepping back from: {count}")
                     if count > 0:
                         data['count'] = count - 1
-                        # print(f"{data['count']}")
-                        
                         that_hash = route[data['count']]["hash"]
-                        # that_hash_name = debug_route[data['count']]
-                        # print(f"Next node: {that_hash_name.get("name")}|Current node: {self.name}")
                         if(my_hash == that_hash):
-                            # print("How?")
                             that_hash = route[count-1]["hash"]
-                            # that_hash_name = debug_route[count-1]
                             data['count'] = count - 2
                         end_hash = route[len(route)-1]["hash"]
                         if(that_hash == end_hash):
@@ -513,7 +369,6 @@ class NetNode():
                         # 
 
                         if(self.store_hash.get(that_hash,None) != None):
-                            # print("That worked",tuple(self.store_hash.get(that_hash,None)))
                             self.store_hash_time[that_hash] = datetime.now(timezone.utc).isoformat()
 
                             val = tuple(self.store_hash.get(that_hash,None))
@@ -521,9 +376,9 @@ class NetNode():
                                 print("Error")
                             await self.return_path(data,val)
                         else:
-                            # print(f"{self.name} Error with cache")
                             await self.return_path(data,debug_node_name="other loop")
                     else:
+                        sub_type = data.get("sub_type","default")
                         if(sub_type == "default"):
                             print(f"{self.name}: Back at main")
                             try:
@@ -532,17 +387,9 @@ class NetNode():
                                 print(f"End hash error {e}")
                             try:
                                 self.found_paths[end_hash.get("hash",None)] = route
-                                print("end_hash.get('name',None) == ",end_hash.get("hash",None))
                             except Exception as e:
                                 print(f"Logging found error {e}")
-                            try:
-                                # print("send route",route)
-                                # self.send_to_target(route, "Hello from start node!")
-                                pass
-                            except Exception as e:
-                                print(f"Send error {e}")
                         else:
-                            # print(f"{self.name},Got path return of type no_path. Adding to failed pathfinding attempts")
                             try:
                                 end_hash = route[len(route)-1]
                             except Exception as e:
@@ -551,8 +398,6 @@ class NetNode():
                                 inc = int(self.failed_paths.get(data.get("hash",None),0))
                                 inc+=1
                                 self.failed_paths[data.get("hash",None)] = inc
-
-                                # print("end_hash.get('name',None) == ",end_hash.get("hash",None))
                             except Exception as e:
                                 print(f"Logging found error {e}")
 
@@ -561,8 +406,6 @@ class NetNode():
                     # print(f"{self.name}: Hash mismatch in path backtracking")
 
             except Exception as e:
-                # for item in data.keys():
-                #     print(data[item],"|",type(data[item]))
                 print(f"{self.name} Path error: {e}")
         elif(data['type'] == "find"):
             try:
@@ -571,16 +414,9 @@ class NetNode():
                 route = list(data['route'])
                 route_hash = hash(tuple(frozenset(item.items()) for item in route))
                 route_hashes = list(item.get("hash") for item in route)
-                # print(">>",route_hashes)
                 route_id = (target_hash, route_hash)
-                
-                # if route_id in self.find_hashes_handled:
-                #     return
-                
-                # if(self.found_end_route.get(route_id,None) == route[0].get("hash")):
                 try:
                     if(route in self.found_end_route.get(route_id,None)):
-                        # return
                         return
                 except Exception as e:
                     pass
@@ -590,79 +426,37 @@ class NetNode():
                 #     # print("Handled find hash already, ignoring. Hash") 
                     return
                 self.find_hashes_handled.add(target_hash)
-                # self.find_hashes_handled.add(target_hash)
-                # self.found_hash_routes.add(hashable_route)
-                # debug_route = list(data['debug_route'])
-                # debug_route_f = debug_route[0]
-                # name_to_find = debug_route_f['name']
-                last_ip = data.get("my_ip",None)
+                last_ip = data.get("ip_combo",None)
                 self.store_hash[route[len(route)-1].get("hash")] = last_ip
-                
-                # print("last_ip",type(last_ip))
                 self.store_hash_time[route[len(route)-1].get("hash")] = datetime.now(timezone.utc).isoformat()
-                
-
-                # print(f"Find data: {data}")
-                first_node = route[0]
                 hash_to_find = target_hash
                 salt = data["salt"]
                 my_hash = self.compute_hashed_identity(salt)
                 if(len(route) > 20):
-                    # print("Killing search")
                     route_member = {"hash":my_hash,"salt":salt}
-                    # debug_route_member = {"name":self.name,"len_route":len(route)}
-                    # debug_route = list(data['debug_route'])
-                    # debug_route.append(debug_route_member)
                     message_id = data.get("message_id",None)
                     ret_data = {"type":"path","sub_type":"no_path","hash":target_hash,"salt": salt,"route":route,"count":len(route)-1}
                     that_hash = route[int(ret_data["count"])]["hash"]
 
                     
-                    # that_hash_name = debug_route[int(ret_data["count"])]["name"]
+
                     if(self.store_hash.get(that_hash,None) != None):
                         self.store_hash_time[that_hash] = datetime.now(timezone.utc).isoformat()
-                        # print("That worked",tuple(self.store_hash.get(that_hash,None)))
                         val = tuple(self.store_hash.get(that_hash,None))
                         if(val == None):
                             print("Error")
                         await self.return_path(ret_data,val)
                     else:
                         print("No match")
-                    # return
-                    # print(f"Failed to find({self.name})")
-                    # await self.return_path(ret_data)
-                    # print("Failed to find")
-                # if(my_hash == hash_to_find):
-                    # print(f"name: {self.name}|{name_to_find}")
                 elif(my_hash == hash_to_find):
-                    print("MAtch found")
-                    # self.found_end_route[target_hash] = route[0].get("hash")
-                    self.found_end_routes.setdefault(route_id, []).append(route)
-                    # self.found_end_routes.setdefault(target_hash, []).append(route)
+                    print("Found Match")
                     route_member = {"hash":my_hash,"salt":salt}
                     route.append(route_member)
-                    # debug_route_member = {"name":self.name,"len_route":len(route)}
-                    # debug_route = list(data['debug_route'])
-                    # debug_route.append(debug_route_member)
                     ret_data = {"type":"path","route":route,"count":len(route)-2,"hash":target_hash,"salt":salt}
                     ret_data["message_id"] = str(uuid.uuid4())
-                    # print(f"LAST NODE : {debug_route[len(route)-2]}")
-                    # ret_data = {"type":"path","hash":target_hash,"salt": salt,"route":route,"count":len(route)-1,"debug_route":debug_route}
-
-                    # print(f"{self.name}: {data.get("message_id")}: FOUND THE ROUTE:")
-                    self.found_route = True
-                    name_route = []
-                    # for mem in debug_route:
-                    #     name_route.append(mem.get("name"))
-                    # out = ' → '.join(name_route)
-                    # print(out)
-
                     that_hash = route[int(ret_data["count"])]["hash"]
-                    # that_hash_name = debug_route[int(ret_data["count"])]["name"]
                     if(self.store_hash.get(that_hash,None) != None):
                         self.store_hash_time[that_hash] = datetime.now(timezone.utc).isoformat()
-
-                        # print("That worked",tuple(self.store_hash.get(that_hash,None)))
                         val = tuple(self.store_hash.get(that_hash,None))
                         if(val == None):
                             print("Error: No value found for that hash")
@@ -671,25 +465,13 @@ class NetNode():
                     else:
                         print("No match")
                         await self.return_path(ret_data,debug_node_name="other run")
-                # await self.return_path(ret_data)
-                    # Will now send ret data BACK up the route
                 elif my_hash not in route_hashes:
                     route_member = {"hash":my_hash,"salt":salt}
                     route.append(route_member)
                     route_hash = hash(tuple(frozenset(item.items()) for item in route))
-                    # route_id = (target_hash, route_hash)
-                    # debug_route_member = {"name":self.name,"len_route":len(route)}
-                    # debug_route = list(data['debug_route'])
-                    # debug_route.append(debug_route_member)
-                    
                     self.store_hash[route[len(route)-1].get("hash")] = last_ip
-                    my_ip = (self.ip,self.port)
-                    # print(">>",my_ip)
-                    # for ip, _ in self.neighbors.items():
-                    #     print(ip)
-                    # time.sleep(10)
-                    # print(f"{self.name}: Continuing find from",my_ip,"to",route[0].get("hash"),"with salt",salt,"and target hash",target_hash)
-                    await self.continue_find(route,hash_to_find=hash_to_find,target=target_hash,salt=salt,my_ip=my_ip)
+                    ip_combo = (self.ip,self.port)
+                    await self.continue_find(route,hash_to_find=hash_to_find,target=target_hash,salt=salt,ip_combo=ip_combo)
             except Exception as e:
                 print(f"{self.name} find error {e}|{data}")
 

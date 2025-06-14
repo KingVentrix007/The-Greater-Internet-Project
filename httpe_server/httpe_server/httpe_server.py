@@ -324,7 +324,7 @@ class Httpe:
                         salt = edoi_json_data.get("salt", None)
                         name_hash = self.compute_hashed_identity(self.name, salt)
                         if name_hash == target_hash:
-                            print("Matched")
+                            # print("Got EDOI-NET connection")
                             route_member = {"hash":name_hash,"salt":salt}
                             route.append(route_member)
                             ret_data = {"type":"path","route":route,"count":len(route)-2,"hash":target_hash,"salt":salt,"node_ip":(self.host,self.port)}
@@ -428,7 +428,7 @@ class Httpe:
                     is_encrypted_packet = True
                     headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(new_lines)
                     end_enc_time_timer = time.time()
-                    print(f"Time to handle encrypted packet {end_enc_time_timer - start_enc_time_timer} seconds.")
+
 
             # ##print("headers>>",headers)
             packet_validation_time_start = time.time()
@@ -444,10 +444,6 @@ class Httpe:
             if(packet_id == None):
                 self._log_failed_verification(header_user_id,addr,"invalid packet")
                 err_res =  Response.error(message="packet_id missing",status_code =400)
-                ##print("Outdata: ",headers,version,is_initial_packet,initial_packet_type,method,location,body)
-                # conn.sendall(err_res.serialize().encode())
-                ##print("\n\n")
-                ##print(err_res.serialize().encode())
                 self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
                 return
             # ##print(f"HTTPE {method} {location} from {addr} with headers {headers}")
@@ -466,8 +462,6 @@ class Httpe:
                 # conn.sendall(err_res.serialize().encode())
                 self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
                 return
-            packet_validation_time_end = time.time()
-            print(f"Time to validate packet {packet_validation_time_end - packet_validation_time_start} seconds.")
             handler = self.routes.get((location, method))
             ##print(">>",location, method)
             try:
@@ -477,7 +471,6 @@ class Httpe:
 
                 ##print(f"Failed to lof file {e}")
             if handler:
-                print(f"Doing handler at {time.time()}")
                 sig = inspect.signature(handler)
                 if(len(sig.parameters) == 0):
 
@@ -495,8 +488,6 @@ class Httpe:
                     if not isinstance(result, Response):
                         result = Response(str(result))  # fallback
                     response = result.serialize()
-                    handler_end_time = time.time()
-                    print(f"Time for handler to handle request {handler_end_time - handler_start_time} seconds.")
             else:
                 # ##print("Cant find route for type:",initial_packet_type)
                 result = "Route Not Found"
@@ -561,7 +552,6 @@ class Httpe:
     
     def send_packet(self,conn,addr,data,route=None):
         try:
-            print(f"Sending packet at {time.time()}")
             if(self.is_edoi_node == False):
                 print("Sending using conn")
                 conn.sendall(data)
