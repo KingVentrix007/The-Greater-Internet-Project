@@ -1,0 +1,26 @@
+This file is for me to put notes for myself, temporary todo's and maths
+Started post:1749900466.5322673
+Got res:1749900466.4314132
+Delay = 
+
+
+Server send: 1749900466.5636454
+Client:1749900466.6139598
+
+Server logs Return: 1749900773.0493548
+Server sends return:1749900773.0493548
+Delay: 0
+
+Server Sends return:1749900773.0493548
+Client Gets return:1749900773.0703092
+Client code handles ret:1749900773.127883
+Delay:0.0209543704986572
+
+Client get ret:
+Client code handles ret:
+Delay: 0.0575737953186035
+
+
+
+
+

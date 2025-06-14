@@ -15,7 +15,7 @@ def send():
     start_time = time.time()
     res = client.send_request("POST","/PTS",body=json.dumps(data))
     end_time = time.time()
-    print("Time taken for POST request:", end_time - start_time, "seconds")
+    print("Time taken for POST request:", end_time - start_time, f"seconds. Start: {start_time}")
     # res = client.send_request("GET","/hello-world")
     print(res.status)
     print(res.json())

@@ -82,7 +82,7 @@ class HttpeResponse:
 class HttpeClient:
     """Custom secure HTTP-like client using symmetric AES and RSA for initial handshake"""
 
-    def __init__(self, host="127.0.0.1", port=8080,connect_to_edoi=False,edoi_port=None,edoi_ip=None,edoi_client_name = None,edoi_target=None,persistent=False):
+    def __init__(self, host="127.0.0.1", port=8080,connect_to_edoi=False,edoi_port=None,edoi_ip=None,edoi_client_name = None,edoi_target=None,persistent=False,debug_mode=False):
         """
         Initialize the class.
 
@@ -122,11 +122,9 @@ class HttpeClient:
         self.persistent = persistent
         self._shutdown_event = threading.Event()
         self.running = False
+        self._debug_mode = debug_mode
         if self.persistent == True:
             self.running = True
-            # threading.Thread(target=self._keep_alive, daemon=True).start()
-            # if self.persistent:
-            # print("[~] Client is in persistent mode. Awaiting termination...")
             self._shutdown_event.wait()  # Keep the thread alive
         if(self.use_edoi == True):
             threading.Thread(target=self.listen_for_message, daemon=True).start()
@@ -161,7 +159,7 @@ class HttpeClient:
             # ).decode(),
             
             "message_id": str(uuid.uuid4()),
-            "my_ip":('127.0.0.1',self.port)
+            "ip_combo":('127.0.0.1',self.port)
         }
             client_socket.sendall(json.dumps(packet).encode())
     def choose_path(self):
@@ -178,6 +176,7 @@ class HttpeClient:
         return shortest_path
             
     def handle_edoi_conn(self,data):
+        edoi_conn_timer_start = time.time()
         # print(data)
         edoi_packet_type = data.get("type",None)
         # print(edoi_packet_type, "EDOI packet type")
@@ -209,7 +208,7 @@ class HttpeClient:
             file.close()
             # print(f"Got packet at {time.time()}")
             payload = data["payload"]
-            path_used = data["route"]
+            # path_used = data["route"]
             # print("Ret path used: ",path_used)
             # print("Forward path used: ",self.edoi_path)
             # print("Message: ",payload)
@@ -229,6 +228,8 @@ class HttpeClient:
             if(my_hash == target_hash):
                 print("I dont know what to do now")
             print(data['hash']," EDOI target hash. Sending back path: ")
+        edoi_conn_timer_end = time.time()
+        print("Client:Time to handle edoi packet: ",edoi_conn_timer_end-edoi_conn_timer_start)
     def listen_for_message(self):
 
         # Listens for incoming messages on the specified port
@@ -262,8 +263,8 @@ class HttpeClient:
                             # print(f"[ΓêÜ] Received JSON: {json_data}")
                             # in_ip,in_port = addr
                             # neighbors[addr] = None
-                            # threading.Thread(target=self.handle_edoi_conn,args=(json_data,), daemon=True).start()
-                            self.handle_edoi_conn(json_data)
+                            threading.Thread(target=self.handle_edoi_conn,args=(json_data,), daemon=True).start()
+                            # self.handle_edoi_conn(json_data)
                                 
                             
                             # print(f"[ΓêÜ] Received JSON: {json_data}")
@@ -298,8 +299,6 @@ class HttpeClient:
             return None
 
     def _send_request_enc(self, method, location, headers=None, body=""):
-        # print(type(body),"|",type(""))
-        print(f"Client Prepare request at {time.time()}")
         if(type(body) != type("")):
             raise TypeError(f"Body must be of type str, current type is {type(body)}")
         """Send an encrypted packet after key exchange"""
@@ -319,20 +318,19 @@ class HttpeClient:
                 request_lines.append("END")
             except Exception as e:
                 print(f"Failed in setting headers {e}")
-            # print("httpe_client_packet_id: ",headers.get("packet_id"))
             if method.upper() == "POST":
                 request_lines.append(body)
                 request_lines.append("END")
-            # print(request_lines)
             try:
                 plain_request = "\n".join(request_lines)
             except Exception as e:
                 print(f"_send_request_enc plain_text error {e}")
-            # enc_request = sec.fernet_encrypt(plain_request, self._aes_key)
             try:
-                start_ecrypt_timer = time.time()
+                start_encrypt_timer = time.time()
                 enc_request = self._fernet_class.encrypt(plain_request.encode("utf-8"))
-                end_enrypt_timer = time.time()
+                end_encrypt_timer = time.time()
+                if(self._debug_mode == True):
+                    print(f"[DEBUG]:Client:Time to encrypt packet:{end_encrypt_timer-start_encrypt_timer}")
                 # print(f"Encryption took {end_enrypt_timer - start_ecrypt_timer} seconds")
             except Exception as e:
                 print(f"enc_request error {e}")
@@ -351,36 +349,32 @@ class HttpeClient:
                 print(f"full_data error {e}")
                 return
             try:
+                send_time_start = time.time()
                 if(self.use_edoi == False):
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         s.connect((self.host, self.port))
                         s.sendall(full_data.encode())
                         response = self._receive_full_response(s)
+                    send_time_end = time.time()
+                    if(self._debug_mode == True):
+                        print(f"[DEBUG]:Client:Time to send packet: {send_time_end-send_time_start}")
                 else:
-                    send_time_start = time.time()
-                    print(f"Client send request at {time.time()}")
-
-                    self.edoi_send_to_target(full_data)
                     
+                    self.edoi_send_to_target(full_data)
                     response = self._receive_full_response(None)
                     send_time_end = time.time()
-                    # print("Time taken to send request(and receive) via EDOI:", send_time_end - send_time_start, "seconds")
-
-                    # print("Use EDOI")
+                    if(self._debug_mode == True):
+                        print(f"[DEBUG]:Client:Time to send EDOI-NET packet: {send_time_end-send_time_start}")
             except Exception as e:
                 print(f"_send_request_enc send error {e}")
 
             res = HttpeResponse(response)
-            # decrypted_body = sec.fernet_decrypt(res.body(), self._aes_key)
-            # print(res.body())
-            # print(res.status_code)
-            # print(res._body_str)
             try:
-                # print("res.body(): ",res.body())
                 decrypt_time_start = time.time()
                 decrypted_body = self._fernet_class.decrypt(res.body()).decode()
                 decrypt_time_end = time.time()
-                print("Decryption took", decrypt_time_end - decrypt_time_start, "seconds")
+                if(self._debug_mode == True):
+                    print("[DEBUG]:Client:Time to decrypt packet", decrypt_time_end - decrypt_time_start, "seconds")
             except Exception as e:
                 print(f"Error in decrypted_body {e}")
                 return None
@@ -390,13 +384,13 @@ class HttpeClient:
             print(f"Error in _send_request_enc: {e}")
             return None
     def edoi_send_to_target(self,payload):
-        print("Starting sending packet preparation at", time.time())
         count = 1
         packet = {
             "type": "forward",
             "route": self.choose_path(),
             "count": count,
-            "payload": payload
+            "payload": payload,
+            "ip_combo":(self.host,self.port)
         }
         # Send to next hop
         # next_hop = route[count]
@@ -404,7 +398,7 @@ class HttpeClient:
         # time.sleep(1)
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
-        print(f"Client:Forward:{time.time()}")
+        # print(f"Client:Forward:{time.time()}")
         for_t = time.time()
         # httpe_logging.sync_log(f"Client:Forward:{time.time()}")
 
@@ -430,7 +424,7 @@ class HttpeClient:
                     if not chunk:
                         break
                     chunks.append(chunk)
-                print("Chunks: ",chunks)
+                # print("Chunks: ",chunks)
                 return b''.join(chunks).decode()
             except Exception as e:
                 raise ConnectionError(f"Error receiving data: {e}")
@@ -439,7 +433,7 @@ class HttpeClient:
             while self.got_edoi_res == False:
                 pass
             
-            # print(f"Got res at: {time.time()}")
+            print(f"Got res at: {time.time()}")
             ret_data = self.edoi_res
             self.got_edoi_res = False
             time_waiting_res_end = time.time()

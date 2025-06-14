@@ -309,11 +309,11 @@ class NetNode():
                             val = None
                         if(val != None):
                             self.store_hash_time[hash_to_search] = datetime.now(timezone.utc).isoformat()
-
+                            print(f"{self.name}:Calling send_data for return at {time.time()}")
                             await self.send_data(next_packet, val,debug_node_name="return",conn=got_return_packet_time)
-                            
+                            print(f"{self.name}:Call send data ended at {time.time()}")
                         else:
-                            
+                            print(f"{self.name}:Bulking return")
                             for ip, _ in self.neighbors.items():
                                 await self.send_data(next_packet, ip,"type return")
                     else:
@@ -333,7 +333,7 @@ class NetNode():
                 my_hash = self.compute_hashed_identity(route[count]["salt"])
                 
                 if self.compute_hashed_identity(route[count]["salt"]) == route[count]["hash"]:
-                    print(f"{self.name}:Forward:{time.time()}")
+                    # print(f"{self.name}:Forward:{time.time()}")
                     file = open("../../run_output.log","a")
                     file.write(f"{self.name}:Forward:{time.time()}\n")
                     file.close()
@@ -351,7 +351,7 @@ class NetNode():
                             next_ip = tuple(self.store_hash.get(route[count+1]["hash"]))
                             await self.send_data(next_packet, next_ip,debug_node_name="forward",conn=got_forward_packet_start)
                         else:
-                            print("[!] No stored hash found for next hop, bulk sending forward packet.")
+                            # print("[!] No stored hash found for next hop, bulk sending forward packet.")
                             bulk_start_time = time.time()
                             for ip, _ in self.neighbors.items():
                                 await self.send_data(next_packet, ip,debug_node_name="forward",conn=got_forward_packet_start)

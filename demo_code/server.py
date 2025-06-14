@@ -1,5 +1,5 @@
 import httpe_server
-server = httpe_server.Httpe()
+server = httpe_server.Httpe(debug_mode=True)
 
 
 @server.path("/TEST",method="POST")

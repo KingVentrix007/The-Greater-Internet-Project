@@ -18,7 +18,7 @@ import logging
 import threading
 
 class Httpe:
-    def __init__(self,server_host="127.0.0.1",Port=8080,running_version="1.0",crte_file_path="cert.crte",key_dir_path=".",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None):
+    def __init__(self,server_host="127.0.0.1",Port=8080,running_version="1.0",crte_file_path="cert.crte",key_dir_path=".",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None,debug_mode=False):
         """
         Initialize the class.
 
@@ -66,6 +66,7 @@ class Httpe:
         self.edoi_ip = edoi_ip
         self.edoi_port = edoi_port
         self.edoi_return_routes = {}
+        self._debug_mode = debug_mode
         if(self.is_edoi_node == True):
             self._send_connect()
     def _shutdown(self, signum, frame):
@@ -280,11 +281,11 @@ class Httpe:
             message = json.dumps({"type": "connect","tup":(self.host,self.port)}).encode('utf-8')
             client_socket.sendall(message)
     def _handle_client(self, conn, addr):
-        print(f"Got request at {time.time()}")
         # start_time_timer = time.start()
         try:
             try:
                 data = b""
+                res_time_start = time.time()
                 while True:
                     chunk = conn.recv(1024)
                     if not chunk:
@@ -293,7 +294,9 @@ class Httpe:
                     # ##print(chunk)
                     if b"END\n" in data or b"END\r\n" in data or b"END" in data:
                         break
-                
+                res_time_end = time.time()
+                if(self._debug_mode == True):
+                    print(f"[DEBUG]:Server:Time to receive packet:{res_time_end-res_time_end}")
             except Exception as e:
                 self._log_internal_error(e)
                 err_res =  Response.error(message="Internal Server Error",status_code=500)
@@ -351,7 +354,7 @@ class Httpe:
                     end_hash = end_point.get("hash",None)
                     my_hash = self.compute_hashed_identity(self.name,salt)
                     if(my_hash == end_hash):
-                        print(f"Server:Forward:{time.time()}")
+                        # print(f"Server:Forward:{time.time()}")
                         file = open("../run_output.log","a")
                         file.write(f"Server:Forward:{time.time()}\n")
                         file.close()
@@ -392,9 +395,11 @@ class Httpe:
             user_id_from_token = None
             # ##print(text)
             reading_headers = False
+            procsess_packet_start = time.time()
             headers,version,is_initial_packet,initial_packet_type,method,location,body  = self._handle_packet_contents(lines)
-            ##print(">>",version)
-            ##print(">>",initial_packet_type)
+            procsess_packet_end = time.time()
+            if(self._debug_mode == True):
+                print("[DEBUG]:Server:Time to extract packet info:",procsess_packet_end-procsess_packet_start)
             if(version != f"HTTPE/{self.version}"):
                 err_res =  Response.error(message="Invalid Version",status_code=400)
                 # conn.sendall(err_res.serialize().encode())
@@ -414,8 +419,11 @@ class Httpe:
                     self.send_packet(conn,addr,data=res_data.serialize().encode(),route=route)
                     return
                 elif(initial_packet_type == "REQ_ENC"):
-                    start_enc_time_timer = time.time()
+                    handle_enc_request_time = time.time()
                     new_lines,user_id_from_token =  self._handle_enc_request(lines)
+                    handle_enc_request_time_end = time.time()
+                    if(self._debug_mode == True):
+                        print("[DEBUG]:Server:Time to handle encrypted packet:",handle_enc_request_time_end-handle_enc_request_time)
                     if(new_lines == None or user_id_from_token == None):
                         #! Remove {e} in prod
                         # self._log_internal_error(e)
@@ -462,6 +470,9 @@ class Httpe:
                 # conn.sendall(err_res.serialize().encode())
                 self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
                 return
+            validate_packet_time_end = time.time()
+            if(self._debug_mode == True):
+                print("[DEBUG]:Server:Time to validate packet:",validate_packet_time_end-packet_validation_time_start)
             handler = self.routes.get((location, method))
             ##print(">>",location, method)
             try:
@@ -496,7 +507,11 @@ class Httpe:
                 response = result.serialize()
 
             # conn.sendall(response.encode())
+            time_send_packet_start = time.time()
             self.send_packet(conn,addr,data=response.encode(),route=route)
+            time_send_packet_end = time.time()
+            if(self._debug_mode == True):
+                print("[DEBUG]:Server:Time to send packet:",time_send_packet_end-time_send_packet_start)
         except Exception as e:
             self._log_internal_error(e)
 
@@ -553,7 +568,6 @@ class Httpe:
     def send_packet(self,conn,addr,data,route=None):
         try:
             if(self.is_edoi_node == False):
-                print("Sending using conn")
                 conn.sendall(data)
             else:
                 if(route == None or len(route) < 2):
@@ -566,7 +580,7 @@ class Httpe:
                     "payload": data.decode("utf-8"),
                     "ip_combo":(self.host,self.port)
                 }
-                print(f"Server:Return:{time.time()}")
+                # print(f"Server:Return:{time.time()}")
                 file = open("../run_output.log","a")
                 file.write(f"Server:Return:{time.time()}\n")
                 file.close()
