@@ -151,17 +151,39 @@ class NetNode():
    
     async def continue_find(self,route,hash_to_find,debug_route=None,target=None,salt=None,ip_combo=None):
         """
-        Continue find request #TODO Continue making comments and code clean-up
+        Continue find request
+
+        Args
+        route(list): The current path that has be used
+        hash_to_find: Unused
+        debug_route: Unused
+        Target(str): The hash of the server being searched for
+        Salt(str): The salt used to create the hash
+        ip_combo(tuple): ip,port of the node sending the continue_find request 
         """
+
+        # Create packet
         packet = {"type":"find","route":route,"hash":target,"salt":salt, "message_id": str(uuid.uuid4()),"ip_combo":ip_combo}
+        
+        # Insure packet has a message_id value
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
         
-        for ip, key in self.neighbors.items():
+        # Save time before send
+        if(self.debug_mode == True):
+            before_send_all = time.time()
+        #Loop through ALL neighbors and send packet
+        for ip, _ in self.neighbors.items():
             
             await self.send_data(packet,ip,debug_node_name="cont find")
+        # Save time after send
+        if(self.debug_mode == True):
+            after_send_all = time.time()
+            #Output debug message
+            print(f"[DEBUG]: {self.name}:Continue:Time to send packets:{after_send_all-before_send_all}")
 
     async def return_path(self,path,addr=None,debug_node_name=None):
+        
         if(addr == None):
             for ip, _ in self.neighbors.items():
                 await self.send_data(path,ip,debug_node_name=f"Scan send: {debug_node_name}")
