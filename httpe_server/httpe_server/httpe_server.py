@@ -327,7 +327,7 @@ class Httpe:
                         salt = edoi_json_data.get("salt", None)
                         name_hash = self.compute_hashed_identity(self.name, salt)
                         if name_hash == target_hash:
-                            # print("Got EDOI-NET connection")
+                            print("Got EDOI-NET connection")
                             route_member = {"hash":name_hash,"salt":salt}
                             route.append(route_member)
                             ret_data = {"type":"path","route":route,"count":len(route)-2,"hash":target_hash,"salt":salt,"node_ip":(self.host,self.port)}
@@ -339,13 +339,13 @@ class Httpe:
                                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
                                     client_socket.connect((self.edoi_ip, self.edoi_port))
                                     client_socket.sendall(encoded)
-                                ##print("Sent path message")
+                                print("Sent path message")
                                 return
                             except Exception as e:
 
                                 print(f"[!] Error sending data: {e}")
                 elif(edoi_packet_type == "forward"):
-                    
+                    print("Forward request received. Processing...")
                     count = edoi_json_data.get("count",None)
                     route = edoi_json_data.get("route",None)
                     end_point = route[count]

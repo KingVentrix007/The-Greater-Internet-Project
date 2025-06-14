@@ -137,7 +137,7 @@ class NetNode():
         host, port = addr # Extract values from tuple (ip,port)
         try:
             # Convert to json
-            json_str = json.dumps(data) 
+            json_str = json.dumps(data)+"\n"
             encoded = json_str.encode("utf-8")
 
 
@@ -146,6 +146,7 @@ class NetNode():
             await writer.drain()
             writer.close() # Close writer
             await writer.wait_closed() # non-blocking ensure writer is closed
+            print(f"{self.name}:Send completed to {host}:{port} with message_id {message_id}")
         except Exception as e: # General catch all Exception
             print(f"[ERROR]: {self.name}: send_data error {e}")
    
@@ -180,14 +181,16 @@ class NetNode():
         if(self.debug_mode == True):
             after_send_all = time.time()
             #Output debug message
-            print(f"[DEBUG]: {self.name}:Continue:Time to send packets:{after_send_all-before_send_all}")
+            # print(f"[DEBUG]: {self.name}:Continue:Time to send packets:{after_send_all-before_send_all}")
 
     async def return_path(self,path,addr=None,debug_node_name=None):
-        
+        print(f"{self.name}:Returning path")
         if(addr == None):
+            print(f"{self.name}:Bulk sending")
             for ip, _ in self.neighbors.items():
                 await self.send_data(path,ip,debug_node_name=f"Scan send: {debug_node_name}")
         else:
+            print(f"{self.name}:Sending to {addr} with debug node name {debug_node_name}")
             await self.send_data(path,addr=addr,debug_node_name=debug_node_name)
     async def hash_str(self,name,salt):
         digest = hashes.Hash(hashes.SHA256())
@@ -211,31 +214,6 @@ class NetNode():
         for ip, key in self.neighbors.items():
             await self.send_data(packet,ip,debug_node_name="send packet")
         return target_hash
-    async def return_to_sender(self, route, payload):
-        count = len(route) - 2
-        packet = {
-            "type": "return",
-            "route": route,
-            "count": count,
-            "ip_combo":tuple(self.ip, self.port),
-            "payload": payload
-        }
-        # Send to previous hop
-        for ip, _ in self.neighbors.items():
-            await self.send_data(packet, ip,"return_to_sender")
-    async def send_to_target(self, route, payload):
-        count = 1
-        packet = {
-            "type": "forward",
-            "route": route,
-            "count": count,
-            "payload": payload
-        }
-        time.sleep(1)
-        message_id = packet.get("message_id",None)
-        packet["message_id"] = message_id or str(uuid.uuid4())
-        for ip, _ in self.neighbors.items():
-            await self.send_data(packet, ip,"send to target")
 
     async def handle_conn(self,data,addr,conn):
         message_id = data.get("message_id")
@@ -249,6 +227,7 @@ class NetNode():
             self.is_connect_node = True
             ip_port_combo = tuple(data.get("tup"))
             self.neighbors[ip_port_combo] = None
+            print(f"Object connected to {self.name} at {ip_port_combo}")
         elif data['type'] == "neighbors":
             ip_port = tuple(data.get("tup"))
             self.neighbors[ip_port] = None
@@ -359,7 +338,7 @@ class NetNode():
                             print(f"Sending bulk message delay {bulk_end_time-bulk_start_time}")
                     else:
                         print(f"[🎯] {self.name} received payload: {payload}")
-                        await self.return_to_sender(route, f"ACK from {self.name}")
+                        # await self.return_to_sender(route, f"ACK from {self.name}")
             except Exception as e:
                 print(f"[!] {self.name}Forward error: {e}")
 
@@ -367,7 +346,7 @@ class NetNode():
             
             message_id = data["message_id"]
             if(message_id in self.handled_paths):
-                # print(f"ignored")
+                print(f"ignored")
                 return
             self.handled_paths.add(message_id)
             try:                
@@ -533,7 +512,7 @@ class NetNode():
 
 # The following code is testing code
 BASE_PORT = 20000
-NUM_NODES = 20
+NUM_NODES = 200
 NEIGHBOR_COUNT = 5  # Or 50 if needed
 def find_all_paths(nodes,start_node, target_name, max_paths=500):
     paths = []
