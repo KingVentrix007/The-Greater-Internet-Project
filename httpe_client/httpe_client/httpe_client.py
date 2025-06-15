@@ -48,6 +48,7 @@ class HttpeClient:
             return await self._client.send_request(method, location, body=body)
         except Exception as e:
             raise RuntimeError(f"Failed to send request: {e}") from e
+    
 
 
 class HttpeResponse:
@@ -163,6 +164,22 @@ class HttpeClientCore:
         self.running = False
         self._debug_mode = debug_mode
         self._silent_mode = silent_mode
+        self._event_hooks = {
+            'connection_established': [],
+            'handshake_complete': [],
+            'key_exchange_done': [],
+            'encryption_ready': [],
+            'authenticated': [],
+        }
+
+    def on(self, event_name, callback):
+        if event_name in self._event_hooks:
+            self._event_hooks[event_name].append(callback)
+        else:
+            raise ValueError(f"Unknown event: {event_name}")
+    async def _trigger_event(self, event_name, *args, **kwargs):
+        for callback in self._event_hooks.get(event_name, []):
+            await callback(*args, **kwargs)
     async def start(self):
         if self.use_edoi:
             asyncio.create_task(self.listen_for_message())
