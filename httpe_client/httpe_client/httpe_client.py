@@ -111,7 +111,7 @@ class HttpeResponse:
 class HttpeClientCore:
     """Custom secure HTTP-like client using symmetric AES and RSA for initial handshake"""
 
-    def __init__(self, host="127.0.0.1", port=8080,connect_to_edoi=False,edoi_port=None,edoi_ip=None,edoi_client_name = None,edoi_target=None,persistent=False,debug_mode=False):
+    def __init__(self, host="127.0.0.1", port=8080,connect_to_edoi=False,edoi_port=None,edoi_ip=None,edoi_client_name = None,edoi_target=None,debug_mode=False,silent_mode=False, pem_path=None, pubkey=None, cert=None, token=None):
         """
         Initialize the class.
 
@@ -149,10 +149,11 @@ class HttpeClientCore:
         self.got_edoi_res = False
         self._got_edoi_event = asyncio.Event()
         self.handle_con_in_use = False
-        self.persistent = persistent
+        self.persistent = False
         self._shutdown_event = threading.Event()
         self.running = False
         self._debug_mode = debug_mode
+        self._silent_mode = silent_mode
     async def start(self):
         if self.use_edoi:
             asyncio.create_task(self.listen_for_message())
@@ -173,11 +174,6 @@ class HttpeClientCore:
             while (self.edoi_path is None):
                 await asyncio.sleep(0.1)  # wait for the path to be set
             return self.edoi_path 
-
-        # # Find the path with the fewest nodes (i.e., shortest path)
-        # shortest_path = min(self.all_edoi_paths, key=len)
-        # print("Choosing shortest path with {} nodes.".format(len(shortest_path)) + "\nPath: " + str(shortest_path) + "\n")
-        # return shortest_path
             
     async def handle_edoi_conn(self, data):
         edoi_conn_timer_start = time.time()
@@ -192,39 +188,35 @@ class HttpeClientCore:
         elif edoi_packet_type == "find":
             await self._handle_find_packet(data)
         else:
-            print("Unknown EDOI packet type received: ", edoi_packet_type)
+            if(self._silent_mode == False):
+                print("Unknown EDOI packet type received: ", edoi_packet_type)
         edoi_conn_timer_end = time.time()
         if(self._debug_mode == True):
             print("Client:Time to handle edoi packet: ", edoi_conn_timer_end - edoi_conn_timer_start)
 
     async def _handle_path_packet(self, data, sub_type):
         if sub_type == "default":
-            # print("in path")
-            # print("Go path")
             route = data.get("route", None)
             if self.edoi_path is None:
                 self.edoi_path = route
                 self.all_edoi_paths.append(route)
-                # print("Found path")
             else:
-                print("Go new path")
                 self.all_edoi_paths.append(route)
         elif sub_type == "no_path":
-            # print("No path")
             self.no_path_res_count += 1
             if self.no_path_res_count > 5 and self.edoi_path is None:
                 print("No path found for target. Please try again later. EDOI target:", self.edoi_target)
 
     async def _handle_return_packet(self, data):
-        # print("in return packet")
-        with open("../run_output.log", "a") as file:
-            file.write(f"Client:Return:{time.time()}\n")
+        if(self._debug_mode == True):
+            with open("../run_output.log", "a") as file:
+                file.write(f"Client:Return:{time.time()}\n")
         payload = data.get("payload", None)
         self.edoi_res = payload
         self._got_edoi_event.set()
 
     async def _handle_find_packet(self, data):
-        print("in find")
+        # print("in find")
         target_hash = data["hash"]
         route = data["route"]
         end_node = route[-1]
@@ -236,28 +228,28 @@ class HttpeClientCore:
         salt = data["salt"]
         my_hash = self.compute_hashed_identity(self.name, salt)
         if my_hash == target_hash:
-            print("I don't know what to do now")
+            print("This shouldn't happen. Clients Cannot be targets. EDOI target hash:", target_hash)
+            
 
-        print(data["hash"], "EDOI target hash. Sending back path:")
+        # print(data["hash"], "EDOI target hash. Sending back path:")
 
 
     async def handle_connection(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         start_time = asyncio.get_event_loop().time()
         addr = writer.get_extra_info('peername')
-        print("hello from", addr, "handling connection...")
+        # print("hello from", addr, "handling connection...")
         try:
             # Read until newline
             data = await reader.read(-1) 
             decoded = data.decode('utf-8').strip()
             json_data = json.loads(decoded)
-            print(f"[+] Received data from {addr}: {json_data}")
+            if(self._silent_mode == False):
+                print(f"[+] Received data from {addr}: {json_data}")
             await self.handle_edoi_conn(json_data)
 
         except asyncio.IncompleteReadError:
             print(f"[!] Incomplete read from {addr}")
         except json.JSONDecodeError as e:
-            print("DECODED DATA: \n",decoded)
-            print("END OF DECODED DATA\n")
             print(f"[!] JSON decode error: {e}")
         except Exception as e:
             print(f"[!] General error: {e}")
@@ -265,7 +257,8 @@ class HttpeClientCore:
             writer.close()
             await writer.wait_closed()
             end_time = asyncio.get_event_loop().time()
-            print(f"[] Time to handle connection: {end_time - start_time:.6f} seconds")
+            if(self._debug_mode == True):
+                print(f"[DEBUG] Time to handle connection: {end_time - start_time:.6f} seconds")
 
     async def listen_for_message(self):
         server = await asyncio.start_server(self.handle_connection, '127.0.0.1', self.port)
@@ -275,7 +268,8 @@ class HttpeClientCore:
             await server.serve_forever()
     async def _send_connect_async(self):
         """Connect to the EDOI server and send a connection message."""
-        print("Connecting to EDOI server at {}:{}".format(self.edoi_ip, self.edoi_port))
+        if(self._silent_mode == False):
+            print("Connecting to EDOI server at {}:{}".format(self.edoi_ip, self.edoi_port))
         _, writer = await asyncio.open_connection(self.edoi_ip, self.edoi_port)
         message = json.dumps({"type": "connect", "tup": (self.host, self.port)}).encode('utf-8')
         writer.write(message)
@@ -284,7 +278,8 @@ class HttpeClientCore:
         await writer.wait_closed()
 
     async def get_edoi_server_path_async(self):
-        print("Getting EDOI server path asynchronously...")
+        if(self._silent_mode == False):
+            print("Getting EDOI server path asynchronously...")
         _, writer = await asyncio.open_connection(self.edoi_ip, self.edoi_port)
         client_hash = self.compute_hashed_identity(self.name,self.salt)
         target_hash = self.compute_hashed_identity(self.edoi_target,self.salt)
@@ -307,21 +302,22 @@ class HttpeClientCore:
         await writer.drain()
         writer.close()
         await writer.wait_closed()
-        print("Sent path request to EDOI server. Waiting for response...")
+        if(self._silent_mode == False):
+            print("Sent path request to EDOI server. Waiting for response...")
     async def send_request(self, method, location, headers=None, body="", use_httpe=True):
         """Send an encrypted request to the server, establishing connection if needed"""
         try:
             if not self.secure and use_httpe:
 
                 print("Is connecting")
-            print("headers >",headers)
             return await self._send_request_enc(method, location, headers, body)
         except Exception as e:
             print(f"Error in send_request: {e}")
             return None
 
     async def _send_request_enc(self, method, location, headers=None, body=""):
-        print(f"Sending ENC packet to EDOI server. Method: {method}, Location: {location}")
+        if(self._silent_mode == False):
+            print(f"Sending ENC packet to EDOI server. Method: {method}, Location: {location}")
         if not isinstance(body, str):
             raise TypeError(f"Body must be of type str, current type is {type(body)}")
 
@@ -337,7 +333,8 @@ class HttpeClientCore:
         try:
             send_start = time.time()
             if self.use_edoi:
-                print("[DEBUG]:Client:Sending packet to EDOI server")
+                if(self._debug_mode):
+                    print("[DEBUG]:Client:Sending packet to EDOI server")
                 await self.edoi_send_to_target(encrypted)
                 response = await self._receive_full_response(None)
                 
@@ -393,7 +390,6 @@ class HttpeClientCore:
             return None
 
     def _send_directly(self, data):
-        print("sending direct")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((self.host, self.port))
             s.sendall(data.encode())
@@ -415,21 +411,23 @@ class HttpeClientCore:
 
     async def _receive_full_response(self,s) -> str:
         if(self.use_edoi == True):
-            print("Waiting for full response...")
+            if(self._silent_mode == False):
+                print("Waiting for EDOI response...")
             await self._got_edoi_event.wait()
-            print("Received EDOI event, processing response...")
+            if(self._silent_mode == False):
+                print("Received EDOI event, processing response...")
             self._got_edoi_event.clear()
 
             return self.edoi_res
         else:
-            pass
-            # response = b""
-            # while True:
-            #     part = s.recv(4096)  # Receive in chunks (4096 bytes is a common size)
-            #     if not part:
-            #         break  # No more data, connection closed by server
-            #     response += part
-            # return response.decode('utf-8')
+            # pass
+            response = b""
+            while True:
+                part = s.recv(4096)  # Receive in chunks (4096 bytes is a common size)
+                if not part:
+                    break  # No more data, connection closed by server
+                response += part
+            return response.decode('utf-8')
             
 
     async def _connection_send(self, request_data: str) -> HttpeResponse:
@@ -446,13 +444,15 @@ class HttpeClientCore:
                 return HttpeResponse("ERROR: Connection failed")
         else:
             await self.edoi_send_to_target(request_data)
-            print("Connection send completed, waiting for response...")
+            if(self._silent_mode == False):
+                print("Connection send completed, waiting for response...")
             response = await self._receive_full_response(None)
             return HttpeResponse(response)
 
     async def _init_connection(self):
         """Initial secure handshake with server"""
-        print("Initializing secure connection with server...")
+        if(self._silent_mode == False):
+            print("Initializing secure connection with server...")
         try:
             self._client_id = uuid.uuid4()
             self._fernet_class = httpe_fernet.HttpeFernet()
@@ -557,6 +557,7 @@ class HttpeClientCore:
             # Send a message to the EDOI node
             message = json.dumps(packet).encode('utf-8')
             client_socket.sendall(message)
-        file = open("../run_output.log","a")
-        file.write(f"Client:Forward:{for_t}\n")
-        file.close()
+        if(self._debug_mode == True):
+            file = open("../run_output.log","a")
+            file.write(f"Client:Forward:{for_t}\n")
+            file.close()

@@ -5,7 +5,7 @@ import httpe_client
 import json
 import time
 import asyncio
-client = httpe_client.HttpeClient(port=5400,connect_to_edoi=True,edoi_ip='127.0.0.1',edoi_port=20199,edoi_target="HTTPE",edoi_client_name="TestC")
+client = httpe_client.HttpeClient(port=5400,connect_to_edoi=True,edoi_ip='127.0.0.1',edoi_port=20199,edoi_target="HTTPE",edoi_client_name="TestC",silent_mode=True,)
 
 
 async def send():
