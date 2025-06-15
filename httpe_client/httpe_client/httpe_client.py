@@ -169,7 +169,7 @@ class HttpeClientCore:
         digest.update((name + salt).encode())
         return digest.finalize().hex()
     async def choose_path(self):
-            print("Choose path")
+            # print("Choose path")
             while (self.edoi_path is None):
                 await asyncio.sleep(0.1)  # wait for the path to be set
             return self.edoi_path 
@@ -183,7 +183,7 @@ class HttpeClientCore:
         edoi_conn_timer_start = time.time()
         edoi_packet_type = data.get("type", None)
         sub_type = data.get("sub_type", "default")
-        print(edoi_packet_type, "EDOI packet type")
+        # print(edoi_packet_type, "EDOI packet type")
 
         if edoi_packet_type == "path":
             await self._handle_path_packet(data, sub_type)
@@ -194,27 +194,29 @@ class HttpeClientCore:
         else:
             print("Unknown EDOI packet type received: ", edoi_packet_type)
         edoi_conn_timer_end = time.time()
-        print("Client:Time to handle edoi packet: ", edoi_conn_timer_end - edoi_conn_timer_start)
+        if(self._debug_mode == True):
+            print("Client:Time to handle edoi packet: ", edoi_conn_timer_end - edoi_conn_timer_start)
 
     async def _handle_path_packet(self, data, sub_type):
         if sub_type == "default":
-            print("in path")
-            print("Go path")
+            # print("in path")
+            # print("Go path")
             route = data.get("route", None)
             if self.edoi_path is None:
                 self.edoi_path = route
                 self.all_edoi_paths.append(route)
-                print("Found path")
+                # print("Found path")
             else:
                 print("Go new path")
                 self.all_edoi_paths.append(route)
         elif sub_type == "no_path":
+            # print("No path")
             self.no_path_res_count += 1
             if self.no_path_res_count > 5 and self.edoi_path is None:
                 print("No path found for target. Please try again later. EDOI target:", self.edoi_target)
 
     async def _handle_return_packet(self, data):
-        print("in return packet")
+        # print("in return packet")
         with open("../run_output.log", "a") as file:
             file.write(f"Client:Return:{time.time()}\n")
         payload = data.get("payload", None)

@@ -434,6 +434,7 @@ class NetNode():
                 salt = data["salt"]
                 my_hash = self.compute_hashed_identity(salt)
                 if(len(route) > 20):
+                    print("No more than 20 hops allowed, ignoring request. Route: ", route)
                     route_member = {"hash":my_hash,"salt":salt}
                     message_id = data.get("message_id",None)
                     ret_data = {"type":"path","sub_type":"no_path","hash":target_hash,"salt": salt,"route":route,"count":len(route)-1}
@@ -473,6 +474,8 @@ class NetNode():
                     self.store_hash[route[len(route)-1].get("hash")] = last_ip
                     ip_combo = (self.ip,self.port)
                     await self.continue_find(route,hash_to_find=hash_to_find,target=target_hash,salt=salt,ip_combo=ip_combo)
+                else:
+                    print("Not really sure what to do here, but ignoring. Hash: ", my_hash, " Route: ", route)
             except Exception as e:
                 print(f"{self.name} find error {e}|{data}")
 
