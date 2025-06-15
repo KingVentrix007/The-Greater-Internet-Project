@@ -37,8 +37,17 @@ class HttpeClient:
 
     async def send_request(self, method, location, body=None):
         if self._client is None:
-            await self.init()
-        return await self._client.send_request(method, location, body=body)
+            raise Warning("Client not initialized. Call `start()` before sending requests.")
+        if not isinstance(method, str):
+            raise TypeError("Method must be a string.")
+        if not isinstance(location, str):
+            raise TypeError("Location must be a string.")
+        if(body == None):
+            raise ValueError("Body cannot be None. Use an empty string if no body is needed.")
+        try:
+            return await self._client.send_request(method, location, body=body)
+        except Exception as e:
+            raise RuntimeError(f"Failed to send request: {e}") from e
 
 
 class HttpeResponse:

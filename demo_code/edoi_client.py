@@ -9,7 +9,7 @@ client = httpe_client.HttpeClient(port=5400,connect_to_edoi=True,edoi_ip='127.0.
 
 
 async def send():
-    # client = httpe_client.HttpeClientCore(port=5400,connect_to_edoi=True,edoi_ip='127.0.0.1',edoi_port=20199,edoi_target="HTTPE",edoi_client_name="TestC")
+    
 
     global client
     print("Starting up client...")
