@@ -1,6 +1,3 @@
-
-
-
 import httpe_client
 import json
 import time
