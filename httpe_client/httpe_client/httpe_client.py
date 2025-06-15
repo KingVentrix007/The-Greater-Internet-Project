@@ -12,6 +12,26 @@ import threading
 from cryptography.hazmat.primitives import hashes
 import asyncio
 import time
+
+
+
+# Singleton-style wrapper
+class Httpe:
+    _client_instance = None
+
+    def __init__(self, **kwargs):
+        if not Httpe._client_instance:
+            Httpe._client_instance = HttpeClientCore(**kwargs)
+
+        self._client = Httpe._client_instance
+
+    async def start(self):
+        await self._client.start()
+
+    async def send_request(self, method, location, body=None):
+        return await self._client.send_request(method, location, body)
+
+
 class HttpeResponse:
     """Parses HTTPE responses in the format: headers + END + body"""
 
@@ -79,7 +99,7 @@ class HttpeResponse:
     def __repr__(self):
         return f"<HttpeResponse status={self.status} content_length={self.content_length}>"
 
-class HttpeClient:
+class HttpeClientCore:
     """Custom secure HTTP-like client using symmetric AES and RSA for initial handshake"""
 
     def __init__(self, host="127.0.0.1", port=8080,connect_to_edoi=False,edoi_port=None,edoi_ip=None,edoi_client_name = None,edoi_target=None,persistent=False,debug_mode=False):
