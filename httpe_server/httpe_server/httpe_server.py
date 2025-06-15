@@ -6,6 +6,7 @@ import threading
 import inspect
 import json
 from httpe_core.httpe_class import Response
+import httpe_core.httpe_error
 from datetime import datetime, timezone, timedelta
 import httpe_core.httpe_secure as sec
 import uuid
@@ -18,7 +19,7 @@ import logging
 import threading
 
 class Httpe:
-    def __init__(self,server_host="127.0.0.1",Port=8080,running_version="1.0",crte_file_path="cert.crte",key_dir_path=".",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None,debug_mode=False):
+    def __init__(self,server_host="127.0.0.1",port=8080,running_version="1.0",crte_file_path="cert.crte",key_dir_path=".",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None,debug_mode=False):
         """
         Initialize the class.
 
@@ -43,7 +44,7 @@ class Httpe:
 
         self.routes = {}
         self.host = server_host
-        self.port = Port
+        self.port = port
         self.valid_token_ids = []
         self.valid_token_ids_per_user = {}
         self._banned_ips = {}
@@ -57,10 +58,7 @@ class Httpe:
         self._load_keys()
         self.load_cert()
         self.version = running_version
-        # self._log_file = None
-        # self._log_file = open("server_log.log","a")
         logging.basicConfig(filename='logfile.log', level=logging.INFO, format='[I]%(asctime)s: %(message)s', datefmt='%Y-%m-%dT%H:%M:%SZ')
-        # Used if EDOI node
         self.is_edoi_node = use_edoi_node
         self.name = name
         self.edoi_ip = edoi_ip
@@ -92,7 +90,7 @@ class Httpe:
                 timestamp = datetime.fromisoformat(expire_data)
                 now = datetime.now(timezone.utc)
                 if now - timestamp > timedelta(minutes=20):
-                    raise Exception("Private key expired")
+                    raise httpe_error.PrivateKeyExpiredError("Private key expired")
                 key = key_data["key"]
                 self.rsa_private_key = key
             with open("public_key.edoi","r") as f:
@@ -159,13 +157,7 @@ class Httpe:
         token_time = token['timestamp']
         timestamp = datetime.fromisoformat(token_time)
         now = datetime.now(timezone.utc)
-        if token["user_id"] != user_id:
-            return False
-        elif token["session_id"] not in self.valid_token_ids:
-            return False
-        elif self.valid_token_ids_per_user[user_id] != token["session_id"]:
-            return False
-        elif now - timestamp > timedelta(minutes=20):
+        if token["user_id"] != user_id or token["session_id"] not in self.valid_token_ids or self.valid_token_ids_per_user[user_id] != token["session_id"] or now - timestamp > timedelta(minutes=20):
             return False
         return True
     def _handle_share_aes(self,data:dict):

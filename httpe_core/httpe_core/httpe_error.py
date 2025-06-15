@@ -66,3 +66,7 @@ def get_error_description(code: int) -> str:
         return f"{code} {description.upper()}"
     else:
         return f"{code} UNKNOWN ERROR CODE"
+
+class PrivateKeyExpiredError(Exception):
+    """Raised when a private key has expired."""
+    pass
