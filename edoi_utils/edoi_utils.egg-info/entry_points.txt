@@ -1,0 +1,2 @@
+[console_scripts]
+edoi-certgen = certgen.cli:main

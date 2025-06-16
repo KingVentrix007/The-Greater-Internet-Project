@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+
+[project.scripts]
+edoi-certgen = "certgen.cli:main"
+
+[project]
+name = "edoi_utils"
+version = "1.0.0"
+description = "EDOI Utilities: A collection of tools for EDOI (Encrypted Data Over Internet) operations."
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+  { name = "Tristan Kuhn", email = "tristanjkuhn007@gmail.com" }
+]
+requires-python = ">=3.8"
+dependencies = [
+  "cryptography>=45.0.4",
+  "rich>=14.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+

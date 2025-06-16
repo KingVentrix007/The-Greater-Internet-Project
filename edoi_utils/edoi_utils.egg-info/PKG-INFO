@@ -1,9 +1,10 @@
 Metadata-Version: 2.4
-Name: EDOI-NET
-Version: 0.1.0
-Summary: EDOI-NET - The EDOI-NET Node system and routing logic
+Name: edoi_utils
+Version: 1.0.0
+Summary: EDOI Utilities: A collection of tools for EDOI (Encrypted Data Over Internet) operations.
 Author-email: Tristan Kuhn <tristanjkuhn007@gmail.com>
 License: MIT
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
 Requires-Dist: cryptography>=45.0.4
+Requires-Dist: rich>=14.0.0

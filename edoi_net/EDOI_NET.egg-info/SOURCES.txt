@@ -6,3 +6,4 @@ EDOI_NET.egg-info/requires.txt
 EDOI_NET.egg-info/top_level.txt
 edoi_net/__init__.py
 edoi_net/edoi_net.py
+edoi_net/edoi_net_test.py

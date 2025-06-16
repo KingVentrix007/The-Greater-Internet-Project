@@ -12,6 +12,7 @@ import threading
 from cryptography.hazmat.primitives import hashes
 import asyncio
 import time
+from typing import overload, Optional
 VERSION = 1.0
 VERSION_STR = f"VERSION:HTTPE/{VERSION}"
 
@@ -20,7 +21,9 @@ VERSION_STR = f"VERSION:HTTPE/{VERSION}"
 # Singleton-style wrapper
 class HttpeClient:
     _client_instance = None
-
+    @overload
+    def __init__(self, host="127.0.0.1", port=8080,connect_to_edoi=False,edoi_port=None,edoi_ip=None,edoi_client_name = None,edoi_target=None,debug_mode=False,silent_mode=False, pem_path=None, pubkey=None, cert=None, token=None):...
+        
     def __init__(self, **kwargs):
         self._kwargs = kwargs
         self._client = None

@@ -1,0 +1,9 @@
+pyproject.toml
+certgen/__init__.py
+certgen/cli.py
+edoi_utils.egg-info/PKG-INFO
+edoi_utils.egg-info/SOURCES.txt
+edoi_utils.egg-info/dependency_links.txt
+edoi_utils.egg-info/entry_points.txt
+edoi_utils.egg-info/requires.txt
+edoi_utils.egg-info/top_level.txt
