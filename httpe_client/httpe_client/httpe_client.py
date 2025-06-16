@@ -567,7 +567,7 @@ class HttpeClientCore:
             aes_request = "\n".join(request_lines)
             print("aes packet sent")
             response = await self._connection_send(aes_request)
-
+            print("GOT IT")
             if not response or not response.ok:
                 print("Server rejected AES key sharing.")
                 return

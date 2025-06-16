@@ -21,7 +21,7 @@ async def _test_network():
             # proxy.delete()
 
         print("[*] Setting up toxiproxy instances...")
-
+        proxeys = []
         for i in range(NUM_NODES):
             real_port = BASE_PORT + i
             proxy_port = PROXY_PORT + i
@@ -38,17 +38,22 @@ async def _test_network():
                 name="downlatency",
                 type="latency",
                 stream="downstream",  # delay when talking *to* the node
-                attributes={"latency": 100, "jitter": 10}
+                attributes={"latency": 1000, "jitter": 10}
             )
 
             proxy.add_toxic(
                 name="uplatency",
                 type="latency",
                 stream="upstream",  # delay when talking *to* the node
-                attributes={"latency": 100, "jitter": 10}
+                attributes={"latency": 1000, "jitter": 10}
             )
-
+            proxeys.append(proxy)
+        for j in range(NUM_NODES):
+            name = f"edoi_node_{j}"
+            if(toxiproxy_client.get_proxy(name) == None):
+                print(f"Failed to create proxy: {name}")
         print(f"[+] Created {NUM_NODES} proxies on ports {PROXY_PORT}–{PROXY_PORT + NUM_NODES - 1}")
+        
 
     await asyncio.to_thread(setup_proxies)
 
@@ -69,12 +74,14 @@ async def _test_network():
         nodes.append(node)
 
     # === 3. Populate reverse neighbor connections ===
-    for node in nodes:
+    for i, node in enumerate(nodes):
         for ip, _ in node.neighbors.items():
-            for other_node in nodes:
-                if ('127.0.0.1', other_node.port) == ip:
-                    if ('127.0.0.1', node.port) not in other_node.neighbors:
-                        other_node.neighbors[('127.0.0.1', node.port)] = None
+            for j, other_node in enumerate(nodes):
+                proxy_port = proxy_ports[j]
+                if ip == ('127.0.0.1', proxy_port):
+                    # Add reverse connection via proxy port
+                    if ('127.0.0.1', proxy_ports[i]) not in other_node.neighbors:
+                        other_node.neighbors[('127.0.0.1', proxy_ports[i])] = None
 
     # === 4. Start all listeners ===
     listen_tasks = [asyncio.create_task(node.listen()) for node in nodes]

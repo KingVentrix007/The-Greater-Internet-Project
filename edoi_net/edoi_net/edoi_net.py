@@ -210,7 +210,7 @@ class NetNode():
             "hash": target_hash,
             "salt": salt,
             "message_id": str(uuid.uuid4()),
-            "ip_combo":(self.ip,self.port)
+            "ip_combo":(self.ip,1000+self.port)
         }
         for ip, key in self.neighbors.items():
             await self.send_data(packet,ip,debug_node_name="send packet")
@@ -273,7 +273,7 @@ class NetNode():
                         if(ip_combo != None):
                             self.store_hash[past_hash]  = ip_combo
                     if count > 0:
-                        combo = (self.ip,self.port)
+                        combo = (self.ip,1000+self.port)
                         next_packet = {
                             "type": "return",
                             "route": route,
@@ -323,7 +323,7 @@ class NetNode():
                             "route": route,
                             "count": count + 1,
                             "payload": payload,
-                            "ip_combo": (self.ip, self.port)
+                            "ip_combo": (self.ip, 1000+self.port)
                         
                         }
                         if(self.store_hash.get(route[count+1].get("hash"),None) != None):
@@ -473,7 +473,7 @@ class NetNode():
                     route.append(route_member)
                     route_hash = hash(tuple(frozenset(item.items()) for item in route))
                     self.store_hash[route[len(route)-1].get("hash")] = last_ip
-                    ip_combo = (self.ip,self.port)
+                    ip_combo = (self.ip,1000+self.port)
                     await self.continue_find(route,hash_to_find=hash_to_find,target=target_hash,salt=salt,ip_combo=ip_combo)
                 else:
                     print("Not really sure what to do here, but ignoring. Hash: ", my_hash, " Route: ", route)

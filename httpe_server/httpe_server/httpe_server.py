@@ -285,11 +285,11 @@ class Httpe:
                         break
                     data += chunk
                     # ##print(chunk)
-                    if b"END\n" in data or b"END\r\n" in data or b"END" in data:
-                        break
+                    # if b"END\n" in data or b"END\r\n" in data or b"END" in data:
+                    #     break
                 res_time_end = time.time()
                 if(self._debug_mode == True):
-                    print(f"[DEBUG]:Server:Time to receive packet:{res_time_end-res_time_end}")
+                    print(f"[DEBUG]:Server:Time to receive packet:{res_time_end-res_time_start}:{data}")
             except Exception as e:
                 self._log_internal_error(e)
                 err_res =  Response.error(message="Internal Server Error",status_code=500)
@@ -298,6 +298,7 @@ class Httpe:
                 return
             # ##print(type(data))
             route=None
+
             if(self.is_edoi_node == True):
                 edoi_decoded = data.decode('utf-8')
                 try:
@@ -311,6 +312,7 @@ class Httpe:
                     return
                 # data = data.decode()
                 edoi_packet_type = edoi_json_data.get("type",None)
+                print("Packet type:",edoi_packet_type)
                 route = None
                 if(edoi_packet_type == "find"):
                     ##print("PAth search")
@@ -347,7 +349,7 @@ class Httpe:
                     end_hash = end_point.get("hash",None)
                     my_hash = self.compute_hashed_identity(self.name,salt)
                     if(my_hash == end_hash):
-                        # print(f"Server:Forward:{time.time()}")
+                        print(f"Server:Forward:{time.time()}")
                         file = open("../run_output.log","a")
                         file.write(f"Server:Forward:{time.time()}\n")
                         file.close()
@@ -355,6 +357,7 @@ class Httpe:
 
                         pass
                     else:
+                        print("No match")
                         return
 
 
@@ -400,19 +403,25 @@ class Httpe:
                 self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
             if(is_initial_packet == True):
                 if(initial_packet_type == "GET_RSA"):
+                    print("RSA")
                     send_rsa_pub = {"rsa":self.rsa_public_key_shared}
                     rsa_rez = Response(json.dumps(send_rsa_pub))
                     # conn.sendall(rsa_rez.serialize().encode())
+                    print("SENDING RSA")
                     self.send_packet(conn,addr,data=rsa_rez.serialize().encode(),route=route)
+                    print("SENT RSA")
                     return
                 elif(initial_packet_type == "SHARE_AES"):
                     # ##print(headers)
+                    print("Got aes")
                     res_data = self._handle_share_aes(headers)
                     # conn.sendall(res_data.serialize().encode())
+                    print("send aes")
                     self.send_packet(conn,addr,data=res_data.serialize().encode(),route=route)
                     print("Send aes response")
                     return
                 elif(initial_packet_type == "REQ_ENC"):
+                    print("Enc req")
                     handle_enc_request_time = time.time()
                     new_lines,user_id_from_token =  self._handle_enc_request(lines)
                     handle_enc_request_time_end = time.time()
@@ -430,6 +439,8 @@ class Httpe:
                     is_encrypted_packet = True
                     headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(new_lines)
                     end_enc_time_timer = time.time()
+                else:
+                    print(f"WHAT IS THIS: {data}")
 
 
             # ##print("headers>>",headers)

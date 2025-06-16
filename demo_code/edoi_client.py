@@ -13,6 +13,7 @@ client = httpe_client.HttpeClient(
     edoi_target="HTTPE",
     edoi_client_name="TestC",
     silent_mode=True,
+    debug_mode = True
 )
 
 # Event stages in order
