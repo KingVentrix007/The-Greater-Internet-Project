@@ -161,6 +161,7 @@ class Httpe:
             return False
         return True
     def _handle_share_aes(self,data:dict):
+        print("Handling share aes")
         try:
             aes_key_enc = data.get("aes_key",None)
             user_id_enc = data.get("user_id",None)
@@ -409,6 +410,7 @@ class Httpe:
                     res_data = self._handle_share_aes(headers)
                     # conn.sendall(res_data.serialize().encode())
                     self.send_packet(conn,addr,data=res_data.serialize().encode(),route=route)
+                    print("Send aes response")
                     return
                 elif(initial_packet_type == "REQ_ENC"):
                     handle_enc_request_time = time.time()

@@ -1,6 +1,6 @@
 import warnings
 import threading
-import random
+
 import uuid
 import socket
 import json
@@ -9,6 +9,7 @@ import uuid
 import asyncio
 from datetime import datetime, timezone,timedelta
 from cryptography.hazmat.primitives import hashes
+
 class NetNode():
     def __init__(self, name: str,port,bootstrap_ips:list,debug_mode=True):
         self.name = name # The name of this node on the network
@@ -513,98 +514,3 @@ class NetNode():
 
 
 
-# The following code is testing code
-BASE_PORT = 20000
-NUM_NODES = 200
-NEIGHBOR_COUNT = 5  # Or 50 if needed
-def find_all_paths(nodes,start_node, target_name, max_paths=500):
-    paths = []
-    visited = set()
-
-    def dfs(current_node, path, visited_set):
-        if current_node.name == target_name:
-            paths.append(path[:])
-            return
-        if len(paths) >= max_paths:
-            return
-        for (ip, _), _ in current_node.neighbors.items():
-            next_node = next((n for n in nodes if n.port == ip[1]), None)
-            if next_node and next_node.name not in visited_set:
-                visited_set.add(next_node.name)
-                path.append(next_node.name)
-                dfs(next_node, path, visited_set)
-                path.pop()
-                visited_set.remove(next_node.name)
-
-    dfs(start_node, [start_node.name], {start_node.name})
-    return paths
-async def _test_network():
-    nodes = []
-    ports = list(range(BASE_PORT, BASE_PORT + NUM_NODES))
-    addresses = [("127.0.0.1", port) for port in ports]
-    assert len(ports) == len(set(ports)), "Duplicate ports detected!"
-    # httpe_logging.init_logger()
-    # asyncio.create_task(httpe_logging.log_writer("edoi_log.txt"))
-    # Create nodes with bootstrap neighbors
-    for i, port in enumerate(ports):
-        name = f"Node{i}"
-        bootstrap_candidates = [addr for j, addr in enumerate(addresses) if j != i]
-        bootstrap_ips = random.sample(bootstrap_candidates, NEIGHBOR_COUNT)
-        node = NetNode(name=name, port=port, bootstrap_ips=bootstrap_ips)
-        nodes.append(node)
-
-    # Populate reverse neighbor connections
-    for node in nodes:
-        for ip, _ in node.neighbors.items():
-            for other_node in nodes:
-                if ('127.0.0.1', other_node.port) == ip:
-                    if ('127.0.0.1', node.port) not in other_node.neighbors:
-                        other_node.neighbors[('127.0.0.1', node.port)] = None
-
-    # Start listeners using asyncio.gather
-    listen_tasks = [asyncio.create_task(node.listen()) for node in nodes]
-    # await asyncio.gather(*listen_tasks)
-    print("[+] All nodes launched and listening.")
-
-    await asyncio.sleep(2)  # Give time for servers to bind
-    # search_node = random.choice(nodes)
-    # target_name = random.choice([n.name for n in nodes])
-    # await search_node.start_find(target_name, "SALT")
-    # print(f"\n[*] Tracing search paths from {search_node.name} to {target_name}...\n")
-    # paths = find_all_paths(nodes,search_node, target_name)
-    # if not paths:
-    #     print("[-] No paths found.")
-    # else:
-    #     for i, path in enumerate(paths):
-    #         print(f"[+] Path {i + 1}: {' -> '.join(path)}")
-    
-
-    # search_node.start_find("Node120","SALT")
-    # Build network (make build_network async or wrap with to_thread)
-    # await asyncio.gather(*(asyncio.to_thread(node.build_network) for node in nodes))
-
-    # await asyncio.sleep(2)
-
-    # Neighbor diagnostics
-    neighbor_map = {}
-    for node in nodes:
-        neighbor_names = []
-        for ip, _ in node.neighbors.items():
-            for n in nodes:
-                if n.port == ip[1]:
-                    neighbor_names.append(n.name)
-        neighbor_map[node.name] = neighbor_names
-    await asyncio.gather(*listen_tasks)
-    # Wait forever
-    try:
-        while True:
-            await asyncio.sleep(1)
-    except KeyboardInterrupt:
-        print("[*] Shutting down.")
-
-def setup_test_network():
-    asyncio.run(_test_network())
-
-# print(__name__)
-if(__name__ == "__main__"):
-    setup_test_network()

@@ -29,6 +29,7 @@ class HttpeClient:
         if not HttpeClient._client_instance:
             HttpeClient._client_instance = HttpeClientCore(**self._kwargs)
         self._client = HttpeClient._client_instance
+        await self._apply_early_hooks()
 
     async def start(self):
         if self._client is None:
@@ -48,7 +49,26 @@ class HttpeClient:
             return await self._client.send_request(method, location, body=body)
         except Exception as e:
             raise RuntimeError(f"Failed to send request: {e}") from e
-    
+    def on(self, event_name, callback=None):
+        # print("Registering event handler for:", event_name, "with callback:", callback)
+        if self._client is None:
+            # Register against _client_instance if it already exists
+            if HttpeClient._client_instance:
+                return HttpeClient._client_instance.on(event_name, callback)
+            else:
+                # Pre-initialization: temporarily store
+                if not hasattr(self, '_early_hooks'):
+                    self._early_hooks = []
+                self._early_hooks.append((event_name, callback))
+                return lambda f: f  # Dummy decorator until init()
+        else:
+            return self._client.on(event_name, callback)
+
+    async def _apply_early_hooks(self):
+        if hasattr(self, '_early_hooks'):
+            for event_name, callback in self._early_hooks:
+                self._client.on(event_name, callback)
+            del self._early_hooks    
 
 
 class HttpeResponse:
@@ -165,21 +185,43 @@ class HttpeClientCore:
         self._debug_mode = debug_mode
         self._silent_mode = silent_mode
         self._event_hooks = {
-            'connection_established': [],
-            'handshake_complete': [],
-            'key_exchange_done': [],
-            'encryption_ready': [],
-            'authenticated': [],
+            'listener_started': [],
+            'connected_to_edoi_server':[],
+            'path_request_sent':[],
+            "rsa_key_request_sent":[],
+            'rsa_key_received':[],
+            'sending_aes_key_and_id':[],
+            'got_token_and_cert':[],
+            'validating_certificates':[],
+            'handshake_complete':[]
+
+
         }
 
-    def on(self, event_name, callback):
-        if event_name in self._event_hooks:
-            self._event_hooks[event_name].append(callback)
-        else:
+    def on(self, event_name, callback=None):
+        """Register an event handler either directly or via decorator"""
+        if event_name not in self._event_hooks:
             raise ValueError(f"Unknown event: {event_name}")
+
+        if callback is None:
+            # Decorator usage
+            def decorator(func):
+                self._event_hooks[event_name].append(func)
+                return func
+            return decorator
+        else:
+            # Direct registration
+            self._event_hooks[event_name].append(callback)
     async def _trigger_event(self, event_name, *args, **kwargs):
-        for callback in self._event_hooks.get(event_name, []):
-            await callback(*args, **kwargs)
+        # print("Triggering event:", event_name, "with args:", args, "and kwargs:", kwargs)
+        try:
+            for cb in self._event_hooks[event_name]:
+                result = cb(*args, **kwargs)
+                if asyncio.iscoroutine(result):
+                    await result
+        except Exception as e:
+            print(f"Error in event handler for {event_name}: {e}")
+
     async def start(self):
         if self.use_edoi:
             asyncio.create_task(self.listen_for_message())
@@ -225,6 +267,7 @@ class HttpeClientCore:
             route = data.get("route", None)
             if self.edoi_path is None:
                 self.edoi_path = route
+                print(f"Route: {len(route)}")
                 self.all_edoi_paths.append(route)
             else:
                 self.all_edoi_paths.append(route)
@@ -289,7 +332,7 @@ class HttpeClientCore:
     async def listen_for_message(self):
         server = await asyncio.start_server(self.handle_connection, '127.0.0.1', self.port)
         print(f"[+] Async listener running on port {self.port}...")
-
+        await self._trigger_event("listener_started")
         async with server:
             await server.serve_forever()
     async def _send_connect_async(self):
@@ -302,7 +345,7 @@ class HttpeClientCore:
         await writer.drain()
         writer.close()
         await writer.wait_closed()
-
+        await self._trigger_event("connected_to_edoi_server")
     async def get_edoi_server_path_async(self):
         if(self._silent_mode == False):
             print("Getting EDOI server path asynchronously...")
@@ -328,6 +371,7 @@ class HttpeClientCore:
         await writer.drain()
         writer.close()
         await writer.wait_closed()
+        await self._trigger_event("path_request_sent")
         if(self._silent_mode == False):
             print("Sent path request to EDOI server. Waiting for response...")
     async def send_request(self, method, location, headers=None, body="", use_httpe=True):
@@ -492,6 +536,7 @@ class HttpeClientCore:
                 "METHOD:POST",
                 "END"
             ])
+            await self._trigger_event("rsa_key_request_sent")
             rsa_response = await self._connection_send(request)
             if not rsa_response or not rsa_response.ok:
                 print("Failed to retrieve RSA public key from server.")
@@ -502,7 +547,8 @@ class HttpeClientCore:
             if not self._server_rsa_pub_key:
                 print("RSA key missing in server response.")
                 return
-
+            await self._trigger_event("rsa_key_received")
+            await self._trigger_event("sending_aes_key_and_id")
             # Step 2: Send AES key and ID (RSA encrypted)
             enc_aes = sec.rsa_encrypt_key(self._aes_key.encode("utf-8"), self._server_rsa_pub_key)
             enc_user_id = sec.encrypt_user_id(str(self._client_id), self._server_rsa_pub_key)
@@ -519,6 +565,7 @@ class HttpeClientCore:
                 "END"
             ]
             aes_request = "\n".join(request_lines)
+            print("aes packet sent")
             response = await self._connection_send(aes_request)
 
             if not response or not response.ok:
@@ -526,10 +573,11 @@ class HttpeClientCore:
                 return
 
             response_data = response.json()
+            await self._trigger_event("got_token_and_cert")
             # print("response_data == ",response_data)
             enc_token = response_data.get("token")
             enc_cert = response_data.get("certificate")
-
+            await self._trigger_event("validating_certificates")
             if not enc_token or not enc_cert:
                 print("Missing token or certificate in response.")
                 return
@@ -544,7 +592,7 @@ class HttpeClientCore:
             self._user_id_enc = enc_user_id
             self._enc_mode_active = True
             self.secure = True
-
+            await self._trigger_event("handshake_complete")
         except Exception as e:
             print(f"Handshake failed: {e}")
     def terminate(self):
