@@ -312,7 +312,7 @@ class Httpe:
                     return
                 # data = data.decode()
                 edoi_packet_type = edoi_json_data.get("type",None)
-                print("Packet type:",edoi_packet_type)
+                # print("Packet type:",edoi_packet_type)
                 route = None
                 if(edoi_packet_type == "find"):
                     ##print("PAth search")
@@ -334,13 +334,13 @@ class Httpe:
                                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
                                     client_socket.connect((self.edoi_ip, self.edoi_port))
                                     client_socket.sendall(encoded)
-                                print("Sent path message")
+                                # print("Sent path message")
                                 return
                             except Exception as e:
 
                                 print(f"[!] Error sending data: {e}")
                 elif(edoi_packet_type == "forward"):
-                    print("Forward request received. Processing...")
+                    # print("Forward request received. Processing...")
                     count = edoi_json_data.get("count",None)
                     route = edoi_json_data.get("route",None)
                     end_point = route[count]
@@ -357,7 +357,7 @@ class Httpe:
 
                         pass
                     else:
-                        print("No match")
+                        # print("No match")
                         return
 
 
@@ -403,25 +403,25 @@ class Httpe:
                 self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
             if(is_initial_packet == True):
                 if(initial_packet_type == "GET_RSA"):
-                    print("RSA")
+                    # print("RSA")
                     send_rsa_pub = {"rsa":self.rsa_public_key_shared}
                     rsa_rez = Response(json.dumps(send_rsa_pub))
                     # conn.sendall(rsa_rez.serialize().encode())
-                    print("SENDING RSA")
+                    # print("SENDING RSA")
                     self.send_packet(conn,addr,data=rsa_rez.serialize().encode(),route=route)
-                    print("SENT RSA")
+                    # print("SENT RSA")
                     return
                 elif(initial_packet_type == "SHARE_AES"):
                     # ##print(headers)
-                    print("Got aes")
+                    # print("Got aes")
                     res_data = self._handle_share_aes(headers)
                     # conn.sendall(res_data.serialize().encode())
-                    print("send aes")
+                    # print("send aes")
                     self.send_packet(conn,addr,data=res_data.serialize().encode(),route=route)
-                    print("Send aes response")
+                    # print("Send aes response")
                     return
                 elif(initial_packet_type == "REQ_ENC"):
-                    print("Enc req")
+                    # print("Enc req")
                     handle_enc_request_time = time.time()
                     new_lines,user_id_from_token =  self._handle_enc_request(lines)
                     handle_enc_request_time_end = time.time()

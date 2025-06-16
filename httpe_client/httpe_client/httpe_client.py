@@ -188,12 +188,18 @@ class HttpeClientCore:
             'listener_started': [],
             'connected_to_edoi_server':[],
             'path_request_sent':[],
-            "rsa_key_request_sent":[],
+            'edoi_path_received':[],
+            'waiting_for_edoi_path':[],
+            "sending_rsa_key_request":[],
             'rsa_key_received':[],
             'sending_aes_key_and_id':[],
             'got_token_and_cert':[],
             'validating_certificates':[],
-            'handshake_complete':[]
+            'handshake_complete':[],
+            'sending_packet':[],
+            'packet_sent':[],
+            'waiting_for_packet_response':[],
+            'packet_response_received':[],
 
 
         }
@@ -267,8 +273,9 @@ class HttpeClientCore:
             route = data.get("route", None)
             if self.edoi_path is None:
                 self.edoi_path = route
-                print(f"Route: {len(route)}")
+                # print(f"Route: {len(route)}")
                 self.all_edoi_paths.append(route)
+                await self._trigger_event("edoi_path_received")
             else:
                 self.all_edoi_paths.append(route)
         elif sub_type == "no_path":
@@ -372,6 +379,7 @@ class HttpeClientCore:
         writer.close()
         await writer.wait_closed()
         await self._trigger_event("path_request_sent")
+        await self._trigger_event("waiting_for_edoi_path")
         if(self._silent_mode == False):
             print("Sent path request to EDOI server. Waiting for response...")
     async def send_request(self, method, location, headers=None, body="", use_httpe=True):
@@ -483,20 +491,23 @@ class HttpeClientCore:
         if(self.use_edoi == True):
             if(self._silent_mode == False):
                 print("Waiting for EDOI response...")
+            await self._trigger_event('waiting_for_packet_response')
             await self._got_edoi_event.wait()
             if(self._silent_mode == False):
                 print("Received EDOI event, processing response...")
             self._got_edoi_event.clear()
-
+            await self._trigger_event('packet_response_received')
             return self.edoi_res
         else:
             # pass
+            await self._trigger_event('waiting_for_packet_response')
             response = b""
             while True:
                 part = s.recv(4096)  # Receive in chunks (4096 bytes is a common size)
                 if not part:
                     break  # No more data, connection closed by server
                 response += part
+            await self._trigger_event('packet_response_received')
             return response.decode('utf-8')
             
 
@@ -520,6 +531,8 @@ class HttpeClientCore:
             return HttpeResponse(response)
 
     async def _init_connection(self):
+        while(self.edoi_path == None):
+            await asyncio.sleep(0.1)
         """Initial secure handshake with server"""
         if(self._silent_mode == False):
             print("Initializing secure connection with server...")
@@ -536,7 +549,7 @@ class HttpeClientCore:
                 "METHOD:POST",
                 "END"
             ])
-            await self._trigger_event("rsa_key_request_sent")
+            await self._trigger_event("sending_rsa_key_request")
             rsa_response = await self._connection_send(request)
             if not rsa_response or not rsa_response.ok:
                 print("Failed to retrieve RSA public key from server.")
@@ -565,9 +578,9 @@ class HttpeClientCore:
                 "END"
             ]
             aes_request = "\n".join(request_lines)
-            print("aes packet sent")
+            # print("aes packet sent")
             response = await self._connection_send(aes_request)
-            print("GOT IT")
+            # print("GOT IT")
             if not response or not response.ok:
                 print("Server rejected AES key sharing.")
                 return
@@ -605,6 +618,7 @@ class HttpeClientCore:
         while self.running == True:
             time.sleep(1)  # Keep thread alive, avoid busy loop
     async def edoi_send_to_target(self,payload):
+        await self._trigger_event('sending_packet')
         count = 1
         packet = {
             "type": "forward",
@@ -631,6 +645,7 @@ class HttpeClientCore:
             # Send a message to the EDOI node
             message = json.dumps(packet).encode('utf-8')
             client_socket.sendall(message)
+        await self._trigger_event('packet_sent')
         if(self._debug_mode == True):
             file = open("../run_output.log","a")
             file.write(f"Client:Forward:{for_t}\n")

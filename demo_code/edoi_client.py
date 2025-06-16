@@ -12,8 +12,7 @@ client = httpe_client.HttpeClient(
     edoi_port=21199,
     edoi_target="HTTPE",
     edoi_client_name="TestC",
-    silent_mode=True,
-    debug_mode = True
+    silent_mode=True
 )
 
 # Event stages in order
@@ -21,7 +20,9 @@ stages = [
     "listener_started",
     "connected_to_edoi_server",
     "path_request_sent",
-    "rsa_key_request_sent",
+    "waiting_for_edoi_path",
+    "edoi_path_received",
+    "sending_rsa_key_request",
     "rsa_key_received",
     "sending_aes_key_and_id",
     "got_token_and_cert",

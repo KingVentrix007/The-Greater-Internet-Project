@@ -499,7 +499,7 @@ class NetNode():
             await self.handle_conn(json_data, addr, writer)
         
         except json.JSONDecodeError as e:
-            print(f"[!]{self.name} JSON decode error: {e}")
+            print(f"[!]{self.name} JSON decode error: {e}:{full_data}")
         except Exception as e:
             print(f"[!]{self.name} General error: {e}")
         finally:

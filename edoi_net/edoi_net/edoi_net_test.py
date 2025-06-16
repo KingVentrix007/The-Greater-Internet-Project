@@ -38,15 +38,57 @@ async def _test_network():
                 name="downlatency",
                 type="latency",
                 stream="downstream",  # delay when talking *to* the node
-                attributes={"latency": 1000, "jitter": 10}
+                attributes={"latency": 100, "jitter": 10}
             )
 
             proxy.add_toxic(
                 name="uplatency",
                 type="latency",
                 stream="upstream",  # delay when talking *to* the node
-                attributes={"latency": 1000, "jitter": 10}
+                attributes={"latency": 100, "jitter": 10}
             )
+            # proxy.add_toxic(
+            #     name="uploss",
+            #     type="loss",
+            #     stream="upstream",
+            #     attributes={"loss": 2.0}  # 2% packet loss
+            # )
+
+            # proxy.add_toxic(
+            #     name="downloss",
+            #     type="loss",
+            #     stream="downstream",
+            #     attributes={"loss": 2.0}
+            # )
+
+
+            proxy.add_toxic(
+                name="downloss",
+                type="bandwidth",
+                stream="downstream",
+                attributes={"rate": 1024}  # Simulate slow bandwidth (bytes/sec)
+            )
+
+            proxy.add_toxic(
+                name="slow_downstream",
+                type="bandwidth",
+                stream="downstream",
+                attributes={"rate": 512 * 8}  # 512 KB/s (in bits/sec)
+            )
+
+            proxy.add_toxic(
+                name="slow_upstream",
+                type="bandwidth",
+                stream="upstream",
+                attributes={"rate": 256 * 8}  # 256 KB/s
+            )
+        #     proxy.add_toxic(
+        #     name="timeout_sim",
+        #     type="timeout",
+        #     stream="downstream",
+        #     attributes={"timeout": 2000}  # Delay stream for 2 seconds (2000 ms)
+        # )
+
             proxeys.append(proxy)
         for j in range(NUM_NODES):
             name = f"edoi_node_{j}"
