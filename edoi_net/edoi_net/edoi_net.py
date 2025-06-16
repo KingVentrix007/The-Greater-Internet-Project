@@ -147,9 +147,12 @@ class NetNode():
             await writer.drain()
             writer.close() # Close writer
             await writer.wait_closed() # non-blocking ensure writer is closed
-            # print(f"{self.name}:Send completed to {host}:{port} with message_id {message_id}")
+            # print(f"{`self.name}:Send completed to {host}:{port} with message_id {message_id}")
+            return True
         except Exception as e: # General catch all Exception
             print(f"[ERROR]: {self.name}: send_data to {host, port} error")
+
+            return False
    
     async def continue_find(self,route,hash_to_find,debug_route=None,target=None,salt=None,ip_combo=None):
         """
@@ -177,7 +180,10 @@ class NetNode():
         #Loop through ALL neighbors and send packet
         for ip, _ in self.neighbors.items():
             
-            await self.send_data(packet,ip,debug_node_name="cont find")
+            ret = await self.send_data(packet,ip,debug_node_name="cont find")
+            if(ret != True):
+                await asyncio.sleep(1) # Wait if send failed
+                await self.send_data(packet,ip,debug_node_name="cont find")
         # Save time after send
         if(self.debug_mode == True):
             after_send_all = time.time()
@@ -189,10 +195,16 @@ class NetNode():
         if(addr == None):
             print(f"{self.name}:Bulk sending")
             for ip, _ in self.neighbors.items():
-                await self.send_data(path,ip,debug_node_name=f"Scan send: {debug_node_name}")
+                ret = await self.send_data(path,ip,debug_node_name=f"Scan send: {debug_node_name}")
+                if(ret != True):
+                    await asyncio.sleep(1) # Wait if send failed
+                    await self.send_data(path,ip,debug_node_name=f"Scan send: {debug_node_name}")
         else:
             print(f"{self.name}:Sending to {addr} with debug node name {debug_node_name}")
-            await self.send_data(path,addr=addr,debug_node_name=debug_node_name)
+            ret = await self.send_data(path,addr=addr,debug_node_name=debug_node_name)
+            if(ret == False):
+                await asyncio.sleep(1) # Wait if send failed
+                await self.send_data(path,addr=addr,debug_node_name=debug_node_name)
     async def hash_str(self,name,salt):
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
@@ -201,7 +213,6 @@ class NetNode():
         target_hash = await self.hash_str(target_name, salt)  # FIXED
         my_hash = self.compute_hashed_identity(salt)
         route_member = {"hash": my_hash, "salt": salt}
-        route = [route_member]
         route = [route_member]
 
         packet = {
@@ -290,7 +301,11 @@ class NetNode():
                         if(val != None):
                             self.store_hash_time[hash_to_search] = datetime.now(timezone.utc).isoformat()
                             # print(f"{self.name}:Calling send_data for return at {time.time()}")
-                            await self.send_data(next_packet, val,debug_node_name="return",conn=got_return_packet_time)
+                            ret = await self.send_data(next_packet, val,debug_node_name="return",conn=got_return_packet_time)
+                            if(ret != True):
+                                await asyncio.sleep(1)  # Wait if send failed
+                                print(f"{self.name}:Retrying send_data for return at {time.time()}")
+                                await self.send_data(next_packet, val,debug_node_name="return",conn=got_return_packet_time)
                             # print(f"{self.name}:Call send data ended at {time.time()}")
                         else:
                             print(f"{self.name}:Bulking return")

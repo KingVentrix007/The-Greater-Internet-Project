@@ -9,6 +9,10 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.live import Live
 from rich.prompt import Prompt
+from rich.spinner import Spinner
+from rich.table import Table
+
+
 
 # === Config ===
 THEME = "dialup"
@@ -73,23 +77,26 @@ async def dialup_runner():
         last_len = 0
         while not error_occurred["status"] and len(completed_stages) < len(stages):
             current = completed_stages[-1] if completed_stages else "Connecting modem..."
-            noise_str = random.choice(["*bzzt*", "*krrr*", "*ping*", "*bip*", "*zzzzz*", "*pop*"])
-            dots = "." * (len(completed_stages) % 5)
+            # noise_str = random.choice(["*bzzt*", "*krrr*", "*ping*", "*bip*", "*zzzzz*", "*pop*"])
+            # dots = "." * (len(completed_stages) % 5)
 
             text = Text()
-            text.append(f"{current}\n", style="bold magenta")
-            live.update(Panel(text, title="📞 Dial-up in progress...", border_style="bright_blue"))
-
+            text.append(f"{current}", style="bold magenta")
+            table = Table.grid(padding=1)
+            table.add_row(Spinner("dots"), text)
+            live.update(Panel(table, title="📞 Dial-up in progress...", border_style="bright_blue"))
+            # live.update(Panel(Spinner("dots", text="Go"), title="Working"))
             if len(completed_stages) > last_len:
                 await asyncio.to_thread(play_beep_pattern, len(completed_stages))
                 last_len = len(completed_stages)
-
+            
             await asyncio.sleep(0.5)
 
         if error_occurred["status"]:
             err_text = Text("❌ Connection failed\n", justify="center", style="red bold")
             err_text.append(f"{error_occurred['message']}", style="dim")
             live.update(Panel(err_text, title="🚨 Error", border_style="red"))
+            
         else:
             success_text = Text("✅ Connected to the internet!\n", justify="center", style="green bold")
             success_text.append("Welcome back, User.", style="dim")
@@ -147,7 +154,6 @@ async def send():
             msg = Prompt.ask("[bold green]Enter Message to Send")
             password = Prompt.ask("[bold]Enter Password (optional)", default="")
             body = {"message": msg, "password": password}
-
             console.print("[magenta]📡 Sending message to server...[/]")
             start_time = time.time()
             res = await client.send_request("POST", "/send_message", body=json.dumps(body))

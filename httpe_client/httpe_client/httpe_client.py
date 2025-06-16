@@ -184,6 +184,7 @@ class HttpeClientCore:
         self.running = False
         self._debug_mode = debug_mode
         self._silent_mode = silent_mode
+        self.path_set_event = asyncio.Event()
         self._event_hooks = {
             'listener_started': [],
             'connected_to_edoi_server':[],
@@ -275,6 +276,7 @@ class HttpeClientCore:
             route = data.get("route", None)
             if self.edoi_path is None:
                 self.edoi_path = route
+                self.path_set_event.set()  # Notify that the path has been set
                 # print(f"Route: {len(route)}")
                 self.all_edoi_paths.append(route)
                 await self._trigger_event("edoi_path_received")
@@ -389,6 +391,17 @@ class HttpeClientCore:
         await self._trigger_event("waiting_for_edoi_path")
         if(self._silent_mode == False):
             print("Sent path request to EDOI server. Waiting for response...")
+        asyncio.create_task(self.wait_for_path_or_timeout())
+    async def wait_for_path_or_timeout(self, timeout=15):
+        try:
+            await asyncio.wait_for(self.path_set_event.wait(), timeout=timeout)
+            # print("Path was set before timeout.")
+        except asyncio.TimeoutError:
+            await self.handle_path_timeout()
+    async def handle_path_timeout(self):
+        await self._trigger_event("no_path_response_received")
+        # print("Path request timed out. Retrying...")
+  
     async def send_request(self, method, location, headers=None, body="", use_httpe=True):
         """Send an encrypted request to the server, establishing connection if needed"""
         try:
@@ -422,8 +435,11 @@ class HttpeClientCore:
             if self.use_edoi:
                 if(self._debug_mode):
                     print("[DEBUG]:Client:Sending packet to EDOI server")
-                await self.edoi_send_to_target(encrypted)
-                response = await self._receive_full_response(None)
+                sent = await self.edoi_send_to_target(encrypted)
+                if(sent == True):
+                    response = await self._receive_full_response(None)
+                else:
+                    response = None
                 
             else:
                 response = self._send_directly(encrypted)
@@ -434,8 +450,12 @@ class HttpeClientCore:
             await self._trigger_event('general_error', f"Error sending request: {e}")
             print(f"_send_request_enc send error {e}")
             return None
-
-        return self._process_response(response)
+        if(response != None):
+            return self._process_response(response)
+        else:
+            await self._trigger_event('general_error', "No response received from server.")
+            # print("No response received from server.")
+            return None
 
     def _prepare_headers(self, headers):
         headers = headers or {}
@@ -522,7 +542,7 @@ class HttpeClientCore:
             return response.decode('utf-8')
             
 
-    async def _connection_send(self, request_data: str) -> HttpeResponse:
+    async def _connection_send(self, request_data: str) -> HttpeResponse|None:
         """Sends a raw request and returns parsed response"""
         if(self.use_edoi == False):
             try:
@@ -536,11 +556,14 @@ class HttpeClientCore:
                 print(f"Connection send failed: {e}")
                 return HttpeResponse("ERROR: Connection failed")
         else:
-            await self.edoi_send_to_target(request_data)
-            if(self._silent_mode == False):
-                print("Connection send completed, waiting for response...")
-            response = await self._receive_full_response(None)
-            return HttpeResponse(response)
+            sent = await self.edoi_send_to_target(request_data)
+            if(sent == True):
+                if(self._silent_mode == False):
+                    print("Connection send completed, waiting for response...")
+                response = await self._receive_full_response(None)
+                return HttpeResponse(response)
+            else:
+                return None
 
     async def _init_connection(self):
         while(self.edoi_path == None):
@@ -635,13 +658,17 @@ class HttpeClientCore:
     async def edoi_send_to_target(self,payload):
         await self._trigger_event('sending_packet')
         count = 1
+        route_to_use = await self.choose_path()
+        if(route_to_use == None):
+            return False
         packet = {
             "type": "forward",
-            "route": await self.choose_path(),
+            "route": route_to_use,
             "count": count,
             "payload": payload,
             "ip_combo":(self.host,self.port)
         }
+
         # Send to next hop
         # next_hop = route[count]
         # print("Next hop",next_hop)
@@ -665,3 +692,5 @@ class HttpeClientCore:
             file = open("../run_output.log","a")
             file.write(f"Client:Forward:{for_t}\n")
             file.close()
+        return True
+        
