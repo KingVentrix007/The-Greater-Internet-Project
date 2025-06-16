@@ -161,7 +161,7 @@ class Httpe:
             return False
         return True
     def _handle_share_aes(self,data:dict):
-        print("Handling share aes")
+        # print("Handling share aes")
         try:
             aes_key_enc = data.get("aes_key",None)
             user_id_enc = data.get("user_id",None)
@@ -274,6 +274,7 @@ class Httpe:
             message = json.dumps({"type": "connect","tup":(self.host,self.port)}).encode('utf-8')
             client_socket.sendall(message)
     def _handle_client(self, conn, addr):
+        print("[+]Received connection from", addr)
         # start_time_timer = time.start()
         try:
             try:
@@ -322,7 +323,7 @@ class Httpe:
                         salt = edoi_json_data.get("salt", None)
                         name_hash = self.compute_hashed_identity(self.name, salt)
                         if name_hash == target_hash:
-                            print("Got EDOI-NET connection")
+                            # print("Got EDOI-NET connection")
                             route_member = {"hash":name_hash,"salt":salt}
                             route.append(route_member)
                             ret_data = {"type":"path","route":route,"count":len(route)-2,"hash":target_hash,"salt":salt,"node_ip":(self.host,self.port)}
@@ -349,13 +350,13 @@ class Httpe:
                     end_hash = end_point.get("hash",None)
                     my_hash = self.compute_hashed_identity(self.name,salt)
                     if(my_hash == end_hash):
-                        print(f"Server:Forward:{time.time()}")
-                        file = open("../run_output.log","a")
-                        file.write(f"Server:Forward:{time.time()}\n")
-                        file.close()
+                        # print(f"Server:Forward:{time.time()}")
+                        if(self._debug_mode == True):
+                            file = open("../run_output.log","a")
+                            file.write(f"Server:Forward:{time.time()}\n")
+                            file.close()
                         # httpe_logging.sync_log(f"Server:Forward:{time.time()}")
 
-                        pass
                     else:
                         # print("No match")
                         return
