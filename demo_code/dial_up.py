@@ -43,6 +43,14 @@ def make_event_handler(stage_name):
 def handle_general_error(message):
     error_occurred["status"] = True
     error_occurred["message"] = str(message)
+def handle_no_path():
+    error_occurred["status"] = True
+    error_occurred["message"] = (
+        "No path to the server could be established.\n"
+        "This usually means the network is saturated or the target is unreachable.\n"
+        "You can try again later, or use a different server name."
+    )
+
 
 # === Beep Patterns ===
 beep_patterns = [
@@ -108,7 +116,7 @@ async def send():
         client.on(stage, make_event_handler(stage))
 
     client.on("general_error", handle_general_error)
-
+    client.on("no_path_response_received", handle_no_path)
     ui_task = asyncio.create_task(dialup_runner())
     await client.start()
     await asyncio.sleep(0.5)
@@ -152,7 +160,7 @@ async def send():
 
         console.print(f"[yellow]Response Time:[/] {end_time - start_time:.2f} sec")
         console.print(f"[blue]Status:[/] {res.status}")
-        console.print(f"[white]Body:[/] {res.json()}")
+        console.print(f"[white]Body:[/] {res.body()}")
 
         again = Prompt.ask("[bold cyan]Do you want to send or receive another message? (y/n)", choices=["y", "n"])
         if again == "n":

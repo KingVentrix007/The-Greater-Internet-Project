@@ -200,7 +200,8 @@ class HttpeClientCore:
             'packet_sent':[],
             'waiting_for_packet_response':[],
             'packet_response_received':[],
-            'general_error':[]
+            'general_error':[],
+            'no_path_response_received':[]
 
 
         }
@@ -280,10 +281,11 @@ class HttpeClientCore:
             else:
                 self.all_edoi_paths.append(route)
         elif sub_type == "no_path":
-            print("No path")
+            # print("No path")
             self.no_path_res_count += 1
             if self.no_path_res_count > 5 and self.edoi_path is None:
-                print("No path found for target. Please try again later. EDOI target:", self.edoi_target)
+                await self._trigger_event("no_path_response_received")
+                # print("No path found for target. Please try again later. EDOI target:", self.edoi_target)
 
     async def _handle_return_packet(self, data):
         if(self._debug_mode == True):
@@ -494,7 +496,7 @@ class HttpeClientCore:
             return res
         except Exception as e:
             print(f"Error in decrypted_body {e}")
-            return None
+            return res
 
     async def _receive_full_response(self,s) -> str:
         if(self.use_edoi == True):

@@ -147,9 +147,9 @@ class NetNode():
             await writer.drain()
             writer.close() # Close writer
             await writer.wait_closed() # non-blocking ensure writer is closed
-            print(f"{self.name}:Send completed to {host}:{port} with message_id {message_id}")
+            # print(f"{self.name}:Send completed to {host}:{port} with message_id {message_id}")
         except Exception as e: # General catch all Exception
-            print(f"[ERROR]: {self.name}: send_data error {e}")
+            print(f"[ERROR]: {self.name}: send_data to {host, port} error")
    
     async def continue_find(self,route,hash_to_find,debug_route=None,target=None,salt=None,ip_combo=None):
         """
@@ -419,13 +419,14 @@ class NetNode():
                 route_id = (target_hash, route_hash)
                 try:
                     if(route in self.found_end_route.get(route_id,None)):
+                        print(f"{self.name}: Route already found, ignoring.")
                         return
                 except Exception as e:
                     pass
                 if(target_hash in self.find_hashes_handled):
                     if(target_hash == route[len(route)-1].get("hash")):
                         print(route)
-                #     # print("Handled find hash already, ignoring. Hash") 
+                    # print(f"{self.name}:Handled find hash already, ignoring. Hash") 
                     return
                 self.find_hashes_handled.add(target_hash)
                 last_ip = data.get("ip_combo",None)
@@ -434,8 +435,9 @@ class NetNode():
                 hash_to_find = target_hash
                 salt = data["salt"]
                 my_hash = self.compute_hashed_identity(salt)
-                if(len(route) > 20):
-                    print("No more than 20 hops allowed, ignoring request. Route: ", route)
+                # print(f"{self.name}:len(route):{len(route)}")
+                if(len(route) >= 8):
+                    print(f"{self.name}: No more than 8 hops allowed, ignoring request. Route: ", route)
                     route_member = {"hash":my_hash,"salt":salt}
                     message_id = data.get("message_id",None)
                     ret_data = {"type":"path","sub_type":"no_path","hash":target_hash,"salt": salt,"route":route,"count":len(route)-1}
@@ -476,7 +478,13 @@ class NetNode():
                     ip_combo = (self.ip,1000+self.port)
                     await self.continue_find(route,hash_to_find=hash_to_find,target=target_hash,salt=salt,ip_combo=ip_combo)
                 else:
-                    print("Not really sure what to do here, but ignoring. Hash: ", my_hash, " Route: ", route)
+                    route_member = {"hash":my_hash,"salt":salt}
+                    route.append(route_member)
+                    route_hash = hash(tuple(frozenset(item.items()) for item in route))
+                    self.store_hash[route[len(route)-1].get("hash")] = last_ip
+                    ip_combo = (self.ip,1000+self.port)
+                    await self.continue_find(route,hash_to_find=hash_to_find,target=target_hash,salt=salt,ip_combo=ip_combo)
+                    # print("Not really sure what to do here, but ignoring. Hash: ", my_hash, " Route: ", route)
             except Exception as e:
                 print(f"{self.name} find error {e}|{data}")
 

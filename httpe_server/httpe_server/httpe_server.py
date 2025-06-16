@@ -508,7 +508,7 @@ class Httpe:
                 # ##print("Cant find route for type:",initial_packet_type)
                 result = "Route Not Found"
                 if not isinstance(result, Response):
-                        result = Response(str(result))  # fallback
+                        result = Response(str(result),status_code=404)  # fallback
                 response = result.serialize()
 
             # conn.sendall(response.encode())
