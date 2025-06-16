@@ -200,6 +200,7 @@ class HttpeClientCore:
             'packet_sent':[],
             'waiting_for_packet_response':[],
             'packet_response_received':[],
+            'general_error':[]
 
 
         }
@@ -279,6 +280,7 @@ class HttpeClientCore:
             else:
                 self.all_edoi_paths.append(route)
         elif sub_type == "no_path":
+            print("No path")
             self.no_path_res_count += 1
             if self.no_path_res_count > 5 and self.edoi_path is None:
                 print("No path found for target. Please try again later. EDOI target:", self.edoi_target)
@@ -324,10 +326,13 @@ class HttpeClientCore:
             await self.handle_edoi_conn(json_data)
 
         except asyncio.IncompleteReadError:
+            await self._trigger_event('general_error', f"Incomplete read from {addr}")
             print(f"[!] Incomplete read from {addr}")
         except json.JSONDecodeError as e:
             print(f"[!] JSON decode error: {e}")
+            await self._trigger_event('json_decode_error', f"JSON decode error from {addr}: {e}")
         except Exception as e:
+            await self._trigger_event('general_error', f"General error from {addr}: {e}")
             print(f"[!] General error: {e}")
         finally:
             writer.close()
@@ -390,6 +395,7 @@ class HttpeClientCore:
                 print("Is connecting")
             return await self._send_request_enc(method, location, headers, body)
         except Exception as e:
+            await self._trigger_event('general_error', f"Error in send_request: {e}")
             print(f"Error in send_request: {e}")
             return None
 
@@ -397,6 +403,7 @@ class HttpeClientCore:
         if(self._silent_mode == False):
             print(f"Sending ENC packet to EDOI server. Method: {method}, Location: {location}")
         if not isinstance(body, str):
+            await self._trigger_event('general_error', f"Body must be of type str, current type is {type(body)}")
             raise TypeError(f"Body must be of type str, current type is {type(body)}")
 
         headers = self._prepare_headers(headers)
@@ -422,6 +429,7 @@ class HttpeClientCore:
             if self._debug_mode:
                 print(f"[DEBUG]:Client:Time to send packet: {send_end - send_start}")
         except Exception as e:
+            await self._trigger_event('general_error', f"Error sending request: {e}")
             print(f"_send_request_enc send error {e}")
             return None
 
@@ -446,6 +454,7 @@ class HttpeClientCore:
                 lines.append("END")
             return "\n".join(lines)
         except Exception as e:
+            # await self._trigger_event('general_error', f"Error constructing request string: {e}")
             print(f"_send_request_enc plain_text error {e}")
             return None
 
@@ -521,6 +530,7 @@ class HttpeClientCore:
                     response = await self._receive_full_response(s)
                 return HttpeResponse(response)
             except Exception as e:
+                await self._trigger_event('general_error', f"Connection send failed: {e}")
                 print(f"Connection send failed: {e}")
                 return HttpeResponse("ERROR: Connection failed")
         else:
@@ -606,7 +616,10 @@ class HttpeClientCore:
             self._enc_mode_active = True
             self.secure = True
             await self._trigger_event("handshake_complete")
+            await asyncio.sleep(0.5)
+            # print("event trigger")
         except Exception as e:
+            await self._trigger_event('general_error', f'Handshake failed: {e}')
             print(f"Handshake failed: {e}")
     def terminate(self):
         print("Terminating connection to server...")

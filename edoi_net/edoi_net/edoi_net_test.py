@@ -13,6 +13,7 @@ NEIGHBOR_COUNT = 5  # adjust based on your config
 async def _test_network():
     # === 1. Setup toxiproxy to simulate network latency ===
     def setup_proxies():
+        # server = toxiproxy.server.Proxy(name="Test")
         toxiproxy_client =  toxiproxy.Toxiproxy()
         
 
