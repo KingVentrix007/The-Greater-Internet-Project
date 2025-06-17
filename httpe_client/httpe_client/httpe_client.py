@@ -37,10 +37,7 @@ class HttpeClient:
         if self._client is None:
             await self.init()
         await self._client.start()
-    async def post(self,location,body=None):
-        return await self.send_request("POST",location=location,body=body)
-    async def get(self,location):
-        return await self.send_request("GET",location=location,body="")
+    
     async def send_request(self, method, location, body=None):
         if self._client is None:
             raise Warning("Client not initialized. Call `start()` before sending requests.")
@@ -54,6 +51,10 @@ class HttpeClient:
             return await self._client.send_request(method, location, body=body)
         except Exception as e:
             raise RuntimeError(f"Failed to send request: {e}") from e
+    async def post(self,location,body=None):
+        return await self.send_request("POST",location=location,body=body)
+    async def get(self,location):
+        return await self.send_request("GET",location=location,body="")
     def on(self, event_name, callback=None):
         # print("Registering event handler for:", event_name, "with callback:", callback)
         if self._client is None:
@@ -717,10 +718,14 @@ class HttpeClientCore:
             # Send a message to the EDOI node
             message = json.dumps(packet).encode('utf-8')
             client_socket.sendall(message)
+
+            client_socket.shutdown(socket.SHUT_RDWR)
         await self._trigger_event('packet_sent')
         if(self._debug_mode == True):
             file = open("../run_output.log","a")
             file.write(f"Client:Forward:{for_t}\n")
             file.close()
+        # client_socket.shutdown(socket.SHUT_RDWR)  # 1. Gracefully close the connection
+        # sock.close() 
         return True
         

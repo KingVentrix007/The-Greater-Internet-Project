@@ -9,10 +9,7 @@ BASE_PORT = 20000
 PROXY_PORT = 21000
 NUM_NODES = 200
 NEIGHBOR_COUNT = 5  # adjust based on your config
-
-async def _test_network():
-    # === 1. Setup toxiproxy to simulate network latency ===
-    def setup_proxies():
+def setup_proxies(latency=50,jitter=10):
         # server = toxiproxy.server.Proxy(name="Test")
         toxiproxy_client =  toxiproxy.Toxiproxy()
         
@@ -39,44 +36,24 @@ async def _test_network():
                 name="downlatency",
                 type="latency",
                 stream="downstream",  # delay when talking *to* the node
-                attributes={"latency": 2, "jitter": 0}
+                attributes={"latency": latency, "jitter": jitter}
             )
 
             proxy.add_toxic(
                 name="uplatency",
                 type="latency",
                 stream="upstream",  # delay when talking *to* the node
-                attributes={"latency": 2, "jitter": 0}
+                attributes={"latency": latency, "jitter": jitter}
             )
-            # proxy.add_toxic(
-            #     name="uploss",
-            #     type="loss",
-            #     stream="upstream",
-            #     attributes={"loss": 2.0}  # 2% packet loss
-            # )
-
-            # proxy.add_toxic(
-            #     name="downloss",
-            #     type="loss",
-            #     stream="downstream",
-            #     attributes={"loss": 2.0}
-            # )
-
-
-
-        #     proxy.add_toxic(
-        #     name="timeout_sim",
-        #     type="timeout",
-        #     stream="downstream",
-        #     attributes={"timeout": 2000}  # Delay stream for 2 seconds (2000 ms)
-        # )
-
             proxeys.append(proxy)
         for j in range(NUM_NODES):
             name = f"edoi_node_{j}"
             if(toxiproxy_client.get_proxy(name) == None):
                 print(f"Failed to create proxy: {name}")
-        print(f"[+] Created {NUM_NODES} proxies on ports {PROXY_PORT}–{PROXY_PORT + NUM_NODES - 1}")
+        print(f"[+] Created {NUM_NODES} proxies on ports {PROXY_PORT}-{PROXY_PORT + NUM_NODES - 1}")
+async def _test_network():
+    # === 1. Setup toxiproxy to simulate network latency ===
+    
         
 
     await asyncio.to_thread(setup_proxies)

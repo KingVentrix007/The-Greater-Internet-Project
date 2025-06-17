@@ -584,7 +584,7 @@ class Httpe:
                 conn.sendall(data)
             else:
                 if(route == None or len(route) < 2):
-                    print("Failed:",route)
+                    print(f"[ERROR] Failed to send packet. Route to short or none: {route}")
                     return
                 count = len(route) - 2
                 packet = {
@@ -605,7 +605,6 @@ class Httpe:
                     client_socket.connect((self.edoi_ip, self.edoi_port))
                     message = json.dumps(packet).encode('utf-8')
                     client_socket.sendall(message)
-                print("REal send complete")
                 return
         except Exception as e:
             print(f"[ERROR]. General error sending packet to {addr}: {e}")

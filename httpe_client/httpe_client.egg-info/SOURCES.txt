@@ -1,6 +1,7 @@
 pyproject.toml
 httpe_client/__init__.py
 httpe_client/httpe_client.py
+httpe_client/httpe_sync.py
 httpe_client.egg-info/PKG-INFO
 httpe_client.egg-info/SOURCES.txt
 httpe_client.egg-info/dependency_links.txt

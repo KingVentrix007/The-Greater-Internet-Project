@@ -18,6 +18,10 @@ def get_message(password):
     
     return {"message": message}, 200
 
+@server.path('/test',method='POST')
+def test_func(message):
+    print(f"Test function called with message: {message}")
+    return {"status": "Test function executed successfully"}
 
 @server.path('/send_message', method='POST')
 def send_message(message,password):
