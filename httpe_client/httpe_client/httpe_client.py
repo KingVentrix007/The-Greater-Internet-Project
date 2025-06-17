@@ -17,7 +17,6 @@ VERSION = 1.0
 VERSION_STR = f"VERSION:HTTPE/{VERSION}"
 
 
-
 # Singleton-style wrapper
 class HttpeClient:
     _client_instance = None
@@ -38,7 +37,10 @@ class HttpeClient:
         if self._client is None:
             await self.init()
         await self._client.start()
-
+    async def post(self,location,body=None):
+        return await self.send_request("POST",location=location,body=body)
+    async def get(self,location):
+        return await self.send_request("GET",location=location,body="")
     async def send_request(self, method, location, body=None):
         if self._client is None:
             raise Warning("Client not initialized. Call `start()` before sending requests.")
@@ -179,6 +181,7 @@ class HttpeClientCore:
         self.edoi_target = edoi_target
         self.salt = os.urandom(32).hex()
         self.edoi_res = None
+        self.edoi_res_event = asyncio.Event()
         self.got_edoi_res = False
         self._got_edoi_event = asyncio.Event()
         self.handle_con_in_use = False
@@ -205,7 +208,8 @@ class HttpeClientCore:
             'waiting_for_packet_response':[],
             'packet_response_received':[],
             'general_error':[],
-            'no_path_response_received':[]
+            'no_path_response_received':[],
+            "response_timeout": [],  # New event for response timeout
 
 
         }
@@ -394,16 +398,19 @@ class HttpeClientCore:
         await self._trigger_event("waiting_for_edoi_path")
         if(self._silent_mode == False):
             print("Sent path request to EDOI server. Waiting for response...")
-        asyncio.create_task(self.wait_for_path_or_timeout())
-    async def wait_for_path_or_timeout(self, timeout=15):
+        asyncio.create_task(self.wait_for_or_timeout(wait_event=self.path_set_event,callback=self.handle_path_timeout))
+    async def wait_for_or_timeout(self, timeout=15,wait_event=None,callback=None):
         try:
-            await asyncio.wait_for(self.path_set_event.wait(), timeout=timeout)
-            # print("Path was set before timeout.")
+            await asyncio.wait_for(wait_event.wait(), timeout=timeout)
         except asyncio.TimeoutError:
-            await self.handle_path_timeout()
+            await callback()
     async def handle_path_timeout(self):
         await self._trigger_event("no_path_response_received")
-        # print("Path request timed out. Retrying...")
+    async def handle_packet_timeout(self):
+        self.edoi_res = None
+
+        await self._trigger_event("response_timeout")
+        await self._got_edoi_event.set()
   
     async def send_request(self, method, location, headers=None, body="", use_httpe=True):
         """Send an encrypted request to the server, establishing connection if needed"""
@@ -425,12 +432,25 @@ class HttpeClientCore:
             raise TypeError(f"Body must be of type str, current type is {type(body)}")
 
         headers = self._prepare_headers(headers)
+        if(headers.get("content-type",None) == "json"):
+            try:
+                body = json.dumps(body)
+            except json.JSONDecodeError as jer:
+                print(f"[ERROR] Failed to decode json value: {jer}")
+                await self._trigger_event('general_error', f"Failed to decode json value: {jer}")
+            except Exception as e:
+                print(f"[ERROR] General error: {e}")
+                await self._trigger_event('general_error', f"General error: {e}")
+
         request_str = self._construct_request_string(method, location, headers, body)
         if request_str is None:
+            await self._trigger_event('general_error', "Error making request string")
             return None
 
         encrypted = self._encrypt_packet(request_str)
         if encrypted is None:
+            await self._trigger_event('general_error', "Error encrypting string")
+
             return None
 
         try:
@@ -467,6 +487,8 @@ class HttpeClientCore:
         headers.setdefault("is_com_setup", False)
         headers.setdefault("timestamp", datetime.now(timezone.utc))
         headers.setdefault("compressions", "false")
+        headers.setdefault("content-type","json") # No server implementation yet
+        headers.setdefault("accept","plain") # No server implementation yet
         return headers
 
     def _construct_request_string(self, method, location, headers, body):
@@ -526,11 +548,13 @@ class HttpeClientCore:
             if(self._silent_mode == False):
                 print("Waiting for EDOI response...")
             await self._trigger_event('waiting_for_packet_response')
+            asyncio.create_task(self.wait_for_or_timeout(wait_event=self.edoi_res_event,callback=self.handle_packet_timeout))
             await self._got_edoi_event.wait()
             if(self._silent_mode == False):
                 print("Received EDOI event, processing response...")
             self._got_edoi_event.clear()
             await self._trigger_event('packet_response_received')
+            self.edoi_res_event.set()
             return self.edoi_res
         else:
             # pass
@@ -564,7 +588,9 @@ class HttpeClientCore:
                 if(self._silent_mode == False):
                     print("Connection send completed, waiting for response...")
                 response = await self._receive_full_response(None)
-                return HttpeResponse(response)
+                if(response != None):
+                    return HttpeResponse(response)
+                return None
             else:
                 return None
 

@@ -4,10 +4,10 @@
 
 ### High Priority
 
-- [ ] Add timeout when waiting for response.  
-- [ ] Auto-convert `dict` to `str` using `json.dumps` in `send()`.  
-- [ ] Add `.post()` wrapper method.  
-- [ ] Add `.get()` wrapper method.  
+- [X] Add timeout when waiting for response.  
+- [X] Auto-convert `dict` to `str` using `json.dumps` in `send()`. Based on content headers
+- [X] Add `.post()` wrapper method.  
+- [X] Add `.get()` wrapper method.  
 
 ## TODO: `httpe_server`
 
