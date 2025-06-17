@@ -12,7 +12,10 @@ NEIGHBOR_COUNT = 5  # adjust based on your config
 def setup_proxies(latency=50,jitter=10):
         # server = toxiproxy.server.Proxy(name="Test")
         toxiproxy_client =  toxiproxy.Toxiproxy()
-        
+        if(toxiproxy_client.running() == False):
+            raise RuntimeError("[!] Toxiproxy server is not running. Please start it first.")
+            # print("")
+            # return
 
         # Clean up any old proxies
         toxiproxy_client.destroy_all()
