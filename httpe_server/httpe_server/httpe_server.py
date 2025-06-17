@@ -417,7 +417,6 @@ class Httpe:
                     print(f"[ERROR]. EDOI handle: {e}")
                 if(edoi_data != None):
                     if(edoi_data == False and route == False):
-                        print("HELLO")
                         return
                     data=edoi_data
                 else:

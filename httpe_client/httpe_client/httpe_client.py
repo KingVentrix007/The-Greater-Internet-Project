@@ -443,7 +443,7 @@ class HttpeClientCore:
             except Exception as e:
                 print(f"[ERROR] General error: {e}")
                 await self._trigger_event('general_error', f"General error: {e}")
-
+    
         request_str = self._construct_request_string(method, location, headers, body)
         if request_str is None:
             await self._trigger_event('general_error', "Error making request string")

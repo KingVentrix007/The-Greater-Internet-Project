@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+        }
+
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        nav {
+            width: 200px;
+            background-color: #222;
+            color: #fff;
+            padding: 1rem;
+        }
+
+        nav a {
+            display: block;
+            color: #ccc;
+            text-decoration: none;
+            margin: 0.5rem 0;
+        }
+
+        nav a:hover {
+            color: #fff;
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            background-color: #fff;
+        }
+
+        .card {
+            background-color: #f9f9f9;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+
+        .card h3 {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>My Dashboard</h1>
+</header>
+
+<div class="container">
+    <nav>
+        <a href="#">Home</a>
+        <a href="#">Stats</a>
+        <a href="#">Settings</a>
+        <a href="#">Logout</a>
+    </nav>
+
+    <main>
+        <div class="card">
+            <h3>Welcome</h3>
+            <p>This is a basic dashboard layout. Customize it as needed.</p>
+        </div>
+
+        <div class="card">
+            <h3>System Status</h3>
+            <p>Everything is running smoothly.</p>
+        </div>
+    </main>
+</div>
+
+</body>
+</html>
