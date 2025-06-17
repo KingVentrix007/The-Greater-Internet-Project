@@ -363,26 +363,27 @@ class Httpe:
                     err_res =  Response.error(message=f"Internal Server Error {e}",status_code=500)
                     print(f"[ERROR] {err_res.serialize()}")
                     self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=None)
-                    return None
+                    return None, edoi_json_data.get("route",None)
                 edoi_packet_type = edoi_json_data.get("type",None)
                 route = None
                 if(edoi_packet_type == "find"):
-                    return self._handle_edoi_find(edoi_json_data=edoi_json_data)
+                    self._handle_edoi_find(edoi_json_data=edoi_json_data)
+                    return False,False
                 elif(edoi_packet_type == "forward"):
                     is_target = self._handle_edoi_forward(edoi_json_data)
                     if(is_target == True):
                         data = edoi_json_data.get("payload",None)
                         return data,edoi_json_data.get("route",None)
-                    return None
+                    return None,edoi_json_data.get("route",None)
                 else:
                     try:
                         data = edoi_json_data.get("payload",None)
-                        return data
+                        return data,edoi_json_data.get("route",None)
                     except Exception as e:
                         err_res =  Response.error(message=f"Internal Server Error {e}",status_code=500)
                         print(f"[ERROR] {err_res.serialize().encode()}")
                         self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=route)
-                        return None
+                        return None,edoi_json_data.get("route",None)
     def _handle_client(self, conn, addr):
         print("[+]Received connection from", addr)
         try:
@@ -410,8 +411,14 @@ class Httpe:
             route=None
 
             if(self.is_edoi_node == True):
-                edoi_data,route  = self.handle_edoi_packet(data=data,addr=addr,conn=conn)
+                try:
+                    edoi_data,route  = self.handle_edoi_packet(data=data,addr=addr,conn=conn)
+                except Exception as e:
+                    print(f"[ERROR]. EDOI handle: {e}")
                 if(edoi_data != None):
+                    if(edoi_data == False and route == False):
+                        print("HELLO")
+                        return
                     data=edoi_data
                 else:
                     return
@@ -527,7 +534,7 @@ class Httpe:
 
             #! Remove {e} in prod
             err_res =  Response.error(message=f"Error With Client handling code :{e}",status_code=500)
-            print(f"[ERROR] {err_res.serialize().encode()}")
+            print(f"[ERROR] {err_res.serialize().encode()}\n||")
             self.send_packet(conn,addr,data=err_res.serialize().encode(),route=None)
             return
         finally:
