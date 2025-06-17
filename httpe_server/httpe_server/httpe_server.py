@@ -538,34 +538,55 @@ class Httpe:
             return
         finally:
             conn.close()
-    def _parse_handler(self, handler,sig,body,aes_key,content_type="json"):
-        if(body != None):
-            if(isinstance(body,str) == True):
-                try:
-                    body = json.loads(body)
-                except Exception as e:
-                    print(f"[ERROR] Failed to load body as json: {e}:{body}")
-            kwargs = {}
-            for val in body.keys():
-                if val not in sig.parameters:
-                    
-                    err_res =  Response.error(message="Invalid Parameter",status_code=400)
-            #         # 
-                    return err_res
-            for name, param in sig.parameters.items():
-                if(name in body):
-                    kwargs[name] = body[name]
-                else:
-                    err_res =  Response.error(message="Invalid Parameter",status_code=400)
-                    # 
-                    return err_res
-            
-            res_data = handler(**kwargs)
+    def _parse_handler_json(self, handler,sig,body):
+        if(isinstance(body,str) == True):
+            try:
+                body = json.loads(body)
+            except Exception as e:
+                print(f"[ERROR] Failed to load body as json: {e}:{body}")
+                err_res =  Response.error(message="Invalid JSON",status_code=400)
+                return err_res
+
+        kwargs = {}
+        for val in body.keys():
+            if val not in sig.parameters:
+                
+                err_res =  Response.error(message="Invalid Parameter",status_code=400)
+        #         # 
+                return err_res
+        for name, param in sig.parameters.items():
+            if(name in body):
+                kwargs[name] = body[name]
+            else:
+                err_res =  Response.error(message="Invalid Parameter",status_code=400)
+                # 
+                return err_res
+        
+        res_data = handler(**kwargs)
+        return res_data
+    def _parse_handler(self, handler,sig,body,aes_key,content_type="application/json",accepts="application/json"):
+        if body is not None:
+
+            if content_type == "application/json":
+                res_data = self._parse_handler_json(handler, sig, body)
+            elif content_type in ("text/plain", "text/html", "application/octet-stream"):
+                res_data = handler(body)
+            else:
+                res_data =  Response.error(message=f"Unsupported Media Type: {content_type}",status_code=415)
+        
         else:
             res_data = handler()
+
         temp_class = httpe_fernet.HttpeFernet(aes_key)
         if(isinstance(res_data, Response)):
             plain_b = res_data.body
+            if(accepts == "application/json"):
+                try:
+                    plain_b = json.loads(plain_b)
+                except json.JSONDecodeError:
+                    err_res =  Response.error(message=f"Endpoint response type doesn't match requested type {accepts}",status_code=415)
+                    plain_b = err_res.body
+                    res_data.status_code = err_res.status_code
             error_code = res_data.status_code
             enc_data = temp_class.encrypt(json.dumps(plain_b).encode("utf-8"))
             enc_res =Response(enc_data,status_code=error_code)
