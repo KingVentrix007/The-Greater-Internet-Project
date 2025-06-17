@@ -538,7 +538,7 @@ class Httpe:
             return
         finally:
             conn.close()
-    def _parse_handler(self, handler,sig,body,aes_key):
+    def _parse_handler(self, handler,sig,body,aes_key,content_type="json"):
         if(body != None):
             if(isinstance(body,str) == True):
                 try:
