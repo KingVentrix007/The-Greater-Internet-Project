@@ -268,6 +268,7 @@ class HttpeClientCore:
         if edoi_packet_type == "path":
             await self._handle_path_packet(data, sub_type)
         elif edoi_packet_type == "return":
+            # print("RETURN")
             await self._handle_return_packet(data)
         elif edoi_packet_type == "find":
             await self._handle_find_packet(data)
@@ -284,7 +285,7 @@ class HttpeClientCore:
             if self.edoi_path is None:
                 self.edoi_path = route
                 self.path_set_event.set()  # Notify that the path has been set
-                # print(f"Route: {len(route)}")
+                # print(f"Route: {len(self.edoi_path)}:{self.edoi_path}")
                 self.all_edoi_paths.append(route)
                 await self._trigger_event("edoi_path_received")
             else:
@@ -303,7 +304,7 @@ class HttpeClientCore:
         payload = data.get("payload", None)
         self.edoi_res = payload
         self._got_edoi_event.set()
-
+        # print("END RTURN")
     async def _handle_find_packet(self, data):
         # print("in find")
         target_hash = data["hash"]
@@ -410,7 +411,7 @@ class HttpeClientCore:
         self.edoi_res = None
 
         await self._trigger_event("response_timeout")
-        await self._got_edoi_event.set()
+        self._got_edoi_event.set()
   
     async def send_request(self, method, location, headers=None, body="", use_httpe=True):
         """Send an encrypted request to the server, establishing connection if needed"""
@@ -548,7 +549,7 @@ class HttpeClientCore:
             if(self._silent_mode == False):
                 print("Waiting for EDOI response...")
             await self._trigger_event('waiting_for_packet_response')
-            asyncio.create_task(self.wait_for_or_timeout(wait_event=self.edoi_res_event,callback=self.handle_packet_timeout))
+            asyncio.create_task(self.wait_for_or_timeout(wait_event=self.edoi_res_event,callback=self.handle_packet_timeout,timeout=60))
             await self._got_edoi_event.wait()
             if(self._silent_mode == False):
                 print("Received EDOI event, processing response...")

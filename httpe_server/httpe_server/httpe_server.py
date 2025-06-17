@@ -6,7 +6,7 @@ import threading
 import inspect
 import json
 from httpe_core.httpe_class import Response
-import httpe_core.httpe_error
+import httpe_core.httpe_error as httpe_error
 from datetime import datetime, timezone, timedelta
 import httpe_core.httpe_secure as sec
 import uuid
@@ -14,7 +14,6 @@ import base64
 import httpe_core.httpe_fernet as httpe_fernet
 import httpe_core.httpe_logging as httpe_logging
 import signal
-import sys
 import logging
 import threading
 
@@ -99,35 +98,36 @@ class Httpe:
                 timestamp = datetime.fromisoformat(expire_data)
                 now = datetime.now(timezone.utc)
                 if now - timestamp > timedelta(minutes=20):
-                    raise Exception("Public key expired")
+                    raise httpe_error.PublicKeyExpiredError("Public key expired")
                 key = key_data["key"]
                 self.rsa_public_key_shared = key
         except Exception as e:
             self._log_internal_error(e)
+            print(f"[ERROR] Failed to handle key files: {e}")
+            self.rsa_private_key = None
+            self.rsa_public_key_shared = None
 
-            ##print(f"Load keys error {e}")
-            raise Exception(e)
         
     def load_cert(self):
         try:
             with open("cert.crte","r") as f:
                 self.cert = json.load(f)
+        except FileNotFoundError:
+            print("[ERROR] Cannot find cert.crte. Please ensure it is placed in the same dir as the main server file")
+            self.cert = None
         except Exception as e:
             self._log_internal_error(e)
-
-            ##print(f"Load keys error {e}")
-            raise Exception(e)
-    def path(self, route, method="GET",requires_enc=True):
+            print(f"[ERROR] General error loading cert.crte {e}")
+            self.cert = None
+    def path(self, route, method="GET"):
         def decorator(func):
             self.routes[(route, method)] = func
             return func
         return decorator
     def paths(self):
         for (route, method), func in self.routes.items():
-            # enc_status = "Encrypted" if requires_enc else "Unencrypted"
-            print(f"{method} {route} ) -> {func.__name__}")
+            print(f"{method} {route} -> {func.__name__}")
     def serve(self, host="127.0.0.1", port=8080):
-        
         print(f"HTTPE server running on {host}:{port}...")
         signal.signal(signal.SIGINT, self._shutdown)  # Handle Ctrl+C
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -189,7 +189,6 @@ class Httpe:
 
             ##print(f"_handle_share_aes error {e}")
     def _handle_enc_request(self,data:str):
-        user_id_enc = None
         aes_key_to_use = None
         found_id = False
         enc_data = None
@@ -213,7 +212,6 @@ class Httpe:
             elif(found_id == True):
                 enc_data = line
                 break
-        # decrypted_data = sec.fernet_decrypt(enc_data,aes_key_to_use)
         temp_class = httpe_fernet.HttpeFernet(aes_key_to_use)
         decrypted_data = temp_class.decrypt(enc_data).decode()
         ##print("HTTPE_DECRYPTED_DATA_decrypted_data == ",decrypted_data)
@@ -252,7 +250,8 @@ class Httpe:
                 body += line + "\n"
         return headers,version,is_initial_packet,initial_packet_type,method,location,body
     def _log_request(self, path, valid, client_ip, header, data):
-        logging.info(f"Request to {path} by {client_ip}. Header: {header} Body: {data}")
+        is_valid = "valid" if valid == True else "invalid"
+        logging.info(f"Request to {is_valid}:{path} by {client_ip}. Header: {header} Body: {data}")
 
     def _log_failed_verification(self, client_id, client_ip,notes):
         logging.warning(f"Failed to verify user {client_id} from {client_ip}. {notes}")
@@ -260,7 +259,6 @@ class Httpe:
     def _log_internal_error(self, error: Exception):
         logging.error(f"Internal server error: {error}", exc_info=True)
     def compute_hashed_identity(self,name:str, salt: str) -> str:
-        # return name
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
         return digest.finalize().hex()
@@ -273,9 +271,120 @@ class Httpe:
             # Send a message to the EDOI node
             message = json.dumps({"type": "connect","tup":(self.host,self.port)}).encode('utf-8')
             client_socket.sendall(message)
+    def validate_packet(self,headers,route,conn,addr,user_id_from_token):
+            packet_validation_time_start = time.time()
+            packet_id = headers.get("packet_id",None)
+            
+            header_user_id = headers.get("client_id",None)
+            if(str(header_user_id) != str(user_id_from_token)):
+                self._log_failed_verification(header_user_id,addr,"clientID x TokenID mismatch")
+                err_res =  Response.error(message="Invalid Token",status_code=608)
+                # conn.sendall(err_res.serialize().encode())
+                self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
+                return False
+            if(packet_id == None):
+                self._log_failed_verification(header_user_id,addr,"invalid packet")
+                err_res =  Response.error(message="packet_id missing",status_code =400)
+                self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
+                return False
+            # ##print(f"HTTPE {method} {location} from {addr} with headers {headers}")
+            timestamp = headers.get("timestamp", None)
+            if(timestamp == None):
+                err_res =  Response.error(message="Invalid Timestamp",status_code=608)
+                self._log_failed_verification(header_user_id,addr,"invalid packet")
+                # conn.sendall(err_res.serialize().encode())
+                self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
+                return False
+            timestamp = datetime.fromisoformat(timestamp)
+            now = datetime.now(timezone.utc)
+            if now - timestamp > timedelta(minutes=2):
+                self._log_failed_verification(header_user_id,addr,"Possible packet reuse")
+                err_res =  Response.error(message="Old Timestamp",status_code=607)
+                # conn.sendall(err_res.serialize().encode())
+                self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
+                return False
+            validate_packet_time_end = time.time()
+            if(self._debug_mode == True):
+                print("[DEBUG]:Server:Time to validate packet:",validate_packet_time_end-packet_validation_time_start)
+            return True
+    def _handle_edoi_find(self,edoi_json_data):
+        ##print("PAth search")
+                    route = edoi_json_data.get("route", None)
+                    target_hash = edoi_json_data.get("hash", None)
+                    if route and target_hash:
+                        salt = edoi_json_data.get("salt", None)
+                        name_hash = self.compute_hashed_identity(self.name, salt)
+                        if name_hash == target_hash:
+                            # print("Got EDOI-NET connection")
+                            route_member = {"hash":name_hash,"salt":salt}
+                            route.append(route_member)
+                            ret_data = {"type":"path","route":route,"count":len(route)-2,"hash":target_hash,"salt":salt,"node_ip":(self.host,self.port)}
+                            ret_data["message_id"] = str(uuid.uuid4())
+                            try:
+                                json_str = json.dumps(ret_data)
+                                encoded = json_str.encode('utf-8')
+
+                                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+                                    client_socket.connect((self.edoi_ip, self.edoi_port))
+                                    client_socket.sendall(encoded)
+                                # print("Sent path message")
+                                return None
+                            except Exception as e:
+
+                                print(f"[!] Error sending data: {e}")
+    def _handle_edoi_forward(self,edoi_json_data):
+        # print("Forward request received. Processing...")
+        count = edoi_json_data.get("count",None)
+        route = edoi_json_data.get("route",None)
+        end_point = route[count]
+        salt = route[count]["salt"]
+
+        end_hash = end_point.get("hash",None)
+        my_hash = self.compute_hashed_identity(self.name,salt)
+        if(my_hash == end_hash):
+            # print(f"Server:Forward:{time.time()}")
+            if(self._debug_mode == True):
+                file = open("../run_output.log","a")
+                file.write(f"Server:Forward:{time.time()}\n")
+                file.close()
+            return True
+            # httpe_logging.sync_log(f"Server:Forward:{time.time()}")
+
+        else:
+            # print("No match")
+            return False
+    def handle_edoi_packet(self,data,addr,conn):
+
+                edoi_decoded = data.decode('utf-8')
+                try:
+                    edoi_json_data = json.loads(edoi_decoded)
+                    # ##print(edoi_json_data)
+                except Exception as e:
+                    err_res =  Response.error(message=f"Internal Server Error {e}",status_code=500)
+                    print(f"[ERROR] {err_res.serialize()}")
+                    self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=None)
+                    return None
+                edoi_packet_type = edoi_json_data.get("type",None)
+                route = None
+                if(edoi_packet_type == "find"):
+                    return self._handle_edoi_find(edoi_json_data=edoi_json_data)
+                elif(edoi_packet_type == "forward"):
+                    is_target = self._handle_edoi_forward(edoi_json_data)
+                    if(is_target == True):
+                        data = edoi_json_data.get("payload",None)
+                        return data,edoi_json_data.get("route",None)
+                    return None
+                else:
+                    try:
+                        data = edoi_json_data.get("payload",None)
+                        return data
+                    except Exception as e:
+                        err_res =  Response.error(message=f"Internal Server Error {e}",status_code=500)
+                        print(f"[ERROR] {err_res.serialize().encode()}")
+                        self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=route)
+                        return None
     def _handle_client(self, conn, addr):
         print("[+]Received connection from", addr)
-        # start_time_timer = time.start()
         try:
             try:
                 data = b""
@@ -301,74 +410,10 @@ class Httpe:
             route=None
 
             if(self.is_edoi_node == True):
-                edoi_decoded = data.decode('utf-8')
-                try:
-                    edoi_json_data = json.loads(edoi_decoded)
-                    # ##print(edoi_json_data)
-                except Exception as e:
-                    err_res =  Response.error(message=f"Internal Server Error {e}",status_code=500)
-                    # conn.sendall(err_res.serialize().encode())
-                    ##print(err_res.serialize().encode())
-                    self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=None)
-                    return
-                # data = data.decode()
-                edoi_packet_type = edoi_json_data.get("type",None)
-                # print("Packet type:",edoi_packet_type)
-                route = None
-                if(edoi_packet_type == "find"):
-                    ##print("PAth search")
-                    route = edoi_json_data.get("route", None)
-                    target_hash = edoi_json_data.get("hash", None)
-                    if route and target_hash:
-                        salt = edoi_json_data.get("salt", None)
-                        name_hash = self.compute_hashed_identity(self.name, salt)
-                        if name_hash == target_hash:
-                            # print("Got EDOI-NET connection")
-                            route_member = {"hash":name_hash,"salt":salt}
-                            route.append(route_member)
-                            ret_data = {"type":"path","route":route,"count":len(route)-2,"hash":target_hash,"salt":salt,"node_ip":(self.host,self.port)}
-                            ret_data["message_id"] = str(uuid.uuid4())
-                            try:
-                                json_str = json.dumps(ret_data)
-                                encoded = json_str.encode('utf-8')
-
-                                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-                                    client_socket.connect((self.edoi_ip, self.edoi_port))
-                                    client_socket.sendall(encoded)
-                                # print("Sent path message")
-                                return
-                            except Exception as e:
-
-                                print(f"[!] Error sending data: {e}")
-                elif(edoi_packet_type == "forward"):
-                    # print("Forward request received. Processing...")
-                    count = edoi_json_data.get("count",None)
-                    route = edoi_json_data.get("route",None)
-                    end_point = route[count]
-                    salt = route[count]["salt"]
-
-                    end_hash = end_point.get("hash",None)
-                    my_hash = self.compute_hashed_identity(self.name,salt)
-                    if(my_hash == end_hash):
-                        # print(f"Server:Forward:{time.time()}")
-                        if(self._debug_mode == True):
-                            file = open("../run_output.log","a")
-                            file.write(f"Server:Forward:{time.time()}\n")
-                            file.close()
-                        # httpe_logging.sync_log(f"Server:Forward:{time.time()}")
-
-                    else:
-                        # print("No match")
-                        return
-
-
-                try:
-                    data = edoi_json_data.get("payload",None)
-                except Exception as e:
-                    err_res =  Response.error(message=f"Internal Server Error {e}",status_code=500)
-                    # conn.sendall(err_res.serialize().encode())
-                    ##print(err_res.serialize().encode())
-                    self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=route)
+                edoi_data,route  = self.handle_edoi_packet(data=data,addr=addr,conn=conn)
+                if(edoi_data != None):
+                    data=edoi_data
+                else:
                     return
 
 
@@ -388,10 +433,8 @@ class Httpe:
             initial_packet_type = None
             headers = {}
             body = ""
-            is_encrypted_packet = False
             user_id_from_token = None
             # ##print(text)
-            reading_headers = False
             procsess_packet_start = time.time()
             headers,version,is_initial_packet,initial_packet_type,method,location,body  = self._handle_packet_contents(lines)
             procsess_packet_end = time.time()
@@ -404,20 +447,14 @@ class Httpe:
                 self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
             if(is_initial_packet == True):
                 if(initial_packet_type == "GET_RSA"):
-                    # print("RSA")
+                    print("RSA")
                     send_rsa_pub = {"rsa":self.rsa_public_key_shared}
                     rsa_rez = Response(json.dumps(send_rsa_pub))
-                    # conn.sendall(rsa_rez.serialize().encode())
-                    # print("SENDING RSA")
                     self.send_packet(conn,addr,data=rsa_rez.serialize().encode(),route=route)
-                    # print("SENT RSA")
+                    print("SENT RSA")
                     return
                 elif(initial_packet_type == "SHARE_AES"):
-                    # ##print(headers)
-                    # print("Got aes")
                     res_data = self._handle_share_aes(headers)
-                    # conn.sendall(res_data.serialize().encode())
-                    # print("send aes")
                     self.send_packet(conn,addr,data=res_data.serialize().encode(),route=route)
                     # print("Send aes response")
                     return
@@ -437,48 +474,16 @@ class Httpe:
                         self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
                         return
                     new_lines = new_lines.splitlines()
-                    is_encrypted_packet = True
                     headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(new_lines)
-                    end_enc_time_timer = time.time()
                 else:
                     print(f"WHAT IS THIS: {data}")
 
 
-            # ##print("headers>>",headers)
-            packet_validation_time_start = time.time()
-            packet_id = headers.get("packet_id",None)
             
             header_user_id = headers.get("client_id",None)
-            if(str(header_user_id) != str(user_id_from_token)):
-                self._log_failed_verification(header_user_id,addr,"clientID x TokenID mismatch")
-                err_res =  Response.error(message="Invalid Token",status_code=608)
-                # conn.sendall(err_res.serialize().encode())
-                self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
+            valid_packet = self.validate_packet(headers=headers,route=route,conn=conn,addr=addr,user_id_from_token=user_id_from_token)
+            if(valid_packet == False):
                 return
-            if(packet_id == None):
-                self._log_failed_verification(header_user_id,addr,"invalid packet")
-                err_res =  Response.error(message="packet_id missing",status_code =400)
-                self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
-                return
-            # ##print(f"HTTPE {method} {location} from {addr} with headers {headers}")
-            timestamp = headers.get("timestamp", None)
-            if(timestamp == None):
-                err_res =  Response.error(message="Invalid Timestamp",status_code=608)
-                self._log_failed_verification(header_user_id,addr,"invalid packet")
-                # conn.sendall(err_res.serialize().encode())
-                self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
-                return
-            timestamp = datetime.fromisoformat(timestamp)
-            now = datetime.now(timezone.utc)
-            if now - timestamp > timedelta(minutes=2):
-                self._log_failed_verification(header_user_id,addr,"Possible packet reuse")
-                err_res =  Response.error(message="Old Timestamp",status_code=607)
-                # conn.sendall(err_res.serialize().encode())
-                self.send_packet(conn,addr,data=err_res.serialize().encode(),route=route)
-                return
-            validate_packet_time_end = time.time()
-            if(self._debug_mode == True):
-                print("[DEBUG]:Server:Time to validate packet:",validate_packet_time_end-packet_validation_time_start)
             handler = self.routes.get((location, method))
             ##print(">>",location, method)
             try:
@@ -500,7 +505,6 @@ class Httpe:
                         result = Response(str(result))  # fallback
                     response = result.serialize()
                 else:
-                    handler_start_time = time.time()
                     result = self._parse_handler(handler,sig,json.loads(body),self.user_keys[header_user_id])
                     if not isinstance(result, Response):
                         result = Response(str(result))  # fallback
@@ -523,17 +527,20 @@ class Httpe:
 
             #! Remove {e} in prod
             err_res =  Response.error(message=f"Error With Client handling code :{e}",status_code=500)
-            # conn.sendall(err_res.serialize().encode())
-            ##print(err_res.serialize().encode())
+            print(f"[ERROR] {err_res.serialize().encode()}")
             self.send_packet(conn,addr,data=err_res.serialize().encode(),route=None)
             return
         finally:
             conn.close()
     def _parse_handler(self, handler,sig,body,aes_key):
         if(body != None):
+            if(isinstance(body,str) == True):
+                try:
+                    body = json.loads(body)
+                except Exception as e:
+                    print(f"[ERROR] Failed to load body as json: {e}:{body}")
             kwargs = {}
             for val in body.keys():
-                ##print(val,sig.parameters)
                 if val not in sig.parameters:
                     
                     err_res =  Response.error(message="Invalid Parameter",status_code=400)
@@ -560,7 +567,7 @@ class Httpe:
         enc_data = temp_class.encrypt(json.dumps(res_data).encode("utf-8"))
 
         return enc_data
-    def redirect(self,redirect_url,status=302,**kwargs):
+    def redirect(self,redirect_url,status=302):
         paths = [key[0] for key in self.routes.keys()]
         if(redirect_url not in paths):
             err_res =  Response.error(message="Redirect Url Invalid",status_code=500)
@@ -577,6 +584,7 @@ class Httpe:
                 conn.sendall(data)
             else:
                 if(route == None or len(route) < 2):
+                    print("Failed:",route)
                     return
                 count = len(route) - 2
                 packet = {
@@ -597,7 +605,8 @@ class Httpe:
                     client_socket.connect((self.edoi_ip, self.edoi_port))
                     message = json.dumps(packet).encode('utf-8')
                     client_socket.sendall(message)
+                print("REal send complete")
                 return
         except Exception as e:
-            print(f"{self.name} error in send packet: ")
+            print(f"[ERROR]. General error sending packet to {addr}: {e}")
     # def edoi_net_rec()

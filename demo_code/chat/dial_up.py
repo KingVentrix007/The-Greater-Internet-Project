@@ -55,7 +55,9 @@ def handle_no_path():
         "You can try again later, or use a different server name."
     )
 
-
+def handle_packet_timeout():
+    error_occurred["status"] = True
+    error_occurred["message"] = ("The message timed out")
 # === Beep Patterns ===
 beep_patterns = [
     [(400, 200), (600, 150)],
@@ -124,6 +126,7 @@ async def send():
 
     client.on("general_error", handle_general_error)
     client.on("no_path_response_received", handle_no_path)
+    client.on("response_timeout",handle_packet_timeout)
     ui_task = asyncio.create_task(dialup_runner())
     await client.start()
     await asyncio.sleep(0.5)

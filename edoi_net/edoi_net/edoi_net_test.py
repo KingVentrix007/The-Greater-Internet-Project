@@ -39,14 +39,14 @@ async def _test_network():
                 name="downlatency",
                 type="latency",
                 stream="downstream",  # delay when talking *to* the node
-                attributes={"latency": 100, "jitter": 10}
+                attributes={"latency": 2, "jitter": 0}
             )
 
             proxy.add_toxic(
                 name="uplatency",
                 type="latency",
                 stream="upstream",  # delay when talking *to* the node
-                attributes={"latency": 100, "jitter": 10}
+                attributes={"latency": 2, "jitter": 0}
             )
             # proxy.add_toxic(
             #     name="uploss",
@@ -63,26 +63,7 @@ async def _test_network():
             # )
 
 
-            proxy.add_toxic(
-                name="downloss",
-                type="bandwidth",
-                stream="downstream",
-                attributes={"rate": 1024}  # Simulate slow bandwidth (bytes/sec)
-            )
 
-            proxy.add_toxic(
-                name="slow_downstream",
-                type="bandwidth",
-                stream="downstream",
-                attributes={"rate": 512 * 8}  # 512 KB/s (in bits/sec)
-            )
-
-            proxy.add_toxic(
-                name="slow_upstream",
-                type="bandwidth",
-                stream="upstream",
-                attributes={"rate": 256 * 8}  # 256 KB/s
-            )
         #     proxy.add_toxic(
         #     name="timeout_sim",
         #     type="timeout",

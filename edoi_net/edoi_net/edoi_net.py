@@ -269,7 +269,7 @@ class NetNode():
                 count = int(data["count"])
                 payload = data["payload"]
                 my_hash = self.compute_hashed_identity(route[count]["salt"])
-
+                print(f"{self.name}:Got return packet")
                 if my_hash == route[count]["hash"]:
                     print(f"{self.name}:Return:{time.time()}")
                     file = open("../../run_output.log","a")

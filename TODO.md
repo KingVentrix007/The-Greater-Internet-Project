@@ -13,13 +13,10 @@
 
 ### High Priority
 
-- [ ] Encrypt all error messages before sending.  
 - [ ] Properly handle both `methods=[]` and `method=""` cases.  
 
 ### Lower Priority
 
-- [ ] Support dynamic URLs, e.g. `/url/{id}`.  
-- [ ] Add header to indicate response content type (`json`, `plain`, `xml`, `html`, etc.).  
-- [ ] Add header to indicate request content type (`json`, `plain`, `xml`, `html`, etc.).  
+- [ ] Support dynamic URLs, e.g. `/url/{id}`.   
 - [ ] Add streaming support for large responses.  
 - [ ] Add basic HTML response rendering (for debugging or browsers).  
