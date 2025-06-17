@@ -38,7 +38,7 @@ class HttpeClient:
             await self.init()
         await self._client.start()
     
-    async def send_request(self, method, location, body=None):
+    async def send_request(self, method, location, body=None,headers=None):
         if self._client is None:
             raise Warning("Client not initialized. Call `start()` before sending requests.")
         if not isinstance(method, str):
@@ -48,13 +48,13 @@ class HttpeClient:
         if(body == None):
             raise ValueError("Body cannot be None. Use an empty string if no body is needed.")
         try:
-            return await self._client.send_request(method, location, body=body)
+            return await self._client.send_request(method, location, body=body,headers=headers)
         except Exception as e:
             raise RuntimeError(f"Failed to send request: {e}") from e
-    async def post(self,location,body=None):
-        return await self.send_request("POST",location=location,body=body)
-    async def get(self,location):
-        return await self.send_request("GET",location=location,body="")
+    async def post(self,location,body=None,headers=None):
+        return await self.send_request("POST",location=location,body=body,headers=headers)
+    async def get(self,location,headers=None):
+        return await self.send_request("GET",location=location,body="",headers=headers)
     def on(self, event_name, callback=None):
         # print("Registering event handler for:", event_name, "with callback:", callback)
         if self._client is None:

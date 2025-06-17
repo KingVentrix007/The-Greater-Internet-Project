@@ -578,19 +578,29 @@ class Httpe:
             res_data = handler()
 
         temp_class = httpe_fernet.HttpeFernet(aes_key)
-        if(isinstance(res_data, Response)):
+
+        if isinstance(res_data, Response):
             plain_b = res_data.body
-            if(accepts == "application/json"):
-                try:
-                    plain_b = json.loads(plain_b)
-                except json.JSONDecodeError:
-                    err_res =  Response.error(message=f"Endpoint response type doesn't match requested type {accepts}",status_code=415)
-                    plain_b = err_res.body
-                    res_data.status_code = err_res.status_code
             error_code = res_data.status_code
-            enc_data = temp_class.encrypt(json.dumps(plain_b).encode("utf-8"))
-            enc_res =Response(enc_data,status_code=error_code)
-            return enc_res
+
+            if accepts == "application/json":
+                # Make sure it's JSON-serializable
+                try:
+                    json_payload = json.dumps(plain_b)
+                except (TypeError, ValueError):
+                    # Not JSON-serializable, return error instead
+                    err_res = Response.error(
+                        message=f"Endpoint response type doesn't match requested type {accepts}",
+                        status_code=415
+                    )
+                    json_payload = json.dumps({"error": err_res.message})
+                    error_code = err_res.status_code
+            else:
+                # Fallback: treat as string
+                json_payload = json.dumps({"data": plain_b})
+
+            enc_data = temp_class.encrypt(json_payload.encode("utf-8"))
+            return Response(enc_data, status_code=error_code)
         enc_data = temp_class.encrypt(json.dumps(res_data).encode("utf-8"))
 
         return enc_data
