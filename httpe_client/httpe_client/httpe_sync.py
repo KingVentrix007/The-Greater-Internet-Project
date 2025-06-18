@@ -8,7 +8,7 @@ import socket
 import json
 import re
 from urllib.parse import urlparse
-
+import atexit
 _loop = asyncio.new_event_loop()
 _thread = threading.Thread(target=_loop.run_forever, daemon=True)
 _thread.start()
@@ -19,15 +19,6 @@ def _run_async(coro):
     return future.result()
 
 _clients = {}
-# client = httpe_client.HttpeClient(
-#         port=5400,
-#         connect_to_edoi=True,
-#         edoi_ip='127.0.0.1',
-#         edoi_port=21199,
-#         edoi_target=edoi_target,
-#         edoi_client_name=client_name,
-#         silent_mode=True
-    # )
 
 def find_free_port(start_port=22100, end_port=65535, host='127.0.0.1'):
     for port in range(start_port, end_port):
@@ -101,6 +92,16 @@ def post(url: str, data: Any = None, headers: dict = None, **kwargs):
     else:
         return requests.post(url, data=data, headers=headers, **kwargs)
 
+def disconnect(url: str):
+    """Disconnects the client associated with the given URL."""
+    domain = _extract_domain(url)
+    if domain in _clients:
+        client = _clients[domain]
+        _run_async(client.disconnect())
+        del _clients[domain]
+    else:
+        print(f"No client found for {url}.")
+
 def get(url: str, headers: dict = None, **kwargs):
     if url.startswith("edoi://"):
         locations = url.split("/")
@@ -120,3 +121,8 @@ def get(url: str, headers: dict = None, **kwargs):
     else:
         return requests.get(url, headers=headers, **kwargs)
 
+def _on_exit():
+    """Cleanup function to close all clients."""
+    for client in _clients.values():
+        _run_async(client.disconnect())
+atexit.register(_on_exit)

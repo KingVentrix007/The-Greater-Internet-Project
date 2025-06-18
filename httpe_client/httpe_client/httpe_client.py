@@ -37,7 +37,12 @@ class HttpeClient:
         if self._client is None:
             await self.init()
         await self._client.start()
-    
+    async def disconnect(self):
+        if self._client is None:
+            raise Warning("Client not initialized. Call `start()` before disconnecting.")
+
+        await self._client.disconnect()
+        # self._client = None
     async def send_request(self, method, location, body=None,headers=None):
         if self._client is None:
             raise Warning("Client not initialized. Call `start()` before sending requests.")
@@ -527,7 +532,22 @@ class HttpeClientCore:
         except Exception as e:
             print(f"enc_request error {e}")
             return None
-
+    async def disconnect(self):
+        plain_request = "random_disconnect_request"
+        encrypted = self._fernet_class.encrypt(plain_request.encode("utf-8"))
+        packet = [
+                f"{VERSION_STR}",
+                "TYPE:ENC_END",
+                f"TOKEN:{self._token}",
+                encrypted.decode() if isinstance(encrypted, bytes) else encrypted,
+                "END",
+                ""
+        ]
+        data = "\n".join(packet)
+        if(self.use_edoi == True):
+            asyncio.create_task(self.edoi_send_to_target(data))
+        else:
+            await self._send_directly(data)
     async def _send_directly(self, data):
         reader, writer = await asyncio.open_connection(self.host, self.port)
         writer.write(data.encode())

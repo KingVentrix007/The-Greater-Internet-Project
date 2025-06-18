@@ -493,6 +493,19 @@ class Httpe:
                         return
                     new_lines = new_lines.splitlines()
                     headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(new_lines)
+                elif(initial_packet_type == "ENC_END"):
+                    new_lines,user_id_from_token =  self._handle_enc_request(lines)
+                    try:
+                        del self.user_keys[user_id_from_token]
+                        token_to_remove = self.valid_token_ids_per_user[user_id_from_token]
+                        del self.valid_token_ids_per_user[user_id_from_token]
+                        self.valid_token_ids.remove(token_to_remove)
+                    except Exception as e:
+                        self._log_internal_error(e)
+                        print(f"Failed to delete user key {e}")
+                    # headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(new_lines)
+                    
+
                 else:
                     print(f"WHAT IS THIS: {data}")
 
