@@ -1,10 +1,10 @@
 from httpe_server import Httpe
 from httpe_core import Response
 
-server = Httpe(use_edoi_node=True,edoi_ip='127.0.0.1',edoi_port=21019,name="HTTPE",debug_mode=True)
+server =  Httpe(port=28080, server_host="127.0.0.1")
 
 
-@server.path("/dashboard", method="POST")
+@server.path("/dashboard", method="GET")
 def dashboard():
     html = open("dashboard.html", "r", encoding="utf-8").read()
     headers = {"content-type": "html"}

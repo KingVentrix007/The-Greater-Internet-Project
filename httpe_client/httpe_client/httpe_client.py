@@ -247,6 +247,7 @@ class HttpeClientCore:
             await asyncio.sleep(0.5)
             await self.get_edoi_server_path_async()
             await asyncio.sleep(1)
+        print("Initializing connection...")
         await self._init_connection()
 
     def compute_hashed_identity(self,name:str, salt: str) -> str:
@@ -467,7 +468,8 @@ class HttpeClientCore:
                     response = None
                 
             else:
-                response = self._send_directly(encrypted)
+                print("Sending directly to server...")
+                response = await self._send_directly(encrypted)
             send_end = time.time()
             if self._debug_mode:
                 print(f"[DEBUG]:Client:Time to send packet: {send_end - send_start}")
@@ -519,17 +521,23 @@ class HttpeClientCore:
                 "TYPE:REQ_ENC",
                 f"TOKEN:{self._token}",
                 encrypted.decode() if isinstance(encrypted, bytes) else encrypted,
-                "END"
+                "END",
+                ""
             ])
         except Exception as e:
             print(f"enc_request error {e}")
             return None
 
-    def _send_directly(self, data):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.host, self.port))
-            s.sendall(data.encode())
-            return self._receive_full_response(s)
+    async def _send_directly(self, data):
+        reader, writer = await asyncio.open_connection(self.host, self.port)
+        writer.write(data.encode())
+        await writer.drain()
+
+        response = await self._receive_full_response(reader)
+
+        writer.close()
+        await writer.wait_closed()
+        return response
 
     def _process_response(self, response):
         res = HttpeResponse(response)
@@ -563,9 +571,9 @@ class HttpeClientCore:
             await self._trigger_event('waiting_for_packet_response')
             response = b""
             while True:
-                part = s.recv(4096)  # Receive in chunks (4096 bytes is a common size)
+                part = await s.read(4096)
                 if not part:
-                    break  # No more data, connection closed by server
+                    break
                 response += part
             await self._trigger_event('packet_response_received')
             return response.decode('utf-8')
@@ -575,10 +583,15 @@ class HttpeClientCore:
         """Sends a raw request and returns parsed response"""
         if(self.use_edoi == False):
             try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.connect((self.host, self.port))
-                    s.sendall(request_data.encode())
-                    response = await self._receive_full_response(s)
+                reader, writer = await asyncio.open_connection(self.host, self.port)
+                writer.write(request_data.encode())
+                await writer.drain()
+
+                response = await self._receive_full_response(reader)
+
+                writer.close()
+                await writer.wait_closed()
+                print("Connection send completed, Got response.")
                 return HttpeResponse(response)
             except Exception as e:
                 await self._trigger_event('general_error', f"Connection send failed: {e}")
@@ -597,7 +610,7 @@ class HttpeClientCore:
                 return None
 
     async def _init_connection(self):
-        while(self.edoi_path == None):
+        while(self.edoi_path == None and self.use_edoi == True):
             await asyncio.sleep(0.1)
         """Initial secure handshake with server"""
         if(self._silent_mode == False):
@@ -613,7 +626,8 @@ class HttpeClientCore:
                VERSION_STR,
                 "TYPE:GET_RSA",
                 "METHOD:POST",
-                "END"
+                "END",
+                ""
             ])
             await self._trigger_event("sending_rsa_key_request")
             rsa_response = await self._connection_send(request)
@@ -641,7 +655,8 @@ class HttpeClientCore:
                 f"user_id:{enc_user_id}",
                 f"packet_id:{str(uuid.uuid4())}",
                 f"timestamp:{datetime.now(timezone.utc).isoformat()}",
-                "END"
+                "END",
+                ""
             ]
             aes_request = "\n".join(request_lines)
             # print("aes packet sent")

@@ -128,10 +128,10 @@ class Httpe:
         for (route, method), func in self.routes.items():
             print(f"{method} {route} -> {func.__name__}")
     def serve(self, host="127.0.0.1", port=8080):
-        print(f"HTTPE server running on {host}:{port}...")
+        print(f"HTTPE server running on {self.host}:{self.port}...")
         signal.signal(signal.SIGINT, self._shutdown)  # Handle Ctrl+C
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((host, port))
+            s.bind((self.host, self.port))
             s.listen()
             s.settimeout(1.0)  # <-- check every 1 second for interrupt
 
@@ -395,9 +395,9 @@ class Httpe:
                     if not chunk:
                         break
                     data += chunk
-                    # ##print(chunk)
-                    # if b"END\n" in data or b"END\r\n" in data or b"END" in data:
-                    #     break
+                    print(chunk)
+                    if b"END\n" in data or b"END\r\n" in data:
+                        break
                 res_time_end = time.time()
                 if(self._debug_mode == True):
                     print(f"[DEBUG]:Server:Time to receive packet:{res_time_end-res_time_start}:{data}")
@@ -425,7 +425,7 @@ class Httpe:
 
 
 
-            # ##print(data)
+            print(data)
             try:
                 text = data.decode()
             except AttributeError as e:
@@ -498,12 +498,14 @@ class Httpe:
                 self._log_internal_error(e)
 
                 ##print(f"Failed to lof file {e}")
+            content_type = headers.get("content-type", "application/json")
+            accepts = headers.get("accepts", "application/json")
             if handler:
                 sig = inspect.signature(handler)
                 if(len(sig.parameters) == 0):
 
 
-                    result = self._parse_handler(handler,sig,None,self.user_keys[header_user_id])
+                    result = self._parse_handler(handler,sig,None,self.user_keys[header_user_id],content_type,accepts)
                     if not isinstance(result, Response):
                         result = Response(str(result))  # fallback
                     response = result.serialize()
@@ -511,7 +513,7 @@ class Httpe:
                         result = Response(str(result))  # fallback
                     response = result.serialize()
                 else:
-                    result = self._parse_handler(handler,sig,json.loads(body),self.user_keys[header_user_id])
+                    result = self._parse_handler(handler,sig,json.loads(body),self.user_keys[header_user_id],content_type,accepts)
                     if not isinstance(result, Response):
                         result = Response(str(result))  # fallback
                     response = result.serialize()
