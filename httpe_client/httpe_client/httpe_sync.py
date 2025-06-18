@@ -115,7 +115,7 @@ def get(url: str, headers: dict = None, **kwargs):
         location = "/".join(locations[3:])
         if(location[0] != "/"):
             location = "/"+location
-        print(location)
+        # print(location)
         return _run_async(client.get(location=location, headers=headers))
     else:
         return requests.get(url, headers=headers, **kwargs)

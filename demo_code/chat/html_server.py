@@ -10,5 +10,9 @@ def dashboard():
     headers = {"content-type": "html"}
     return Response(html, headers=headers, status=200)
 
-
+@server.path("/user/{id}", method="GET")
+def get_user(data, user_key=None):
+    user_id = data["id"]
+    print(user_id)
+    return Response(f"User ID: {user_id}", status=200)
 server.serve()

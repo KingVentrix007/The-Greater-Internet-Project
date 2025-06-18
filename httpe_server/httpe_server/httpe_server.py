@@ -12,11 +12,10 @@ import httpe_core.httpe_secure as sec
 import uuid
 import base64
 import httpe_core.httpe_fernet as httpe_fernet
-import httpe_core.httpe_logging as httpe_logging
 import signal
 import logging
 import threading
-
+import re
 class Httpe:
     def __init__(self,server_host="127.0.0.1",port=8080,running_version="1.0",crte_file_path="cert.crte",key_dir_path=".",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None,debug_mode=False):
         """
@@ -384,6 +383,19 @@ class Httpe:
                         print(f"[ERROR] {err_res.serialize().encode()}")
                         self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=route)
                         return None,edoi_json_data.get("route",None)
+    def find_dynamic_route(self,routes, path, method):
+        for (route_pattern, route_method), handler in routes.items():
+            if route_method != method:
+                continue
+
+            # Convert pattern to regex, e.g., "/user/{id}" -> "^/user/(?P<id>[^/]+)$"
+            regex = re.sub(r'\{(\w+)\}', r'(?P<\1>[^/]+)', route_pattern)
+            regex = f"^{regex}$"
+            match = re.match(regex, path)
+            if match:
+                return handler, match.groupdict()  # return handler and extracted params
+
+        return None, {}
     def _handle_client(self, conn, addr):
         print("[+]Received connection from", addr)
         try:
@@ -490,7 +502,9 @@ class Httpe:
             valid_packet = self.validate_packet(headers=headers,route=route,conn=conn,addr=addr,user_id_from_token=user_id_from_token)
             if(valid_packet == False):
                 return
-            handler = self.routes.get((location, method))
+            
+            handler, url_params = self.find_dynamic_route(self.routes, location, method)
+            
             ##print(">>",location, method)
             try:
                 self._log_request(path=location,client_ip=addr,header=headers,data=body,valid=True)
@@ -498,8 +512,8 @@ class Httpe:
                 self._log_internal_error(e)
 
                 ##print(f"Failed to lof file {e}")
-            content_type = headers.get("content-type", "application/json")
-            accepts = headers.get("accepts", "application/json")
+            content_type = headers.get("Content-Type", "application/json")
+            accepts = headers.get("Accepts", "application/json")
             if handler:
                 sig = inspect.signature(handler)
                 if(len(sig.parameters) == 0):
@@ -513,7 +527,10 @@ class Httpe:
                         result = Response(str(result))  # fallback
                     response = result.serialize()
                 else:
-                    result = self._parse_handler(handler,sig,json.loads(body),self.user_keys[header_user_id],content_type,accepts)
+                    parsed_input = json.loads(body or "{}")
+                    parsed_input.update(url_params)  # Merge path params with JSON body
+
+                    result = self._parse_handler(handler,sig,parsed_input,self.user_keys[header_user_id],content_type,accepts)
                     if not isinstance(result, Response):
                         result = Response(str(result))  # fallback
                     response = result.serialize()
@@ -597,9 +614,11 @@ class Httpe:
                     )
                     json_payload = json.dumps({"error": err_res.message})
                     error_code = err_res.status_code
+            elif accepts == "text/html":
+                json_payload = plain_b#json.dumps({"data": plain_b})
             else:
-                # Fallback: treat as string
-                json_payload = json.dumps({"data": plain_b})
+                json_payload = plain_b
+                
 
             enc_data = temp_class.encrypt(json_payload.encode("utf-8"))
             return Response(enc_data, status_code=error_code)
