@@ -24,7 +24,7 @@ Replace `X.X.X` with the actual version number:
 ```bash
 git checkout stable-vX.X.X
 # Or
-git checkout stable-open-beta-vX.X.X
+git checkout open-beta-vX.X.X
 ```
 
 ### 3. Install Project Dependencies
