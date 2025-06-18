@@ -75,7 +75,7 @@ async def _get_client(url: str,type:str="httpe") -> HttpeClient:
 
 def post(url: str, data: Any = None, headers: dict = None, **kwargs):
     if url.startswith("edoi://"):
-        client =  _run_async(_get_client(url),"edoi")
+        client =  _run_async(_get_client(url,"edoi"))
         locations = url.split("/")
         location = "/".join(locations[3:])
         if(location[0] != "/"):

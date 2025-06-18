@@ -497,7 +497,7 @@ class HttpeClientCore:
         headers.setdefault("timestamp", datetime.now(timezone.utc))
         headers.setdefault("compressions", "false")
         headers.setdefault("Content-Type","application/json") # Minor server implementation
-        headers.setdefault("Accept","plain") # No server implementation yet
+        headers.setdefault("Accepts","application/json") # No server implementation yet
         return headers
 
     def _construct_request_string(self, method, location, headers, body):
