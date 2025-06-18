@@ -40,5 +40,9 @@ def send_message(message,password):
     print(f"Received message: {message} with password: {password}")
 
     return {"status": "Message received successfully"}, 200
+
+@server.path("/get_test",method="GET")
+def get_test():
+    return  {"status": "Message received successfully"}
 # server.paths()
 server.serve()

@@ -68,8 +68,12 @@ def post(url: str, data: Any = None, headers: dict = None, **kwargs):
 
 def get(url: str, headers: dict = None, **kwargs):
     if url.startswith("edoi://"):
+        locations = url.split("/")
+        location = "/".join(locations[3:])
+        if(location[0] != "/"):
+            location = "/"+location
         client = _run_async(_get_client(url))
-        return _run_async(client.get(url, headers=headers, **kwargs))
+        return _run_async(client.get(location=location, headers=headers))
     else:
         return requests.get(url, headers=headers, **kwargs)
 
