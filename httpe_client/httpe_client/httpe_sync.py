@@ -9,6 +9,7 @@ import json
 import re
 from urllib.parse import urlparse
 import atexit
+
 _loop = asyncio.new_event_loop()
 _thread = threading.Thread(target=_loop.run_forever, daemon=True)
 _thread.start()

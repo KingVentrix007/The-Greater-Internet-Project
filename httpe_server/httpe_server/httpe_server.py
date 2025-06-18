@@ -16,6 +16,7 @@ import signal
 import logging
 import threading
 import re
+import asyncio
 class Httpe:
     def __init__(self,server_host="127.0.0.1",port=8080,running_version="1.0",crte_file_path="cert.crte",key_dir_path=".",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None,debug_mode=False):
         """
@@ -65,7 +66,7 @@ class Httpe:
         self._debug_mode = debug_mode
         if(self.is_edoi_node == True):
             self._send_connect()
-    def _shutdown(self, signum, frame):
+    async def _shutdown(self, signum, frame):
         print("\nShutting down HTTPE server...")
         print("[v] Purging users")
         self.user_keys.clear()
@@ -80,7 +81,7 @@ class Httpe:
         # self._log_file.close()
         
         self._running = False
-    def _load_keys(self):
+    async def _load_keys(self):
         try:
             with open("private_key.edoi","r") as f:
                 key_data = json.load(f)
@@ -107,7 +108,7 @@ class Httpe:
             self.rsa_public_key_shared = None
 
         
-    def load_cert(self):
+    async def load_cert(self):
         try:
             with open("cert.crte","r") as f:
                 self.cert = json.load(f)
@@ -126,7 +127,7 @@ class Httpe:
     def paths(self):
         for (route, method), func in self.routes.items():
             print(f"{method} {route} -> {func.__name__}")
-    def serve(self, host="127.0.0.1", port=8080):
+    async def serve(self, host="127.0.0.1", port=8080):
         print(f"HTTPE server running on {self.host}:{self.port}...")
         signal.signal(signal.SIGINT, self._shutdown)  # Handle Ctrl+C
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -146,20 +147,20 @@ class Httpe:
                 return
         
                                 # ##print("[*] Connection closed.\n")
-    def _create_token(self, user_id):
+    async def _create_token(self, user_id):
         
         token = {"user_id":user_id,"session_id":str(uuid.uuid4()),"timestamp":datetime.now(timezone.utc).isoformat(),"noise":base64.b64encode(os.urandom(128)).decode()}
         self.valid_token_ids_per_user[user_id] = token["session_id"]
         self.valid_token_ids.append(token["session_id"])
         return token
-    def _validate_token(self, token,user_id):
+    async def _validate_token(self, token,user_id):
         token_time = token['timestamp']
         timestamp = datetime.fromisoformat(token_time)
         now = datetime.now(timezone.utc)
         if token["user_id"] != user_id or token["session_id"] not in self.valid_token_ids or self.valid_token_ids_per_user[user_id] != token["session_id"] or now - timestamp > timedelta(minutes=20):
             return False
         return True
-    def _handle_share_aes(self,data:dict):
+    async def _handle_share_aes(self,data:dict):
         # print("Handling share aes")
         try:
             aes_key_enc = data.get("aes_key",None)
@@ -187,7 +188,7 @@ class Httpe:
             self._log_internal_error(e)
 
             ##print(f"_handle_share_aes error {e}")
-    def _handle_enc_request(self,data:str):
+    async def _handle_enc_request(self,data:str):
         aes_key_to_use = None
         found_id = False
         enc_data = None
@@ -215,7 +216,7 @@ class Httpe:
         decrypted_data = temp_class.decrypt(enc_data).decode()
         ##print("HTTPE_DECRYPTED_DATA_decrypted_data == ",decrypted_data)
         return decrypted_data,user_id
-    def _handle_packet_contents(self,lines):
+    async def _handle_packet_contents(self,lines):
         headers = {}
         version = None
         is_initial_packet = None
@@ -248,20 +249,20 @@ class Httpe:
             elif not reading_headers:
                 body += line + "\n"
         return headers,version,is_initial_packet,initial_packet_type,method,location,body
-    def _log_request(self, path, valid, client_ip, header, data):
+    async def _log_request(self, path, valid, client_ip, header, data):
         is_valid = "valid" if valid == True else "invalid"
         logging.info(f"Request to {is_valid}:{path} by {client_ip}. Header: {header} Body: {data}")
 
-    def _log_failed_verification(self, client_id, client_ip,notes):
+    async def _log_failed_verification(self, client_id, client_ip,notes):
         logging.warning(f"Failed to verify user {client_id} from {client_ip}. {notes}")
 
-    def _log_internal_error(self, error: Exception):
+    async def _log_internal_error(self, error: Exception):
         logging.error(f"Internal server error: {error}", exc_info=True)
-    def compute_hashed_identity(self,name:str, salt: str) -> str:
+    async def compute_hashed_identity(self,name:str, salt: str) -> str:
         digest = hashes.Hash(hashes.SHA256())
         digest.update((name + salt).encode())
         return digest.finalize().hex()
-    def _send_connect(self):
+    async def _send_connect(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             client_socket.connect((self.edoi_ip, self.edoi_port))
@@ -270,7 +271,7 @@ class Httpe:
             # Send a message to the EDOI node
             message = json.dumps({"type": "connect","tup":(self.host,self.port)}).encode('utf-8')
             client_socket.sendall(message)
-    def validate_packet(self,headers,route,conn,addr,user_id_from_token):
+    async def validate_packet(self,headers,route,conn,addr,user_id_from_token):
             packet_validation_time_start = time.time()
             packet_id = headers.get("packet_id",None)
             
@@ -306,7 +307,7 @@ class Httpe:
             if(self._debug_mode == True):
                 print("[DEBUG]:Server:Time to validate packet:",validate_packet_time_end-packet_validation_time_start)
             return True
-    def _handle_edoi_find(self,edoi_json_data):
+    async def _handle_edoi_find(self,edoi_json_data):
         ##print("PAth search")
                     route = edoi_json_data.get("route", None)
                     target_hash = edoi_json_data.get("hash", None)
@@ -331,7 +332,7 @@ class Httpe:
                             except Exception as e:
 
                                 print(f"[!] Error sending data: {e}")
-    def _handle_edoi_forward(self,edoi_json_data):
+    async def _handle_edoi_forward(self,edoi_json_data):
         # print("Forward request received. Processing...")
         count = edoi_json_data.get("count",None)
         route = edoi_json_data.get("route",None)
@@ -352,7 +353,7 @@ class Httpe:
         else:
             # print("No match")
             return False
-    def handle_edoi_packet(self,data,addr,conn):
+    async def handle_edoi_packet(self,data,addr,conn):
 
                 edoi_decoded = data.decode('utf-8')
                 try:
@@ -383,7 +384,7 @@ class Httpe:
                         print(f"[ERROR] {err_res.serialize().encode()}")
                         self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=route)
                         return None,edoi_json_data.get("route",None)
-    def find_dynamic_route(self,routes, path, method):
+    async def find_dynamic_route(self,routes, path, method):
         for (route_pattern, route_method), handler in routes.items():
             if route_method != method:
                 continue
@@ -396,7 +397,7 @@ class Httpe:
                 return handler, match.groupdict()  # return handler and extracted params
 
         return None, {}
-    def _handle_client(self, conn, addr):
+    async def _handle_client(self, conn, addr):
         print("[+]Received connection from", addr)
         try:
             try:
@@ -570,7 +571,7 @@ class Httpe:
             return
         finally:
             conn.close()
-    def _parse_handler_json(self, handler,sig,body):
+    async def _parse_handler_json(self, handler,sig,body):
         if(isinstance(body,str) == True):
             try:
                 body = json.loads(body)
@@ -596,7 +597,7 @@ class Httpe:
         
         res_data = handler(**kwargs)
         return res_data
-    def _parse_handler(self, handler,sig,body,aes_key,content_type="application/json",accepts="application/json"):
+    async def _parse_handler(self, handler,sig,body,aes_key,content_type="application/json",accepts="application/json"):
         if body is not None:
 
             if content_type == "application/json":
@@ -638,7 +639,7 @@ class Httpe:
         enc_data = temp_class.encrypt(json.dumps(res_data).encode("utf-8"))
 
         return enc_data
-    def redirect(self,redirect_url,status=302):
+    async def redirect(self,redirect_url,status=302):
         paths = [key[0] for key in self.routes.keys()]
         if(redirect_url not in paths):
             err_res =  Response.error(message="Redirect Url Invalid",status_code=500)
@@ -649,7 +650,7 @@ class Httpe:
             res = Response(json.dumps(body),status_code=status)
             return res
     
-    def send_packet(self,conn,addr,data,route=None):
+    async def send_packet(self,conn,addr,data,route=None):
         try:
             if(self.is_edoi_node == False):
                 conn.sendall(data)
