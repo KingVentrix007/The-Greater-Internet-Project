@@ -245,16 +245,19 @@ class HttpeClientCore:
             print(f"Error in event handler for {event_name}: {e}")
 
     async def start(self):
-        if self.use_edoi:
-            asyncio.create_task(self.listen_for_message())
-            await asyncio.sleep(1.5)  # give time for listener to actually bind
-            await self._send_connect_async()
-            await asyncio.sleep(0.5)
-            await self.get_edoi_server_path_async()
-            await asyncio.sleep(1)
-        print("Initializing connection...")
-        await self._init_connection()
-
+        try:
+            if self.use_edoi:
+                asyncio.create_task(self.listen_for_message())
+                await asyncio.sleep(1.5)  # give time for listener to actually bind
+                await self._send_connect_async()
+                await asyncio.sleep(0.5)
+                await self.get_edoi_server_path_async()
+                await asyncio.sleep(1)
+            print("Initializing connection...")
+            await self._init_connection()
+        except KeyboardInterrupt:
+            print("KeyboardInterrupt detected.")
+            # self._shutdown_event
     def compute_hashed_identity(self,name:str, salt: str) -> str:
 
         digest = hashes.Hash(hashes.SHA256())

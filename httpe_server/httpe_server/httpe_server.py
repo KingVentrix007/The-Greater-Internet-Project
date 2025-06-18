@@ -1,8 +1,6 @@
 from cryptography.hazmat.primitives import hashes
 import time
 import os
-import socket
-import threading
 import inspect
 import json
 from httpe_core.httpe_class import Response
@@ -64,8 +62,8 @@ class Httpe:
         self.edoi_port = edoi_port
         self.edoi_return_routes = {}
         self._debug_mode = debug_mode
-        
-    async def _shutdown(self, signum, frame):
+        # self.shutdown_complete =False
+    def _shutdown(self):
         print("\nShutting down HTTPE server...")
         print("[v] Purging users")
         self.user_keys.clear()
@@ -130,7 +128,10 @@ class Httpe:
         try:
             asyncio.run(self.serve())
         except KeyboardInterrupt:
+            
             print("\nShutting down server...")
+            self._shutdown()
+            print("\nServer shutdown")
     async def serve(self):
         if(self.is_edoi_node == True):
             await self._send_connect()
@@ -255,14 +256,26 @@ class Httpe:
         digest.update((name + salt).encode())
         return digest.finalize().hex()
     async def _send_connect(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-            client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            client_socket.connect((self.edoi_ip, self.edoi_port))
-            ##print(f"[+] Connected to EDOI node at {self.edoi_ip}:{self.edoi_port}")
+        try:
+            reader, writer = await asyncio.open_connection(self.edoi_ip, self.edoi_port)
+            # print(f"[+] Connected to EDOI node at {self.edoi_ip}:{self.edoi_port}")
 
-            # Send a message to the EDOI node
-            message = json.dumps({"type": "connect","tup":(self.host,self.port)}).encode('utf-8')
-            client_socket.sendall(message)
+            # Prepare the message
+            message = json.dumps({
+                "type": "connect",
+                "tup": (self.host, self.port)
+            }).encode('utf-8')
+
+            # Send the message
+            writer.write(message)
+            await writer.drain()
+
+            # Optional: Close the connection
+            writer.close()
+            await writer.wait_closed()
+
+        except Exception as e:
+            print(f"Failed to connect to EDOI node: {e}")
     async def validate_packet(self,headers,route,writer,addr,user_id_from_token):
             packet_validation_time_start = time.time()
             packet_id = headers.get("packet_id",None)
@@ -320,10 +333,17 @@ class Httpe:
                                 json_str = json.dumps(ret_data)
                                 encoded = json_str.encode('utf-8')
 
-                                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-                                    client_socket.connect((self.edoi_ip, self.edoi_port))
-                                    client_socket.sendall(encoded)
-                                # print("Sent path message")
+                                try:
+                                    reader, writer = await asyncio.open_connection(self.edoi_ip, self.edoi_port)
+
+                                    writer.write(encoded)
+                                    await writer.drain()
+
+                                    writer.close()
+                                    await writer.wait_closed()
+
+                                except Exception as e:
+                                    print(f"Error sending to EDOI node: {e}")
                                 return None
                             except Exception as e:
 
@@ -678,11 +698,18 @@ class Httpe:
                 file.close()
                 # httpe_logging.sync_log(f"Server:Return:{time.time()}")
 
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-                    client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    client_socket.connect((self.edoi_ip, self.edoi_port))
+                try:
+                    reader, writer = await asyncio.open_connection(self.edoi_ip, self.edoi_port)
+
                     message = json.dumps(packet).encode('utf-8')
-                    client_socket.sendall(message)
+                    writer.write(message)
+                    await writer.drain()
+
+                    writer.close()
+                    await writer.wait_closed()
+
+                except Exception as e:
+                    print(f"Failed to send packet to EDOI node: {e}")
                 return
         except Exception as e:
             print(f"[ERROR]. General error sending packet to {addr}: {e}")
