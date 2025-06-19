@@ -6,7 +6,6 @@ import httpe_core.httpe_secure as sec  # Must have fernet_encrypt, fernet_decryp
 import httpe_core.httpe_cert as httpe_cert           # Must have verify_cert(cert, host, pem_path, pubkey)
 import json
 import httpe_core.httpe_fernet as httpe_fernet
-import httpe_core.httpe_logging as httpe_logging
 import base64
 import threading
 from cryptography.hazmat.primitives import hashes
@@ -192,7 +191,7 @@ class HttpeClientCore:
         self._got_edoi_event = asyncio.Event()
         self.handle_con_in_use = False
         self.persistent = False
-        self._shutdown_event = threading.Event()
+        self._shutdown_event = asyncio.Event()
         self.running = False
         self._debug_mode = debug_mode
         self._silent_mode = silent_mode
@@ -257,7 +256,7 @@ class HttpeClientCore:
             await self._init_connection()
         except KeyboardInterrupt:
             print("KeyboardInterrupt detected.")
-            # self._shutdown_event
+
     def compute_hashed_identity(self,name:str, salt: str) -> str:
 
         digest = hashes.Hash(hashes.SHA256())
@@ -633,97 +632,92 @@ class HttpeClientCore:
                 return None
 
     async def _init_connection(self):
-        while(self.edoi_path == None and self.use_edoi == True):
-            await asyncio.sleep(0.1)
-        """Initial secure handshake with server"""
-        if(self._silent_mode == False):
-            print("Initializing secure connection with server...")
         try:
-            self._client_id = uuid.uuid4()
-            self._fernet_class = httpe_fernet.HttpeFernet()
-            self._aes_key = self._fernet_class.get_key()
-            self._aes_key =  base64.urlsafe_b64encode(self._aes_key).decode()
+            while(self.edoi_path == None and self.use_edoi == True):
+                await asyncio.sleep(0.1)
+            """Initial secure handshake with server"""
+            if(self._silent_mode == False):
+                print("Initializing secure connection with server...")
+            try:
+                self._client_id = uuid.uuid4()
+                self._fernet_class = httpe_fernet.HttpeFernet()
+                self._aes_key = self._fernet_class.get_key()
+                self._aes_key =  base64.urlsafe_b64encode(self._aes_key).decode()
 
-            # Step 1: Get RSA public key
-            request = "\n".join([
-               VERSION_STR,
-                "TYPE:GET_RSA",
-                "METHOD:POST",
-                "END",
-                ""
-            ])
-            await self._trigger_event("sending_rsa_key_request")
-            rsa_response = await self._connection_send(request)
-            if not rsa_response or not rsa_response.ok:
-                print("Failed to retrieve RSA public key from server.")
-                return
-
-            json_data = rsa_response.json()
-            self._server_rsa_pub_key = json_data.get("rsa")
-            if not self._server_rsa_pub_key:
-                print("RSA key missing in server response.")
-                return
-            await self._trigger_event("rsa_key_received")
-            await self._trigger_event("sending_aes_key_and_id")
-            # Step 2: Send AES key and ID (RSA encrypted)
-            enc_aes = sec.rsa_encrypt_key(self._aes_key.encode("utf-8"), self._server_rsa_pub_key)
-            enc_user_id = sec.encrypt_user_id(str(self._client_id), self._server_rsa_pub_key)
-
-            request_lines = [
+                # Step 1: Get RSA public key
+                request = "\n".join([
                 VERSION_STR,
-                "TYPE:SHARE_AES",
-                "METHOD:POST",
-                "HEADERS:",
-                f"aes_key:{enc_aes}",
-                f"user_id:{enc_user_id}",
-                f"packet_id:{str(uuid.uuid4())}",
-                f"timestamp:{datetime.now(timezone.utc).isoformat()}",
-                "END",
-                ""
-            ]
-            aes_request = "\n".join(request_lines)
-            # print("aes packet sent")
-            response = await self._connection_send(aes_request)
-            # print("GOT IT")
-            if not response or not response.ok:
-                print("Server rejected AES key sharing.")
-                return
+                    "TYPE:GET_RSA",
+                    "METHOD:POST",
+                    "END",
+                    ""
+                ])
+                await self._trigger_event("sending_rsa_key_request")
+                rsa_response = await self._connection_send(request)
+                if not rsa_response or not rsa_response.ok:
+                    print("Failed to retrieve RSA public key from server.")
+                    return
 
-            response_data = response.json()
-            await self._trigger_event("got_token_and_cert")
-            # print("response_data == ",response_data)
-            enc_token = response_data.get("token")
-            enc_cert = response_data.get("certificate")
-            await self._trigger_event("validating_certificates")
-            if not enc_token or not enc_cert:
-                print("Missing token or certificate in response.")
-                return
+                json_data = rsa_response.json()
+                self._server_rsa_pub_key = json_data.get("rsa")
+                if not self._server_rsa_pub_key:
+                    print("RSA key missing in server response.")
+                    return
+                await self._trigger_event("rsa_key_received")
+                await self._trigger_event("sending_aes_key_and_id")
+                # Step 2: Send AES key and ID (RSA encrypted)
+                enc_aes = sec.rsa_encrypt_key(self._aes_key.encode("utf-8"), self._server_rsa_pub_key)
+                enc_user_id = sec.encrypt_user_id(str(self._client_id), self._server_rsa_pub_key)
 
-            cert = self._fernet_class.decrypt(enc_cert).decode("utf-8")
-            if not httpe_cert.verify_cert(cert, self.host, "public.pem", self._server_rsa_pub_key):
-                print("Invalid certificate received from server.")
-                return
+                request_lines = [
+                    VERSION_STR,
+                    "TYPE:SHARE_AES",
+                    "METHOD:POST",
+                    "HEADERS:",
+                    f"aes_key:{enc_aes}",
+                    f"user_id:{enc_user_id}",
+                    f"packet_id:{str(uuid.uuid4())}",
+                    f"timestamp:{datetime.now(timezone.utc).isoformat()}",
+                    "END",
+                    ""
+                ]
+                aes_request = "\n".join(request_lines)
+                # print("aes packet sent")
+                response = await self._connection_send(aes_request)
+                # print("GOT IT")
+                if not response or not response.ok:
+                    print("Server rejected AES key sharing.")
+                    return
 
-            self._token = enc_token
-            self._aes_key_enc = enc_aes
-            self._user_id_enc = enc_user_id
-            self._enc_mode_active = True
-            self.secure = True
-            await self._trigger_event("handshake_complete")
-            await asyncio.sleep(0.5)
-            # print("event trigger")
-        except Exception as e:
-            await self._trigger_event('general_error', f'Handshake failed: {e}')
-            print(f"Handshake failed: {e}")
-    def terminate(self):
-        print("Terminating connection to server...")
-        self.running = False
-        if self.persistent:
-            self._shutdown_event.set()
-    def _keep_alive(self):
-        print("[*] Persistent mode active. Client will stay alive until terminate() is called.")
-        while self.running == True:
-            time.sleep(1)  # Keep thread alive, avoid busy loop
+                response_data = response.json()
+                await self._trigger_event("got_token_and_cert")
+                # print("response_data == ",response_data)
+                enc_token = response_data.get("token")
+                enc_cert = response_data.get("certificate")
+                await self._trigger_event("validating_certificates")
+                if not enc_token or not enc_cert:
+                    print("Missing token or certificate in response.")
+                    return
+
+                cert = self._fernet_class.decrypt(enc_cert).decode("utf-8")
+                if not httpe_cert.verify_cert(cert, self.host, "public.pem", self._server_rsa_pub_key):
+                    print("Invalid certificate received from server.")
+                    return
+
+                self._token = enc_token
+                self._aes_key_enc = enc_aes
+                self._user_id_enc = enc_user_id
+                self._enc_mode_active = True
+                self.secure = True
+                await self._trigger_event("handshake_complete")
+                await asyncio.sleep(0.5)
+                # print("event trigger")
+            except Exception as e:
+                await self._trigger_event('general_error', f'Handshake failed: {e}')
+                print(f"Handshake failed: {e}")
+        except asyncio.CancelledError:
+            print("Startup task ended, killing code...")
+
     async def edoi_send_to_target(self,payload):
         await self._trigger_event('sending_packet')
         count = 1

@@ -15,9 +15,14 @@ _thread = threading.Thread(target=_loop.run_forever, daemon=True)
 _thread.start()
 
 def _run_async(coro):
-    """Run async code in the background thread."""
-    future = asyncio.run_coroutine_threadsafe(coro, _loop)
-    return future.result()
+    try:
+        """Run async code in the background thread."""
+        future = asyncio.run_coroutine_threadsafe(coro, _loop)
+        return future.result()
+    except Exception as e:
+        print(f"Error in sync wrapper {e}")
+    except KeyboardInterrupt:
+        print("Client shutdown")
 
 _clients = {}
 
@@ -81,6 +86,9 @@ def post(url: str, data: Any = None, headers: dict = None, **kwargs):
         if(location[0] != "/"):
             location = "/"+location
         # print(location)
+        if client == None:
+            print("Client is not initialized yet.")
+            return None
         return _run_async(client.post(location=location, body=json.dumps(data)))
     elif url.startswith("httpe://"):
         client =  _run_async(_get_client(url),"httpe")
@@ -89,6 +97,9 @@ def post(url: str, data: Any = None, headers: dict = None, **kwargs):
         if(location[0] != "/"):
             location = "/"+location
         # print(location)
+        if client == None:
+            print("Client is not initialized yet.")
+            return None
         return _run_async(client.post(location=location, body=json.dumps(data)))
     else:
         return requests.post(url, data=data, headers=headers, **kwargs)
@@ -109,6 +120,9 @@ def get(url: str, headers: dict = None, **kwargs):
         location = "/".join(locations[3:])
         if(location[0] != "/"):
             location = "/"+location
+        if client == None:
+            print("Client is not initialized yet.")
+            return None
         client = _run_async(_get_client(url),type="edoi")
         return _run_async(client.get(location=location, headers=headers))
     elif url.startswith("httpe://"):
@@ -118,6 +132,9 @@ def get(url: str, headers: dict = None, **kwargs):
         if(location[0] != "/"):
             location = "/"+location
         # print(location)
+        if client == None:
+            print("Client is not initialized yet.")
+            return None
         return _run_async(client.get(location=location, headers=headers))
     else:
         return requests.get(url, headers=headers, **kwargs)
