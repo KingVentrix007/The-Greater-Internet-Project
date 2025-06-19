@@ -431,7 +431,7 @@ class Httpe:
         return None, {}
     async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         addr = writer.get_extra_info('peername')
-        print("[+]Received connection from", addr)
+        self.console.print(f"[green][+]Received connection from {addr}")
         try:
             try:
                 data = b""
@@ -637,28 +637,28 @@ class Httpe:
         
         res_data = await handler(**kwargs)
         return res_data
+    async def _parse_handler_with_contents(self, handler,sig,body,content_type):
+        if content_type == "application/json":
+                res_data = await self._parse_handler_json(handler, sig, body)
+        elif content_type in ("text/plain", "text/html", "application/octet-stream"):
+            res_data = await handler(body)
+        else:
+            res_data =  Response.error(message=f"Unsupported Media Type: {content_type}",status_code=415)
+        return res_data
     async def _parse_handler(self, handler,sig,body,aes_key,content_type="application/json",accepts="application/json"):
         if body is not None:
-
-            if content_type == "application/json":
-                res_data = await self._parse_handler_json(handler, sig, body)
-            elif content_type in ("text/plain", "text/html", "application/octet-stream"):
-                res_data = await handler(body)
-            else:
-                res_data =  Response.error(message=f"Unsupported Media Type: {content_type}",status_code=415)
-        
+            res_data = await self._parse_handler_with_contents(handler,sig,body,content_type)
         else:
             res_data = await handler()
 
         temp_class = httpe_fernet.HttpeFernet(aes_key)
-        print(type(res_data))
         if(isinstance(res_data,(dict,tuple))):
             try:
-                print("Hello world")
+                # print("Hello world")
                 new_res = Response(body=res_data[0],status_code=int(res_data[1]))
                 res_data = new_res
             except Exception as e:
-                print(f"[ERROR]: Error in parse handler {e}")
+                self.console.log(f"[bold red][ERROR]: Error in parse handler {e}")
         if isinstance(res_data, Response):
             plain_b = res_data.body
             error_code = res_data.status_code
@@ -721,7 +721,7 @@ class Httpe:
                 # httpe_logging.sync_log(f"Server:Return:{time.time()}")
 
                 try:
-                    reader, writer = await asyncio.open_connection(self.edoi_ip, self.edoi_port)
+                    _, writer = await asyncio.open_connection(self.edoi_ip, self.edoi_port)
 
                     message = json.dumps(packet).encode('utf-8')
                     writer.write(message)
