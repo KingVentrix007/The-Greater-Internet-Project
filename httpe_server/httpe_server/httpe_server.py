@@ -10,9 +10,7 @@ import httpe_core.httpe_secure as sec
 import uuid
 import base64
 import httpe_core.httpe_fernet as httpe_fernet
-import signal
 import logging
-import threading
 import re
 import asyncio
 class Httpe:
@@ -62,7 +60,6 @@ class Httpe:
         self.edoi_port = edoi_port
         self.edoi_return_routes = {}
         self._debug_mode = debug_mode
-        # self.shutdown_complete =False
     def _shutdown(self):
         print("\nShutting down HTTPE server...")
         print("[v] Purging users")
@@ -257,7 +254,7 @@ class Httpe:
         return digest.finalize().hex()
     async def _send_connect(self):
         try:
-            reader, writer = await asyncio.open_connection(self.edoi_ip, self.edoi_port)
+            _, writer = await asyncio.open_connection(self.edoi_ip, self.edoi_port)
             # print(f"[+] Connected to EDOI node at {self.edoi_ip}:{self.edoi_port}")
 
             # Prepare the message
@@ -358,11 +355,6 @@ class Httpe:
         end_hash = end_point.get("hash",None)
         my_hash = await self.compute_hashed_identity(self.name,salt)
         if(my_hash == end_hash):
-            # print(f"Server:Forward:{time.time()}")
-            if(self._debug_mode == True):
-                file = open("../run_output.log","a")
-                file.write(f"Server:Forward:{time.time()}\n")
-                file.close()
             return True
             # httpe_logging.sync_log(f"Server:Forward:{time.time()}")
 
@@ -433,7 +425,7 @@ class Httpe:
                     # print(f"Data :{data}")
                 res_time_end = time.time()
                 if(self._debug_mode == True):
-                    print(f"[DEBUG]:Server:Time to receive packet:{res_time_end-res_time_start}:{data}")
+                    print(f"[DEBUG]:Server:Time to receive packet:{res_time_end-res_time_start}")
             except Exception as e:
                 await self._log_internal_error(e)
                 err_res =  Response.error(message="Internal Server Error",status_code=500)
@@ -458,7 +450,7 @@ class Httpe:
 
 
 
-            print(data)
+            # print(data)
             try:
                 text = data.decode()
             except AttributeError as e:
@@ -486,11 +478,9 @@ class Httpe:
                 await self.send_packet(writer,addr,data=err_res.serialize().encode(),route=route)
             if(is_initial_packet == True):
                 if(initial_packet_type == "GET_RSA"):
-                    print("RSA")
                     send_rsa_pub = {"rsa":self.rsa_public_key_shared}
                     rsa_rez = Response(json.dumps(send_rsa_pub))
                     await self.send_packet(writer,addr,data=rsa_rez.serialize().encode(),route=route)
-                    print("SENT RSA")
                     return
                 elif(initial_packet_type == "SHARE_AES"):
                     res_data = await self._handle_share_aes(headers)
@@ -536,6 +526,7 @@ class Httpe:
             header_user_id = headers.get("client_id",None)
             valid_packet = await self.validate_packet(headers=headers,route=route,writer=writer,addr=addr,user_id_from_token=user_id_from_token)
             if(valid_packet == False):
+                
                 return
             
             handler, url_params = await self.find_dynamic_route(self.routes, location, method)
@@ -636,7 +627,14 @@ class Httpe:
             res_data = await handler()
 
         temp_class = httpe_fernet.HttpeFernet(aes_key)
-
+        print(type(res_data))
+        if(isinstance(res_data,(dict,tuple))):
+            try:
+                print("Hello world")
+                new_res = Response(body=res_data[0],status_code=int(res_data[1]))
+                res_data = new_res
+            except Exception as e:
+                print(f"[ERROR]: Error in parse handler {e}")
         if isinstance(res_data, Response):
             plain_b = res_data.body
             error_code = res_data.status_code

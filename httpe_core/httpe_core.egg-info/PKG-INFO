@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: httpe_core
-Version: 0.1.0
+Version: 1.0.0
 Summary: Core cryptographic and certificate logic for HTTPE
 Author-email: Tristan Kuhn <tristanjkuhn007@gmail.com>
 License: MIT

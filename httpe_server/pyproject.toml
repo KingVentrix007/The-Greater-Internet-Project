@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "httpe_server"
-version = "1.0.0"
+version = "1.1.0"
 description = "HTTPE Server - A secure and simple server for sending date over EDOI-NET and the web"
 readme = "README.md"
 license = {text = "MIT"}

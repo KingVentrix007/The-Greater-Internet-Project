@@ -1,5 +1,6 @@
 pyproject.toml
 httpe_client/__init__.py
+httpe_client/browser.py
 httpe_client/httpe_client.py
 httpe_client/httpe_sync.py
 httpe_client.egg-info/PKG-INFO

@@ -8,7 +8,6 @@ async def get_message(password):
     Handle GET message requests.
     Expects a JSON body with a 'password' field.
     """
-    # password = request.json.get('password')
     
     if not password:
         return {"error": "Password is required"}, 400

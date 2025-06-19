@@ -70,3 +70,7 @@ def get_error_description(code: int) -> str:
 class PrivateKeyExpiredError(Exception):
     """Raised when a private key has expired."""
     pass
+
+class PublicKeyExpiredError(Exception):
+    """Raised when a private key has expired."""
+    pass

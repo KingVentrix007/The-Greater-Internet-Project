@@ -8,7 +8,7 @@ server =  Httpe(port=28080, server_host="127.0.0.1")
 async def dashboard():
     html = open("dashboard.html", "r", encoding="utf-8").read()
     headers = {"content-type": "html"}
-    return Response(html, headers=headers, status=200)
+    return "FOOD",404
 
 @server.path("/user/{id}/cat/{plan}", method="GET")
 async def get_user(data, user_key=None):

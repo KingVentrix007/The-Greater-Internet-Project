@@ -2,13 +2,13 @@
 import time
 import httpe_client.httpe_sync as httpe_sync
 print("RUNNING SYNC WRAPPER TEST")
-response = httpe_sync.post(
-    "edoi://HTTPE/test",
-    data={"message":"Hello world"},
+response = httpe_sync.get(
+    "httpe://127.0.0.1:28080/dashboard",
     headers={"Content-Type": "application/json","Accepts":"application/json"},
 )
 print(response.text)
 print(response.status_code)
+print(response.status)
 # print("Testing client kill")
 # httpe_sync.disconnect("httpe://127.0.1:28080")
 # print("Testing client restart")
