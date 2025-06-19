@@ -656,12 +656,14 @@ class HttpeClientCore:
                 rsa_response = await self._connection_send(request)
                 if not rsa_response or not rsa_response.ok:
                     print("Failed to retrieve RSA public key from server.")
+                    await self._trigger_event("general_error","Failed to get RSA key")
                     return
 
                 json_data = rsa_response.json()
                 self._server_rsa_pub_key = json_data.get("rsa")
                 if not self._server_rsa_pub_key:
                     print("RSA key missing in server response.")
+                    await self._trigger_event("general_error","Server failed to send RSA key")
                     return
                 await self._trigger_event("rsa_key_received")
                 await self._trigger_event("sending_aes_key_and_id")
