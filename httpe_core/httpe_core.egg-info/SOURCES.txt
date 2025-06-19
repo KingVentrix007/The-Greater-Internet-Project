@@ -7,6 +7,7 @@ httpe_core/httpe_fernet.py
 httpe_core/httpe_keys.py
 httpe_core/httpe_logging.py
 httpe_core/httpe_secure.py
+httpe_core/httpe_types.py
 httpe_core.egg-info/PKG-INFO
 httpe_core.egg-info/SOURCES.txt
 httpe_core.egg-info/dependency_links.txt

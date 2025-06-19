@@ -15,14 +15,9 @@ import re
 import asyncio
 import httpe_core.httpe_cert as httpe_cert
 import httpe_core.httpe_keys as httpe_keys
-
+from httpe_core.httpe_types import APPLICATION_JSON
 from rich.console import Console
-from rich.panel import Panel
-from rich.text import Text
-from rich.live import Live
 from rich.prompt import Prompt
-from rich.spinner import Spinner
-from rich.table import Table
 
 
 
@@ -355,7 +350,7 @@ class Httpe:
                                 encoded = json_str.encode('utf-8')
 
                                 try:
-                                    reader, writer = await asyncio.open_connection(self.edoi_ip, self.edoi_port)
+                                    _, writer = await asyncio.open_connection(self.edoi_ip, self.edoi_port)
 
                                     writer.write(encoded)
                                     await writer.drain()
@@ -429,10 +424,9 @@ class Httpe:
                 return handler, match.groupdict()  # return handler and extracted params
 
         return None, {}
-    async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        addr = writer.get_extra_info('peername')
-        self.console.print(f"[green][+]Received connection from {addr}")
-        try:
+    async def _receive_connection_data(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+            addr = writer.get_extra_info('peername')
+            self.console.print(f"[green][+]Received connection from {addr}")
             try:
                 data = b""
                 res_time_start = time.time()
@@ -455,104 +449,111 @@ class Httpe:
                 err_res =  Response.error(message="Internal Server Error",status_code=500)
                 # conn.sendall(err_res.serialize().encode())
                 await self.send_packet(writer,addr=addr,data=err_res.serialize().encode(),route=None)
+                return None,None
+            return data,addr
+    async def _handle_packets(self,lines,data,writer,addr,route):
+        headers,version,_,initial_packet_type,method,location,body  = await self._handle_packet_contents(lines)
+        if(version != f"HTTPE/{self.version}"):
+            err_res =  Response.error(message="Invalid Version",status_code=400)
+            await self.send_packet(writer,addr,data=err_res.serialize().encode(),route=route)
+        if(initial_packet_type == "GET_RSA"):
+            send_rsa_pub = {"rsa":self.rsa_public_key_shared}
+            rsa_rez = Response(json.dumps(send_rsa_pub))
+            await self.send_packet(writer,addr,data=rsa_rez.serialize().encode(),route=route)
+            return None,None,None,None,None
+        elif(initial_packet_type == "SHARE_AES"):
+            res_data = await self._handle_share_aes(headers)
+            await self.send_packet(writer,addr,data=res_data.serialize().encode(),route=route)
+            # print("Send aes response")
+            return None,None,None,None,None
+        elif(initial_packet_type == "REQ_ENC"):
+            # print("Enc req")
+            new_lines,user_id_from_token =  await self._handle_enc_request(lines)
+            if(new_lines == None or user_id_from_token == None):
+                #! Remove {e} in prod
+                # self._log_internal_error(e)
+
+                err_res =  Response.error(message=f"Error With Client handling code: user_id_from_token: {user_id_from_token}, new_lines: {new_lines}",status_code=500)
+                # conn.sendall(err_res.serialize().encode())
+                await self.send_packet(writer,addr,data=err_res.serialize().encode(),route=route)
+                return None,None,None,None,None
+            new_lines = new_lines.splitlines()
+            headers,version,_,initial_packet_type,method,location,body  =await self._handle_packet_contents(new_lines)
+        elif(initial_packet_type == "ENC_END"):
+            new_lines,user_id_from_token =  await self._handle_enc_request(lines)
+            try:
+                del self.user_keys[user_id_from_token]
+                token_to_remove = self.valid_token_ids_per_user[user_id_from_token]
+                del self.valid_token_ids_per_user[user_id_from_token]
+                self.valid_token_ids.remove(token_to_remove)
+            except Exception as e:
+                await self._log_internal_error(e)
+                print(f"Failed to delete user key {e}")
+            return None,None,None,None,None
+            
+
+        else:
+            print(f"WHAT IS THIS: {data}")
+        header_user_id = headers.get("client_id",None)
+        valid_packet = await self.validate_packet(headers=headers,route=route,writer=writer,addr=addr,user_id_from_token=header_user_id)
+        if(valid_packet == False):
+            return None,None,None,None,None
+        return headers,method,location,body,header_user_id
+    async def _handle_no_parm_endpoint(self,handler,sig,header_user_id,content_type,accepts):
+        result = await self._parse_handler(handler,sig,None,self.user_keys[header_user_id],content_type,accepts)
+        if not isinstance(result, Response):
+            result = Response(str(result))  # fallback
+        if not isinstance(result, Response):
+            result = Response(str(result))  # fallback
+        response = result.serialize()
+        return response
+    async def _handle_standard_endpoint(self,handler,sig,body,header_user_id,content_type,accepts,url_params):
+        parsed_input = json.loads(body or "{}")
+        if(parsed_input == None):
+            parsed_input = body
+        else:
+            parsed_input.update(url_params)  # Merge path params with JSON body
+
+        result = await self._parse_handler(handler,sig,parsed_input,self.user_keys[header_user_id],content_type,accepts)
+        if not isinstance(result, Response):
+            result = Response(str(result))  # fallback
+        response = result.serialize()
+        return response
+    async def _process_edoi_data(self,user_data,addr,writer):
+        try:
+            edoi_data,route  = await self.handle_edoi_packet(data=user_data,addr=addr,conn=writer)
+        except Exception as e:
+            print(f"[ERROR]. EDOI handle: {e}")
+        if(edoi_data != None):
+            if(edoi_data == False and route == False):
+                self.console.print("[bold red][ERROR] Failed to extract edoi data and route from edoi packet")
+                return None,None
+            data=edoi_data
+        else:
+            return data,route
+    async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        try:
+            data,addr = await self._receive_connection_data(reader,writer)
+            if(addr == None or data == None):
+                self.console.print(f"[bold red][ERROR] Failed to receive data from client({addr if addr != None else "N/A"})")
                 return
             # ##print(type(data))
             route=None
-
             if(self.is_edoi_node == True):
-                try:
-                    edoi_data,route  = await self.handle_edoi_packet(data=data,addr=addr,conn=writer)
-                except Exception as e:
-                    print(f"[ERROR]. EDOI handle: {e}")
-                if(edoi_data != None):
-                    if(edoi_data == False and route == False):
-                        return
-                    data=edoi_data
-                else:
-                    return
-
-
-
-
+                data,route = await self._process_edoi_data(user_data=data,addr=addr,writer=writer)
             # print(data)
-            try:
-                text = data.decode()
-            except AttributeError as e:
-                text = data
+            # try:
+            text = data.decode()
+            # except AttributeError as e:
+            #     text = data
             lines = text.splitlines()
-
-            version = None
             method = None
             location = None
-            is_initial_packet = False
-            initial_packet_type = None
             headers = {}
             body = ""
-            user_id_from_token = None
-            # ##print(text)
-            procsess_packet_start = time.time()
-            headers,version,is_initial_packet,initial_packet_type,method,location,body  = await self._handle_packet_contents(lines)
-            procsess_packet_end = time.time()
-            if(self._debug_mode == True):
-                print("[DEBUG]:Server:Time to extract packet info:",procsess_packet_end-procsess_packet_start)
-            if(version != f"HTTPE/{self.version}"):
-                err_res =  Response.error(message="Invalid Version",status_code=400)
-                # conn.sendall(err_res.serialize().encode())
-                ## DIsbaled for debug
-                await self.send_packet(writer,addr,data=err_res.serialize().encode(),route=route)
-            if(is_initial_packet == True):
-                if(initial_packet_type == "GET_RSA"):
-                    send_rsa_pub = {"rsa":self.rsa_public_key_shared}
-                    rsa_rez = Response(json.dumps(send_rsa_pub))
-                    await self.send_packet(writer,addr,data=rsa_rez.serialize().encode(),route=route)
-                    return
-                elif(initial_packet_type == "SHARE_AES"):
-                    res_data = await self._handle_share_aes(headers)
-                    await self.send_packet(writer,addr,data=res_data.serialize().encode(),route=route)
-                    # print("Send aes response")
-                    return
-                elif(initial_packet_type == "REQ_ENC"):
-                    # print("Enc req")
-                    handle_enc_request_time = time.time()
-                    new_lines,user_id_from_token =  await self._handle_enc_request(lines)
-                    handle_enc_request_time_end = time.time()
-                    if(self._debug_mode == True):
-                        print("[DEBUG]:Server:Time to handle encrypted packet:",handle_enc_request_time_end-handle_enc_request_time)
-                    if(new_lines == None or user_id_from_token == None):
-                        #! Remove {e} in prod
-                        # self._log_internal_error(e)
-
-                        err_res =  Response.error(message=f"Error With Client handling code: user_id_from_token: {user_id_from_token}, new_lines: {new_lines}",status_code=500)
-                        # conn.sendall(err_res.serialize().encode())
-                        await self.send_packet(writer,addr,data=err_res.serialize().encode(),route=route)
-                        return
-                    new_lines = new_lines.splitlines()
-                    headers,version,is_initial_packet,initial_packet_type,method,location,body  =await self._handle_packet_contents(new_lines)
-                elif(initial_packet_type == "ENC_END"):
-                    new_lines,user_id_from_token =  await self._handle_enc_request(lines)
-                    try:
-                        del self.user_keys[user_id_from_token]
-                        token_to_remove = self.valid_token_ids_per_user[user_id_from_token]
-                        del self.valid_token_ids_per_user[user_id_from_token]
-                        self.valid_token_ids.remove(token_to_remove)
-                    except Exception as e:
-                        await self._log_internal_error(e)
-                        print(f"Failed to delete user key {e}")
-                    return
-                    # headers,version,is_initial_packet,initial_packet_type,method,location,body  =self._handle_packet_contents(new_lines)
-                    
-
-                else:
-                    print(f"WHAT IS THIS: {data}")
-
-
-            
-            header_user_id = headers.get("client_id",None)
-            valid_packet = await self.validate_packet(headers=headers,route=route,writer=writer,addr=addr,user_id_from_token=user_id_from_token)
-            if(valid_packet == False):
-                
+            headers,method,location,body,header_user_id = await self._handle_packets(lines,data,writer,addr,route)
+            if(any(x is None for x in (headers,method,location,body))):
                 return
-            
             handler, url_params = await self.find_dynamic_route(self.routes, location, method)
             
             ##print(">>",location, method)
@@ -562,31 +563,14 @@ class Httpe:
                 await self._log_internal_error(e)
 
                 ##print(f"Failed to lof file {e}")
-            content_type = headers.get("Content-Type", "application/json")
-            accepts = headers.get("Accepts", "application/json")
+            content_type = headers.get("Content-Type", APPLICATION_JSON)
+            accepts = headers.get("Accepts", APPLICATION_JSON)
             if handler:
                 sig = inspect.signature(handler)
                 if(len(sig.parameters) == 0):
-
-
-                    result = await self._parse_handler(handler,sig,None,self.user_keys[header_user_id],content_type,accepts)
-                    if not isinstance(result, Response):
-                        result = Response(str(result))  # fallback
-                    response = result.serialize()
-                    if not isinstance(result, Response):
-                        result = Response(str(result))  # fallback
-                    response = result.serialize()
+                    response = await self._handle_no_parm_endpoint(handler,sig,header_user_id,content_type,accepts)
                 else:
-                    parsed_input = json.loads(body or "{}")
-                    if(parsed_input == None):
-                        parsed_input = body
-                    else:
-                        parsed_input.update(url_params)  # Merge path params with JSON body
-
-                    result = await self._parse_handler(handler,sig,parsed_input,self.user_keys[header_user_id],content_type,accepts)
-                    if not isinstance(result, Response):
-                        result = Response(str(result))  # fallback
-                    response = result.serialize()
+                    response = await self._handle_standard_endpoint(handler=handler,sig=sig,body=body,header_user_id=header_user_id,content_type=content_type,accepts=accepts,url_params=url_params)
             else:
                 # ##print("Cant find route for type:",initial_packet_type)
                 result = "Route Not Found"
@@ -595,17 +579,12 @@ class Httpe:
                 response = result.serialize()
 
             # conn.sendall(response.encode())
-            time_send_packet_start = time.time()
+
             await self.send_packet(writer,addr,data=response.encode(),route=route)
-            time_send_packet_end = time.time()
-            if(self._debug_mode == True):
-                print("[DEBUG]:Server:Time to send packet:",time_send_packet_end-time_send_packet_start)
         except Exception as e:
             await self._log_internal_error(e)
-
-            #! Remove {e} in prod
             err_res =  Response.error(message=f"Error With Client handling code :{e}",status_code=500)
-            print(f"[ERROR] {err_res.serialize().encode()}\n||")
+            self.console.log(f"[bold red][ERROR] {err_res.serialize().encode()}\n||")
             await self.send_packet(writer,addr,data=err_res.serialize().encode(),route=None)
             return
         finally:
@@ -638,14 +617,14 @@ class Httpe:
         res_data = await handler(**kwargs)
         return res_data
     async def _parse_handler_with_contents(self, handler,sig,body,content_type):
-        if content_type == "application/json":
+        if content_type == APPLICATION_JSON:
                 res_data = await self._parse_handler_json(handler, sig, body)
         elif content_type in ("text/plain", "text/html", "application/octet-stream"):
             res_data = await handler(body)
         else:
             res_data =  Response.error(message=f"Unsupported Media Type: {content_type}",status_code=415)
         return res_data
-    async def _parse_handler(self, handler,sig,body,aes_key,content_type="application/json",accepts="application/json"):
+    async def _parse_handler(self, handler,sig,body,aes_key,content_type=APPLICATION_JSON,accepts=APPLICATION_JSON):
         if body is not None:
             res_data = await self._parse_handler_with_contents(handler,sig,body,content_type)
         else:
@@ -663,7 +642,7 @@ class Httpe:
             plain_b = res_data.body
             error_code = res_data.status_code
 
-            if accepts == "application/json":
+            if accepts == APPLICATION_JSON:
                 # Make sure it's JSON-serializable
                 try:
                     json_payload = json.dumps(plain_b)
