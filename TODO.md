@@ -17,6 +17,6 @@
 
 ### Lower Priority
 
-- [ ] Support dynamic URLs, e.g. `/url/{id}`.   
+- [X] Support dynamic URLs, e.g. `/url/{id}`.   
 - [ ] Add streaming support for large responses.  
-- [ ] Add basic HTML response rendering (for debugging or browsers).  
+

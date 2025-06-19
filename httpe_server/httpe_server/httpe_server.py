@@ -13,6 +13,19 @@ import httpe_core.httpe_fernet as httpe_fernet
 import logging
 import re
 import asyncio
+import httpe_core.httpe_cert as httpe_cert
+import httpe_core.httpe_keys as httpe_keys
+
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
+from rich.live import Live
+from rich.prompt import Prompt
+from rich.spinner import Spinner
+from rich.table import Table
+
+
+
 class Httpe:
     def __init__(self,server_host="127.0.0.1",port=8080,running_version="1.0",crte_file_path="cert.crte",key_dir_path=".",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None,debug_mode=False):
         """
@@ -31,24 +44,39 @@ class Httpe:
 
         """
         self.cert_path = crte_file_path
+        self.console = Console()
         self.key_dir_path = key_dir_path
-        if(os.path.exists(self.cert_path) == False):
-            raise FileNotFoundError("Certificate file not found: cert.crte. Please generate a certificate using the certgen.py script before starting the server.")
-        if(os.path.exists(f"{self.key_dir_path}/private_key.edoi") == False or os.path.exists(f"{self.key_dir_path}/public_key.edoi") == False):
-            raise FileNotFoundError(".edoi keys files not found. Please generate them using the certgen.py script")
+        self.console.print("[bold blue][INFO] HTTPE Server Initializing...[/]")
+        if(os.path.exists(self.cert_path) == False or os.path.exists(f"{self.key_dir_path}/private_key.edoi") == False or os.path.exists(f"{self.key_dir_path}/public_key.edoi") == False):
+            self.console.print("[bold red] [ERROR] Necessary files cannot be found.",end="")
+            action = Prompt.ask("[bold red] Do you want to create them(Y/N)")
+            action = action.upper()
+            if(action == "" or action == "N"):
+                raise FileNotFoundError("The Necessary file could not be found")
+            elif(action == "Y"):
+                self.console.print("[grey50] Generating PEM files...")
+                httpe_cert.create_pem_files(".",".")
+                self.console.print("[grey50] Generating RSA keypair...")
+                pub_key, _ = httpe_keys.save_keys_rsa_keys()
+                self.console.print("[grey50] Creating certificate...")
+                httpe_cert.create_corticate(
+                    hostname=server_host,
+                    save=True,
+                    cert_pub_key=pub_key,
+                    valid_time_days=100
+                )
+
+            
 
         self.routes = {}
         self.host = server_host
         self.port = port
         self.valid_token_ids = []
         self.valid_token_ids_per_user = {}
-        self._banned_ips = {}
         self.user_keys = {}
         self.rsa_private_key = None
         self.rsa_public_key_shared = None
         self.master_aes_class = httpe_fernet.HttpeFernet()
-        self.master_aes_key = self.master_aes_class.get_key()
-        self._running = True
         self.cert = None
         self._load_keys()
         self.load_cert()
@@ -58,23 +86,19 @@ class Httpe:
         self.name = name
         self.edoi_ip = edoi_ip
         self.edoi_port = edoi_port
-        self.edoi_return_routes = {}
         self._debug_mode = debug_mode
     def _shutdown(self):
-        print("\nShutting down HTTPE server...")
-        print("[v] Purging users")
+        self.console.print("[blue][INFO] Purging users")
         self.user_keys.clear()
         if(len(self.user_keys) > 0):
-            print("[!] Failed to purge users")
-        print("[v] Purging token ids")
+            self.console.print("[bold red][!] Failed to purge users")
+        self.console.print("[bold green][Success]Purged users")
+        self.console.print("[blue][INFO] Purging token ids")
         self.valid_token_ids.clear()
         self.valid_token_ids_per_user.clear()
         if(len(self.valid_token_ids) > 0 or len(self.valid_token_ids_per_user) > 0):
-            print("[!] Failed to purge token IDs")
-        print("Saving logs")
-        # self._log_file.close()
-        
-        self._running = False
+            self.console.print("[bold red][!] Failed to purge token IDs")
+        self.console.print("[bold green][[Success]]Purged token ids")
     def _load_keys(self):
         try:
             with open("private_key.edoi","r") as f:
@@ -97,7 +121,7 @@ class Httpe:
                 self.rsa_public_key_shared = key
         except Exception as e:
             self._log_internal_error(e)
-            print(f"[ERROR] Failed to handle key files: {e}")
+            self.console.print(f"[bold red][ERROR] Failed to handle key files: {e}")
             self.rsa_private_key = None
             self.rsa_public_key_shared = None
 
@@ -107,11 +131,11 @@ class Httpe:
             with open("cert.crte","r") as f:
                 self.cert = json.load(f)
         except FileNotFoundError:
-            print("[ERROR] Cannot find cert.crte. Please ensure it is placed in the same dir as the main server file")
+            self.console.print("[bold red][ERROR] Cannot find cert.crte. Please ensure it is placed in the same dir as the main server file")
             self.cert = None
         except Exception as e:
             self._log_internal_error(e)
-            print(f"[ERROR] General error loading cert.crte {e}")
+            self.console.print(f"[bold red] General error loading cert.crte {e}")
             self.cert = None
     def path(self, route, method="GET"):
         def decorator(func):
@@ -126,15 +150,15 @@ class Httpe:
             asyncio.run(self.serve())
         except KeyboardInterrupt:
             
-            print("\nShutting down server...")
+            self.console.print("[blue][INFO]Shutting down server...")
             self._shutdown()
-            print("\nServer shutdown")
+            self.console.print("[blue][INFO]Server shutdown")
     async def serve(self):
         if(self.is_edoi_node == True):
             await self._send_connect()
         self._server = await asyncio.start_server(self._handle_client, self.host, self.port)
         async with self._server:
-            print(f"Server running on {self.host}:{self.port}")
+            self.console.print(f"[bold blue][INFO] Server running on {self.host}:{self.port}")
             await self._server.serve_forever()
         
                                 # ##print("[*] Connection closed.\n")
@@ -603,7 +627,7 @@ class Httpe:
                 err_res =  Response.error(message="Invalid Parameter",status_code=400)
         #         # 
                 return err_res
-        for name, param in sig.parameters.items():
+        for name, _ in sig.parameters.items():
             if(name in body):
                 kwargs[name] = body[name]
             else:
