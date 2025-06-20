@@ -719,6 +719,7 @@ class HttpeClientCore:
                 print(f"Handshake failed: {e}")
         except asyncio.CancelledError:
             print("Startup task ended, killing code...")
+            raise
 
     async def edoi_send_to_target(self,payload):
         await self._trigger_event('sending_packet')
@@ -755,10 +756,6 @@ class HttpeClientCore:
 
             client_socket.shutdown(socket.SHUT_RDWR)
         await self._trigger_event('packet_sent')
-        if(self._debug_mode == True):
-            file = open("../run_output.log","a")
-            file.write(f"Client:Forward:{for_t}\n")
-            file.close()
         # client_socket.shutdown(socket.SHUT_RDWR)  # 1. Gracefully close the connection
         # sock.close() 
         return True

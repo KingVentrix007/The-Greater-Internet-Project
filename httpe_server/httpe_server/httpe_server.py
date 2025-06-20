@@ -694,9 +694,7 @@ class Httpe:
                     "ip_combo":(self.host,self.port)
                 }
                 # print(f"Server:Return:{time.time()}")
-                file = open("../run_output.log","a")
-                file.write(f"Server:Return:{time.time()}\n")
-                file.close()
+
                 # httpe_logging.sync_log(f"Server:Return:{time.time()}")
 
                 try:

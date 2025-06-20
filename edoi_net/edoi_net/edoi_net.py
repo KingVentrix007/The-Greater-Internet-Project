@@ -255,7 +255,7 @@ class NetNode():
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
                     client_socket.connect((host, port))
                     client_socket.sendall(encoded)
-                time.sleep(0.05)
+                await asyncio.sleep(0.05)
             except Exception as e:
                 pass
         elif(data["type"] == "hash_res"):
@@ -272,9 +272,6 @@ class NetNode():
                 print(f"{self.name}:Got return packet")
                 if my_hash == route[count]["hash"]:
                     print(f"{self.name}:Return:{time.time()}")
-                    file = open("../../run_output.log","a")
-                    file.write(f"{self.name}:Return:{time.time()}\n")
-                    file.close()
                     past_hash = route[count + 1]["hash"]
                     if past_hash == my_hash:
                         print("[ERROR]. Previous node matches current node")
@@ -329,9 +326,6 @@ class NetNode():
                 
                 if self.compute_hashed_identity(route[count]["salt"]) == route[count]["hash"]:
                     # print(f"{self.name}:Forward:{time.time()}")
-                    file = open("../../run_output.log","a")
-                    file.write(f"{self.name}:Forward:{time.time()}\n")
-                    file.close()
                     if count + 1 < len(route):
                         next_packet = {
                             "type": "forward",
