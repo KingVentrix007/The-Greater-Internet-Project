@@ -307,9 +307,6 @@ class HttpeClientCore:
                 # print("No path found for target. Please try again later. EDOI target:", self.edoi_target)
 
     async def _handle_return_packet(self, data):
-        if(self._debug_mode == True):
-            with open("../run_output.log", "a") as file:
-                file.write(f"Client:Return:{time.time()}\n")
         payload = data.get("payload", None)
         self.edoi_res = payload
         self._got_edoi_event.set()

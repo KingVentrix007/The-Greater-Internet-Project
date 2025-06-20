@@ -1,7 +1,7 @@
 # logger.py
 import asyncio
 import datetime
-
+import aiofiles
 log_queue = None  # Will be set by init_logger()
 
 def init_logger():
@@ -10,10 +10,9 @@ def init_logger():
     log_queue = asyncio.Queue()
 
 async def log_writer(file_path="edoi_log.txt"):
-    with open(file_path, "a", buffering=1) as f:
-        while True:
+    async with aiofiles.open(file_path, mode='a',buffering=1) as f:
             message = await log_queue.get()
-            f.write(message + "\n")
+            await f.write(message + "\n")
             log_queue.task_done()
 
 async def log(message):

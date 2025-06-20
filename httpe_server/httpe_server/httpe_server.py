@@ -503,8 +503,6 @@ class Httpe:
         result = await self._parse_handler(handler,sig,None,self.user_keys[header_user_id],content_type,accepts)
         if not isinstance(result, Response):
             result = Response(str(result))  # fallback
-        if not isinstance(result, Response):
-            result = Response(str(result))  # fallback
         response = result.serialize()
         return response
     async def _handle_standard_endpoint(self,handler,sig,body,header_user_id,content_type,accepts,url_params):

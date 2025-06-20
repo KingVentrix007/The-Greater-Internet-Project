@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "httpe_core"
-version = "1.0.1"
+version = "1.0.2"
 description = "Core cryptographic and certificate logic for HTTPE"
 readme = "README.md"
 license = {text = "MIT"}
@@ -13,7 +13,8 @@ authors = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-  "cryptography>=45.0.4"
+  "cryptography>=45.0.4",
+  "aiofiles>=24.1.0",
 ]
 
 [tool.setuptools.packages.find]
