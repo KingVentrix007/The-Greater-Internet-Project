@@ -4,11 +4,11 @@ from httpe_core import Response
 server =  Httpe(port=28080, server_host="127.0.0.1")
 
 
-@server.path("/dashboard", method="GET")
+@server.route("/dashboard", methods=[])
 async def dashboard():
     html = open("dashboard.html", "r", encoding="utf-8").read()
     headers = {"content-type": "html"}
-    return "FOOD",404
+    return html,200
 
 @server.path("/user/{id}/cat/{plan}", method="GET")
 async def get_user(data, user_key=None):

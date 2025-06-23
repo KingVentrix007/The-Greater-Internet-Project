@@ -15,7 +15,7 @@ import re
 import asyncio
 import httpe_core.httpe_cert as httpe_cert
 import httpe_core.httpe_keys as httpe_keys
-from httpe_core.httpe_types import APPLICATION_JSON
+from httpe_core.httpe_types import APPLICATION_JSON,EMPTY_RETURN_5
 from rich.console import Console
 from rich.prompt import Prompt
 
@@ -39,9 +39,9 @@ class Httpe:
 
         """
         self.cert_path = crte_file_path
-        self.console = Console()
+        self.console = Console(log_time_format="%H:%M:%S")
         self.key_dir_path = key_dir_path
-        self.console.print("[bold blue][INFO] HTTPE Server Initializing...[/]")
+        self.console.log("[bold blue][INFO] HTTPE Server Initializing...[/]")
         if(os.path.exists(self.cert_path) == False or os.path.exists(f"{self.key_dir_path}/private_key.edoi") == False or os.path.exists(f"{self.key_dir_path}/public_key.edoi") == False):
             self.console.print("[bold red] [ERROR] Necessary files cannot be found.",end="")
             action = Prompt.ask("[bold red] Do you want to create them(Y/N)")
@@ -82,18 +82,19 @@ class Httpe:
         self.edoi_ip = edoi_ip
         self.edoi_port = edoi_port
         self._debug_mode = debug_mode
+        self.is_encrypted_for_user = {} #user_id:true/none
     def _shutdown(self):
-        self.console.print("[blue][INFO] Purging users")
+        self.console.log("[blue][INFO] Purging users")
         self.user_keys.clear()
         if(len(self.user_keys) > 0):
-            self.console.print("[bold red][!] Failed to purge users")
-        self.console.print("[bold green][Success]Purged users")
-        self.console.print("[blue][INFO] Purging token ids")
+            self.console.log("[bold red][!] Failed to purge users")
+        self.console.log("[bold green][Success]Purged users")
+        self.console.log("[blue][INFO] Purging token ids")
         self.valid_token_ids.clear()
         self.valid_token_ids_per_user.clear()
         if(len(self.valid_token_ids) > 0 or len(self.valid_token_ids_per_user) > 0):
-            self.console.print("[bold red][!] Failed to purge token IDs")
-        self.console.print("[bold green][[Success]]Purged token ids")
+            self.console.log("[bold red][!] Failed to purge token IDs")
+        self.console.log("[bold green][[Success]]Purged token ids")
     def _load_keys(self):
         try:
             with open("private_key.edoi","r") as f:
@@ -116,7 +117,7 @@ class Httpe:
                 self.rsa_public_key_shared = key
         except Exception as e:
             self._log_internal_error(e)
-            self.console.print(f"[bold red][ERROR] Failed to handle key files: {e}")
+            self.console.log(f"[bold red][ERROR] Failed to handle key files: {e}")
             self.rsa_private_key = None
             self.rsa_public_key_shared = None
 
@@ -126,15 +127,23 @@ class Httpe:
             with open("cert.crte","r") as f:
                 self.cert = json.load(f)
         except FileNotFoundError:
-            self.console.print("[bold red][ERROR] Cannot find cert.crte. Please ensure it is placed in the same dir as the main server file")
+            self.console.log("[bold red][ERROR] Cannot find cert.crte. Please ensure it is placed in the same dir as the main server file")
             self.cert = None
         except Exception as e:
             self._log_internal_error(e)
-            self.console.print(f"[bold red] General error loading cert.crte {e}")
+            self.console.log(f"[bold red] General error loading cert.crte {e}")
             self.cert = None
     def path(self, route, method="GET"):
         def decorator(func):
             self.routes[(route, method)] = func
+            return func
+        return decorator
+    def route(self, route, methods=None):
+        if methods is None or len(methods) == 0:
+            methods = ['GET','POST']
+        def decorator(func):
+            for method in methods:
+                self.routes[(route, method)] = func
             return func
         return decorator
     def paths(self):
@@ -145,15 +154,15 @@ class Httpe:
             asyncio.run(self.serve())
         except KeyboardInterrupt:
             
-            self.console.print("[blue][INFO]Shutting down server...")
+            self.console.log("[blue][INFO]Shutting down server...")
             self._shutdown()
-            self.console.print("[blue][INFO]Server shutdown")
+            self.console.log("[blue][INFO]Server shutdown")
     async def serve(self):
         if(self.is_edoi_node == True):
             await self._send_connect()
         self._server = await asyncio.start_server(self._handle_client, self.host, self.port)
         async with self._server:
-            self.console.print(f"[bold blue][INFO] Server running on {self.host}:{self.port}")
+            self.console.log(f"[bold blue][INFO] Server running on {self.host}:{self.port}")
             await self._server.serve_forever()
         
                                 # ##print("[*] Connection closed.\n")
@@ -388,7 +397,7 @@ class Httpe:
                     # ##print(edoi_json_data)
                 except Exception as e:
                     err_res =  Response.error(message=f"Internal Server Error {e}",status_code=500)
-                    print(f"[ERROR] {err_res.serialize()}")
+                    self.console.log(f"[bold red][ERROR] {err_res.serialize()}")
                     self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=None)
                     return None, edoi_json_data.get("route",None)
                 edoi_packet_type = edoi_json_data.get("type",None)
@@ -408,7 +417,7 @@ class Httpe:
                         return data,edoi_json_data.get("route",None)
                     except Exception as e:
                         err_res =  Response.error(message=f"Internal Server Error {e}",status_code=500)
-                        print(f"[ERROR] {err_res.serialize().encode()}")
+                        self.console.log(f"[bold red][ERROR] {err_res.serialize().encode()}")
                         self.send_packet(conn,addr=addr,data=err_res.serialize().encode(),route=route)
                         return None,edoi_json_data.get("route",None)
     async def find_dynamic_route(self,routes, path, method):
@@ -426,7 +435,7 @@ class Httpe:
         return None, {}
     async def _receive_connection_data(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
             addr = writer.get_extra_info('peername')
-            self.console.print(f"[green][+]Received connection from {addr}")
+            self.console.log(f"[green][+]Received connection from {addr}")
             try:
                 data = b""
                 res_time_start = time.time()
@@ -460,12 +469,12 @@ class Httpe:
             send_rsa_pub = {"rsa":self.rsa_public_key_shared}
             rsa_rez = Response(json.dumps(send_rsa_pub))
             await self.send_packet(writer,addr,data=rsa_rez.serialize().encode(),route=route)
-            return None,None,None,None,None
+            return EMPTY_RETURN_5
         elif(initial_packet_type == "SHARE_AES"):
             res_data = await self._handle_share_aes(headers)
             await self.send_packet(writer,addr,data=res_data.serialize().encode(),route=route)
             # print("Send aes response")
-            return None,None,None,None,None
+            return EMPTY_RETURN_5
         elif(initial_packet_type == "REQ_ENC"):
             # print("Enc req")
             new_lines,user_id_from_token =  await self._handle_enc_request(lines)
@@ -476,9 +485,13 @@ class Httpe:
                 err_res =  Response.error(message=f"Error With Client handling code: user_id_from_token: {user_id_from_token}, new_lines: {new_lines}",status_code=500)
                 # conn.sendall(err_res.serialize().encode())
                 await self.send_packet(writer,addr,data=err_res.serialize().encode(),route=route)
-                return None,None,None,None,None
+                return EMPTY_RETURN_5
             new_lines = new_lines.splitlines()
             headers,version,_,initial_packet_type,method,location,body  =await self._handle_packet_contents(new_lines)
+            if(user_id_from_token != headers.get("client_id",None)):
+                pass
+            else:
+                self.is_encrypted_for_user[user_id_from_token]= True#self.user_keys[user_id_from_token]
         elif(initial_packet_type == "ENC_END"):
             new_lines,user_id_from_token =  await self._handle_enc_request(lines)
             try:
@@ -488,8 +501,8 @@ class Httpe:
                 self.valid_token_ids.remove(token_to_remove)
             except Exception as e:
                 await self._log_internal_error(e)
-                print(f"Failed to delete user key {e}")
-            return None,None,None,None,None
+                self.console.log(f"[bold red][ERROR]Failed to delete user key {e}")
+            return EMPTY_RETURN_5
             
 
         else:
@@ -497,7 +510,7 @@ class Httpe:
         header_user_id = headers.get("client_id",None)
         valid_packet = await self.validate_packet(headers=headers,route=route,writer=writer,addr=addr,user_id_from_token=header_user_id)
         if(valid_packet == False):
-            return None,None,None,None,None
+            return EMPTY_RETURN_5
         return headers,method,location,body,header_user_id
     async def _handle_no_parm_endpoint(self,handler,sig,header_user_id,content_type,accepts):
         result = await self._parse_handler(handler,sig,None,self.user_keys[header_user_id],content_type,accepts)
@@ -521,10 +534,10 @@ class Httpe:
         try:
             edoi_data,route  = await self.handle_edoi_packet(data=user_data,addr=addr,conn=writer)
         except Exception as e:
-            print(f"[ERROR]. EDOI handle: {e}")
+            self.console.log(f"[bold red][ERROR]. EDOI handle: {e}")
         if(edoi_data != None):
             if(edoi_data == False and route == False):
-                self.console.print("[bold red][ERROR] Failed to extract edoi data and route from edoi packet")
+                self.console.log("[bold red][ERROR] Failed to extract edoi data and route from edoi packet")
                 return None,None
             data=edoi_data
         else:
@@ -533,7 +546,7 @@ class Httpe:
         try:
             data,addr = await self._receive_connection_data(reader,writer)
             if(addr == None or data == None):
-                self.console.print(f"[bold red][ERROR] Failed to receive data from client({addr if addr != None else "N/A"})")
+                self.console.log(f"[bold red][ERROR] Failed to receive data from client({addr if addr != None else "N/A"})")
                 return
             # ##print(type(data))
             route=None
@@ -571,18 +584,28 @@ class Httpe:
                     response = await self._handle_standard_endpoint(handler=handler,sig=sig,body=body,header_user_id=header_user_id,content_type=content_type,accepts=accepts,url_params=url_params)
             else:
                 # ##print("Cant find route for type:",initial_packet_type)
-                result = "Route Not Found"
+                self.console.log(f"[bold red][ERROR]Invalid route {location} access attempt by {addr}")
+                aes_key = self.user_keys[header_user_id]
+                enc_class = httpe_fernet.HttpeFernet(aes_key)
+                body = "Route Not Found"
+                enc_body = enc_class.encrypt(body.encode("latin-1"))
+                result = enc_body
                 if not isinstance(result, Response):
-                        result = Response(str(result),status_code=404,status="404 NOT FOUND")  # fallback
+                        result = Response(str(result),status_code=404)  # fallback
                 response = result.serialize()
 
             # conn.sendall(response.encode())
+            # print(response)
 
             await self.send_packet(writer,addr,data=response.encode(),route=route)
         except Exception as e:
             await self._log_internal_error(e)
-            err_res =  Response.error(message=f"Error With Client handling code :{e}",status_code=500)
-            self.console.log(f"[bold red][ERROR] {err_res.serialize().encode()}\n||")
+            body = f"Error With Client handling code :{e}"
+            aes_key = self.user_keys[header_user_id]
+            enc_class = httpe_fernet.HttpeFernet(aes_key)
+            enc_body = enc_class.encrypt(body.encode("utf-8"))
+            err_res =  Response.error(message=enc_body,status_code=500)
+            self.console.log(f"[bold red][ERROR] {body}")
             await self.send_packet(writer,addr,data=err_res.serialize().encode(),route=None)
             return
         finally:
@@ -673,8 +696,7 @@ class Httpe:
             body = {"redirect_url_endpoint":redirect_url}
             res = Response(json.dumps(body),status_code=status)
             return res
-    
-    async def send_packet(self,writer,addr,data,route=None):
+    async def send_packet(self,writer,addr,data,route=None,dont_encrypt=True,user_id=None):
         try:
             if(self.is_edoi_node == False):
                 writer.write(data)

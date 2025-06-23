@@ -13,7 +13,9 @@
 
 ### High Priority
 
-- [ ] Properly handle both `methods=[]` and `method=""` cases.  
+- [X] Properly handle both `methods=[]` and `method=""` cases.  
+- [ ] Make error responses encrypted 
+- [ ] Add version of Depends
 
 ### Lower Priority
 

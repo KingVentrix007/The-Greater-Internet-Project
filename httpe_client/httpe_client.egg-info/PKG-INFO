@@ -8,3 +8,4 @@ Requires-Python: >=3.8
 Description-Content-Type: text/markdown
 Requires-Dist: cryptography>=45.0.4
 Requires-Dist: httpe_core>=0.1.0
+Requires-Dist: requests>=2.32.4

@@ -39,9 +39,7 @@ class HttpeClient:
     async def disconnect(self):
         if self._client is None:
             raise Warning("Client not initialized. Call `start()` before disconnecting.")
-
         await self._client.disconnect()
-        # self._client = None
     async def send_request(self, method, location, body=None,headers=None):
         if self._client is None:
             raise Warning("Client not initialized. Call `start()` before sending requests.")
@@ -738,10 +736,6 @@ class HttpeClientCore:
         # time.sleep(1)
         message_id = packet.get("message_id",None)
         packet["message_id"] = message_id or str(uuid.uuid4())
-        # print(f"Client:Forward:{time.time()}")
-        for_t = time.time()
-        # httpe_logging.sync_log(f"Client:Forward:{time.time()}")
-
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             client_socket.connect((self.edoi_ip, self.edoi_port)) #! Look here
@@ -753,7 +747,5 @@ class HttpeClientCore:
 
             client_socket.shutdown(socket.SHUT_RDWR)
         await self._trigger_event('packet_sent')
-        # client_socket.shutdown(socket.SHUT_RDWR)  # 1. Gracefully close the connection
-        # sock.close() 
         return True
         
