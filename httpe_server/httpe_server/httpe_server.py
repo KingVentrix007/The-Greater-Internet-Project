@@ -19,7 +19,7 @@ from httpe_core.httpe_types import APPLICATION_JSON,EMPTY_RETURN_5
 from rich.console import Console
 from rich.prompt import Prompt
 import warnings
-
+warnings.simplefilter('always', DeprecationWarning)
 
 class Httpe:
     def __init__(self,server_host="127.0.0.1",port=8080,running_version="1.0",crte_file_path="cert.crte",key_dir_path=".",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None,debug_mode=False):
@@ -134,7 +134,7 @@ class Httpe:
             self.console.log(f"[bold red] General error loading cert.crte {e}")
             self.cert = None
     def path(self, route, method="GET"):
-        warnings.warn("path is deprecated and will be removed soon. Use route instead", category=DeprecationWarning, stacklevel=1)
+        warnings.warn("path is deprecated and will be removed soon. Use route instead", category=DeprecationWarning, stacklevel=2)
         def decorator(func):
             self.routes[(route, method)] = func
             return func
