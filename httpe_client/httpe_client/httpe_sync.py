@@ -76,7 +76,7 @@ async def _get_client(url: str,type:str="httpe") -> HttpeClient:
     return _clients[domain]
 
 
-def post(url: str, data: Any = None, headers: dict = None, **kwargs):
+def post(url: str, data : Any = None, headers: dict = None, **kwargs):
     if url.startswith("edoi://"):
         client =  _run_async(_get_client(url,"edoi"))
         locations = url.split("/")
@@ -87,7 +87,7 @@ def post(url: str, data: Any = None, headers: dict = None, **kwargs):
         if client == None:
             print("Client is not initialized yet.")
             return None
-        return _run_async(client.post(location=location, body=json.dumps(data)))
+        return _run_async(client.post(location=location, body=json.dumps(data )))
     elif url.startswith("httpe://"):
         client =  _run_async(_get_client(url,"httpe"))
         locations = url.split("/")
@@ -98,9 +98,9 @@ def post(url: str, data: Any = None, headers: dict = None, **kwargs):
         if client == None:
             print("Client is not initialized yet.")
             return None
-        return _run_async(client.post(location=location, body=json.dumps(data)))
+        return _run_async(client.post(location=location, body=json.dumps(data )))
     else:
-        return requests.post(url, data=data, headers=headers, **kwargs)
+        return requests.post(url, data=data , headers=headers, **kwargs)
 
 def disconnect(url: str):
     """Disconnects the client associated with the given URL."""

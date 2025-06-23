@@ -19,6 +19,8 @@ from httpe_core.httpe_types import APPLICATION_JSON,EMPTY_RETURN_5
 from rich.console import Console
 from rich.prompt import Prompt
 import warnings
+import traceback
+import sys
 warnings.simplefilter('always', DeprecationWarning)
 
 class Httpe:
@@ -142,6 +144,12 @@ class Httpe:
     def route(self, route, methods=None):
         if methods is None or len(methods) == 0:
             methods = ['GET','POST']
+        if(isinstance(methods,list) != True):
+            if(isinstance(methods,str)):
+                temp = methods
+                methods = [temp]
+            else:
+                raise ValueError("methods must be string(POST) or list[POST,GET]")
         def decorator(func):
             for method in methods:
                 self.routes[(route, method)] = func
@@ -520,12 +528,14 @@ class Httpe:
         response = result.serialize()
         return response
     async def _handle_standard_endpoint(self,handler,sig,body,header_user_id,content_type,accepts,url_params):
-        parsed_input = json.loads(body or "{}")
+        if(body == None):
+            parsed_input = {}
+        else:
+            parsed_input = json.loads("{}")
         if(parsed_input == None):
             parsed_input = body
         else:
             parsed_input.update(url_params)  # Merge path params with JSON body
-
         result = await self._parse_handler(handler,sig,parsed_input,self.user_keys[header_user_id],content_type,accepts)
         if not isinstance(result, Response):
             result = Response(str(result))  # fallback
@@ -582,6 +592,7 @@ class Httpe:
                 if(len(sig.parameters) == 0):
                     response = await self._handle_no_parm_endpoint(handler,sig,header_user_id,content_type,accepts)
                 else:
+                    # print("_handle_client",body,type(body))
                     response = await self._handle_standard_endpoint(handler=handler,sig=sig,body=body,header_user_id=header_user_id,content_type=content_type,accepts=accepts,url_params=url_params)
             else:
                 # ##print("Cant find route for type:",initial_packet_type)
@@ -600,6 +611,12 @@ class Httpe:
 
             await self.send_packet(writer,addr,data=response.encode(),route=route)
         except Exception as e:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback_details = traceback.extract_tb(exc_traceback)
+            filename, lineno, func, text = traceback_details[-1]
+            print(f"Line number: {lineno}")
+            print(f"In function: {func}")
+            print(f"Code: {text}")
             await self._log_internal_error(e)
             body = f"Error With Client handling code :{e}"
             aes_key = self.user_keys[header_user_id]
@@ -625,20 +642,28 @@ class Httpe:
         for val in body.keys():
             if val not in sig.parameters:
                 
-                err_res =  Response.error(message="Invalid Parameter",status_code=400)
-        #         # 
+                err_res =  Response.error(message=f"Unexpected  Parameter '{val}'",status_code=400)
+                self.console.log(f"[bold red][ERROR] Unexpected  Parameter '{val}'")
+                return err_res
+        for parm in sig.parameters:
+            if parm not in  body.keys():
+                err_res =  Response.error(message=f"Missing   Parameter '{val}'",status_code=400)
+                self.console.log(f"[bold red][ERROR] Missing   Parameter '{val}'")
+
                 return err_res
         for name, _ in sig.parameters.items():
             if(name in body):
                 kwargs[name] = body[name]
             else:
-                err_res =  Response.error(message="Invalid Parameter",status_code=400)
-                # 
+                err_res =  Response.error(message=f"Invalid Parameter '{name}'",status_code=400)
+                self.console.log(f"[bold red][ERROR] Invalid Parameter '{name}'")
+
                 return err_res
         
         res_data = await handler(**kwargs)
         return res_data
     async def _parse_handler_with_contents(self, handler,sig,body,content_type):
+        # print("_parse_handler_with_contents",body)
         if content_type == APPLICATION_JSON:
                 res_data = await self._parse_handler_json(handler, sig, body)
         elif content_type in ("text/plain", "text/html", "application/octet-stream"):
@@ -647,7 +672,8 @@ class Httpe:
             res_data =  Response.error(message=f"Unsupported Media Type: {content_type}",status_code=415)
         return res_data
     async def _parse_handler(self, handler,sig,body,aes_key,content_type=APPLICATION_JSON,accepts=APPLICATION_JSON):
-        if body is not None:
+        if body != None:
+            # print("_parse_handler",body)
             res_data = await self._parse_handler_with_contents(handler,sig,body,content_type)
         else:
             res_data = await handler()

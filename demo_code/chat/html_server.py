@@ -10,10 +10,10 @@ async def dashboard():
     headers = {"content-type": "html"}
     return html,200
 
-@server.path("/user/{id}/cat/{plan}", method="GET")
-async def get_user(data, user_key=None):
-    user_id = data["id"]
-    plan = data["plan"]
+@server.route("/user/{id}/cat/{plan}", methods=["POST","GET"])
+async def get_user(id, plan):
+    user_id = id
+    plan = plan
     print(f"User ID: {user_id}, Plan: {plan}")
     # print(user_id)
     return Response(f"User ID: {user_id}", status=200)
