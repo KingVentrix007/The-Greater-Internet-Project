@@ -89,6 +89,7 @@ class HttpeResponse:
         self.status = None
         self.status_code = -1
         self.content_length = -1
+        self.packet_number = -1
         self._parse()
 
     def _parse(self):
@@ -110,6 +111,10 @@ class HttpeResponse:
             self.status_code = int(self.headers.get("STATUS_CODE", -1))
         except (ValueError, TypeError):
             self.status_code = -1
+        try:
+            self.packet_number = int(self.headers.get("PACKET_NUM", -1))
+        except (ValueError, TypeError):
+            self.packet_number = -1
 
         try:
             self.content_length = int(self.headers.get("CONTENT_LENGTH", -1))
@@ -557,6 +562,9 @@ class HttpeClientCore:
         return response
 
     def _process_response(self, response):
+        #TODO Make packet handle packet_number: PACKET_NUM
+        if(isinstance(response,HttpeResponse)):
+            return response
         res = HttpeResponse(response)
         try:
             start = time.time()
@@ -564,6 +572,7 @@ class HttpeClientCore:
             end = time.time()
             if self._debug_mode:
                 print(f"[DEBUG]:Client:Time to decrypt packet: {end - start}")
+                print("res is nonr")
             res._set_body(decrypted_body)
             return res
         except Exception as e:
@@ -585,16 +594,53 @@ class HttpeClientCore:
             return self.edoi_res
         else:
             # pass
-            await self._trigger_event('waiting_for_packet_response')
-            response = b""
+            global_res_data = ""
+            global_res_object = None
+            body_parts = []
             while True:
-                part = await s.read(4096)
-                if not part:
+                await self._trigger_event('waiting_for_packet_response')
+                response = b""
+                try:
+                    response = await s.readuntil(b"\n\n")  
+                except asyncio.IncompleteReadError:
                     break
-                response += part
-            await self._trigger_event('packet_response_received')
-            return response.decode('utf-8')
-            
+                    
+                await self._trigger_event('packet_response_received')
+                # print("response recieved")
+                res_data = response.decode('utf-8')
+                # print("[",res_data,"]")
+                if("END" not in res_data):
+                    break
+                try:
+                    res = HttpeResponse(res_data)
+                except:
+                    break
+                if(res.packet_number == -1):
+                    return response.decode('utf-8')
+                else:
+                    # print("[",res_data,"]")
+                    response = None
+                    # if(res != None):
+                    global_res_object = res
+                    decrypted_body = self._fernet_class.decrypt(res.body()).decode()
+                    body_parts.append(decrypted_body)
+                    # print(res.body(),res.packet_number)
+                    # print("Got res")
+            global_res_data = "".join(body_parts)
+            # print("---------------------")
+            # print(global_res_data)
+            # print("---------------------")
+
+           
+            if(global_res_object == None):
+                return ""
+            global_res_object._set_body(global_res_data)
+            global_res_object.content_length = len(global_res_data)
+            # print(global_res_object)
+            # print("-----------")
+            # print(">>",global_res_object.raw_response)
+            # print("____________")
+            return global_res_object
 
     async def _connection_send(self, request_data: str) -> HttpeResponse|None:
         """Sends a raw request and returns parsed response"""
@@ -650,6 +696,8 @@ class HttpeClientCore:
                 await self._trigger_event("sending_rsa_key_request")
                 rsa_response = await self._connection_send(request)
                 if not rsa_response or not rsa_response.ok:
+                    print(rsa_response)
+                    print(rsa_response.ok)
                     print("Failed to retrieve RSA public key from server.")
                     await self._trigger_event("general_error","Failed to get RSA key")
                     return

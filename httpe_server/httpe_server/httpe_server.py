@@ -22,7 +22,7 @@ import warnings
 import traceback
 import sys
 warnings.simplefilter('always', DeprecationWarning)
-
+CHUNK_SIZE = 100
 class Httpe:
     def __init__(self,server_host="127.0.0.1",port=8080,running_version="1.0",crte_file_path="cert.crte",key_dir_path=".",name="edoi node",use_edoi_node=False,edoi_ip=None,edoi_port=None,debug_mode=False):
         """
@@ -521,13 +521,13 @@ class Httpe:
         if(valid_packet == False):
             return EMPTY_RETURN_5
         return headers,method,location,body,header_user_id
-    async def _handle_no_parm_endpoint(self,handler,sig,header_user_id,content_type,accepts):
+    async def _handle_no_parm_endpoint(self,handler,sig,header_user_id,content_type,accepts) ->Response:
         result = await self._parse_handler(handler,sig,None,self.user_keys[header_user_id],content_type,accepts)
         if not isinstance(result, Response):
             result = Response(str(result))  # fallback
-        response = result.serialize()
-        return response
-    async def _handle_standard_endpoint(self,handler,sig,body,header_user_id,content_type,accepts,url_params):
+        # response = result.serialize()
+        return result
+    async def _handle_standard_endpoint(self,handler,sig,body,header_user_id,content_type,accepts,url_params) -> Response:
         if(body == None):
             parsed_input = {}
         else:
@@ -539,8 +539,8 @@ class Httpe:
         result = await self._parse_handler(handler,sig,parsed_input,self.user_keys[header_user_id],content_type,accepts)
         if not isinstance(result, Response):
             result = Response(str(result))  # fallback
-        response = result.serialize()
-        return response
+        # response = result.serialize()
+        return result
     async def _process_edoi_data(self,user_data,addr,writer):
         try:
             edoi_data,route  = await self.handle_edoi_packet(data=user_data,addr=addr,conn=writer)
@@ -553,6 +553,25 @@ class Httpe:
             data=edoi_data
         else:
             return data,route
+    async def _send_data_as_chunks(self,data:Response, writer: asyncio.StreamWriter,aes_key,route,addr):
+        num_chunks = (len(data.body) + CHUNK_SIZE - 1) // CHUNK_SIZE
+        enc_class = httpe_fernet.HttpeFernet(aes_key)
+        body_contents = data.body
+        stat_code = data.status_code
+
+        for i in range(num_chunks):
+            start = i * CHUNK_SIZE
+            end = start + CHUNK_SIZE
+            unencrypted_data = body_contents[start:end]
+            encrypted_data = enc_class.encrypt(unencrypted_data.encode("latin-1"))
+            packet = Response(encrypted_data,status_code=stat_code,packet_num=i)
+            send_data = packet.serialize()
+            await self.send_packet(writer=writer,addr=addr,data=send_data.encode("latin-1"),route=route)
+            # Do something with each chunk:
+            # print(f"Packet {packet_number}: {unencrypted_data}")
+            print(f"Sent packet {i}:{packet.serialize()}")
+            await asyncio.sleep(0.1)
+
     async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         try:
             data,addr = await self._receive_connection_data(reader,writer)
@@ -604,11 +623,25 @@ class Httpe:
                 result = enc_body
                 if not isinstance(result, Response):
                         result = Response(str(result),status_code=404)  # fallback
-                response = result.serialize()
+                # response = result.serialize()
 
             # conn.sendall(response.encode())
             # print(response)
+            # if(len(json_payload) >= CHUNK_SIZE*5):
+            #     self._send_data_as_chunks(Response(json_payload, status_code=error_code),wr)
+            if(len(response.body) >= CHUNK_SIZE*5):
+                aes_key = self.user_keys[header_user_id]
+                await self._send_data_as_chunks(response,writer=writer,aes_key=aes_key,route=route,addr=addr)
+                writer.close()
+                await writer.wait_closed()
+                return
+            else:
+                aes_key = self.user_keys[header_user_id]
+                enc_class = httpe_fernet.HttpeFernet(aes_key)
+                enc_body = enc_class.encrypt(result.body.encode("latin-1"))
 
+                response = Response(enc_body,status_code=result.status_code)
+                response = response.serialize()
             await self.send_packet(writer,addr,data=response.encode(),route=route)
         except Exception as e:
             _, _, exc_traceback = sys.exc_info()
@@ -676,7 +709,7 @@ class Httpe:
         else:
             res_data =  Response.error(message=f"Unsupported Media Type: {content_type}",status_code=415)
         return res_data
-    async def _parse_handler(self, handler,sig,body,aes_key,content_type=APPLICATION_JSON,accepts=APPLICATION_JSON):
+    async def _parse_handler(self, handler,sig,body,aes_key,content_type=APPLICATION_JSON,accepts=APPLICATION_JSON) ->Response:
         if body != None:
             # print("_parse_handler",body)
             res_data = await self._parse_handler_with_contents(handler,sig,body,content_type)
@@ -712,11 +745,11 @@ class Httpe:
             else:
                 json_payload = plain_b
                 
-
-            enc_data = temp_class.encrypt(json_payload.encode("utf-8"))
-            return Response(enc_data, status_code=error_code)
+            
+            # enc_data = temp_class.encrypt(json_payload.encode("utf-8"))
+            return Response(json_payload, status_code=error_code)
         enc_data = temp_class.encrypt(json.dumps(res_data).encode("utf-8"))
-
+        print("HERE:889")
         return enc_data
     async def redirect(self,redirect_url,status=302):
         paths = [key[0] for key in self.routes.keys()]
@@ -731,7 +764,7 @@ class Httpe:
     async def send_packet(self,writer,addr,data,route=None):
         try:
             if(self.is_edoi_node == False):
-                writer.write(data)
+                writer.write((data.decode("latin-1")+"\n\n").encode("latin-1"))
                 await writer.drain()
             else:
                 if(route == None or len(route) < 2):
