@@ -14,7 +14,7 @@ print("RUNNING SYNC WRAPPER TEST")
 # httpe_sync.disconnect("httpe://127.0.1:28080")
 print("Testing client restart")
 response = httpe_sync.post(
-    "httpe://127.0.1:28080/user/123/cat/food",
+    "httpe://127.0.1:28080/user/123/catT/foodss",
     headers={"Content-Type": "text/plain"},
 )
 print(response.text)

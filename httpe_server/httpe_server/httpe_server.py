@@ -611,19 +611,24 @@ class Httpe:
 
             await self.send_packet(writer,addr,data=response.encode(),route=route)
         except Exception as e:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
+            _, _, exc_traceback = sys.exc_info()
             traceback_details = traceback.extract_tb(exc_traceback)
             filename, lineno, func, text = traceback_details[-1]
-            print(f"Line number: {lineno}")
-            print(f"In function: {func}")
-            print(f"Code: {text}")
+            internal_error_message = (
+                f"\n[INTERNAL ERROR]\n"
+                f"File      : {filename}\n"
+                f"Line      : {lineno}\n"
+                f"Function  : {func}\n"
+                f"Code      : {text}\n"
+                f"Error     : {e}\n"
+            )
             await self._log_internal_error(e)
             body = f"Error With Client handling code :{e}"
             aes_key = self.user_keys[header_user_id]
             enc_class = httpe_fernet.HttpeFernet(aes_key)
             enc_body = enc_class.encrypt(body.encode("utf-8"))
             err_res =  Response.error(message=enc_body,status_code=500)
-            self.console.log(f"[bold red][ERROR] {body}")
+            self.console.log(f"[bold red][ERROR] {internal_error_message}")
             await self.send_packet(writer,addr,data=err_res.serialize().encode(),route=None)
             return
         finally:
@@ -723,7 +728,7 @@ class Httpe:
             body = {"redirect_url_endpoint":redirect_url}
             res = Response(json.dumps(body),status_code=status)
             return res
-    async def send_packet(self,writer,addr,data,route=None,dont_encrypt=True,user_id=None):
+    async def send_packet(self,writer,addr,data,route=None):
         try:
             if(self.is_edoi_node == False):
                 writer.write(data)
