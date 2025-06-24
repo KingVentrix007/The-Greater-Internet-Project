@@ -623,7 +623,7 @@ class Httpe:
                 result = enc_body
                 if not isinstance(result, Response):
                         result = Response(str(result),status_code=404)  # fallback
-                # response = result.serialize()
+                response = result.serialize()
 
             # conn.sendall(response.encode())
             # print(response)
@@ -638,9 +638,9 @@ class Httpe:
             else:
                 aes_key = self.user_keys[header_user_id]
                 enc_class = httpe_fernet.HttpeFernet(aes_key)
-                enc_body = enc_class.encrypt(result.body.encode("latin-1"))
+                enc_body = enc_class.encrypt(response.body.encode("latin-1"))
 
-                response = Response(enc_body,status_code=result.status_code)
+                response = Response(enc_body,status_code=response.status_code)
                 response = response.serialize()
             await self.send_packet(writer,addr,data=response.encode(),route=route)
         except Exception as e:
